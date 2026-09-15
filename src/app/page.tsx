@@ -26,14 +26,14 @@ export default function Home() {
 
             <h1 className="text-[2.25rem] xs:text-4xl sm:text-5xl md:text-6xl lg:text-[4.5rem] font-bold tracking-tight text-gray-900 dark:text-white mb-6 md:mb-8 leading-[1.15] md:leading-[1.1] max-w-[90rem] mx-auto px-4">
               Master Your Next Interview <br className="xs:hidden" />
-              <span className="text-gradient-fusion">Before It Happens.</span>
+              <span className="text-gradient-fusion">in Any Profession.</span>
             </h1>
 
             <h2 className="text-[0.95rem] md:text-xl text-gray-500 dark:text-gray-400 mb-4 max-w-4xl mx-auto leading-relaxed font-medium px-6 md:px-0">
-              The ultimate training platform featuring a <strong>Voice-to-Voice AI Interviewer</strong> for rigorous mock interviews. Master your technical, behavioral, and system design interviews with high-fidelity ZEDX AI simulations.
+              Whether you're a <strong>Software Engineer, Medical Doctor, Sales Manager, or HR Specialist</strong>, ZEDX dynamically adapts to your CV and Job Description to simulate the perfect interview.
             </h2>
             <h3 className="text-[0.85rem] md:text-lg text-emerald-600 dark:text-emerald-400 mb-8 md:mb-12 max-w-4xl mx-auto font-bold tracking-wide px-6 md:px-0">
-              ZEDX AI Mock Interview Simulator • Real-time Feedback • Deep Performance Analytics
+              Universal AI Mock Interview Simulator • Real-time Feedback • Deep Performance Analytics
             </h3>
 
             <div className="flex flex-wrap items-center gap-5 w-full justify-center mb-16 px-4 relative z-50">

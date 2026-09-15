@@ -24,13 +24,13 @@ export const metadata: Metadata = {
     default: "ZEDX AI Interview Simulator",
     template: "%s | ZEDX AI Interview Simulator"
   },
-  description: "ZEDX AI Interview Simulator is a real-time AI interview simulation coach providing real-time transcriptions, example answers, and feedback for job seekers and fresh graduates.",
+  description: "ZEDX AI Interview Simulator is a real-time AI coach that dynamically adapts to your CV and Job Description. Master your next interview in any profession: Software Engineering, Medicine, Sales, Finance, HR, and more.",
   keywords: [
     "ZEDX", "ZEDX AI", "ZEDX AI Simulator", "Mock Interview Coach", "Real-Time Transcription",
-    "Interview Simulation", "Mock Interview Coach", "AI Interview Notes", "Real-time AI Coach",
-    "Training Coach", "Interview Practice", "Job Seeker Coach", "AI Coach",
+    "Interview Simulation", "Software Engineer Interview Simulator", "Medical Mock Interview", "Sales Interview Coach",
+    "Accounting AI Interview", "HR Interview Prep", "Job Seeker Coach", "Universal Interview Prep",
     "interview simulator", "real-time transcription", "interview training", "artificial intelligence", "personal coach",
-    "زيدكس", "زيدكس AI", "موقع زيدكس", "محاكي المقابلات", "تدريب انترفيو", "الذكاء الاصطناعي للمقابلات",
+    "زياد عماد", "Ziad Emad", "محاكي انترفيو", "انترفيو مهندسين", "انترفيو دكاترة", "انترفيو مبيعات",
     "AI Interviewer", "AI Mock Interviewer", "Best AI Interview Prep", "ZEDX Interview"
   ],
   authors: [{ name: "ZEDX AI Team", url: "https://zedx-ai-simulator.vercel.app" }],

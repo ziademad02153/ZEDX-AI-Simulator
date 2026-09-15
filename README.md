@@ -17,9 +17,9 @@
 
 ## Executive Summary
 
-**ZEDX AI Interview Simulator** is the world's most advanced **Voice-to-Voice AI Interviewer** and professional training platform engineered for rigorous candidate evaluation. Designed to help job seekers master their next interview, it provides a comprehensive **Dual-Mode** system (Web & Desktop) integrating real-time Speech-to-Text (STT), Large Language Model (LLM) inference, and a hybrid Text-to-Speech (TTS) engine.
+**ZEDX AI Interview Simulator** is the world's most advanced **Voice-to-Voice Universal AI Interviewer** and professional training platform. Designed to dynamically adapt to any profession—whether you're a Software Engineer, Medical Doctor, Sales Representative, or HR Specialist—ZEDX analyzes the candidate's CV and Job Description to conduct a rigorous, highly specialized mock interview.
 
-- **The Web Simulator (Rigorous Evaluation Mode):** A strict, autonomous AI Mock Interview Simulator that conducts structured, context-aware interviews in **29+ supported languages**. 
+- **The Web Simulator (Rigorous Evaluation Mode):** A strict, autonomous AI Mock Interview Simulator that conducts structured, context-aware interviews across all professional domains in **29+ supported languages**. 
 - **The Desktop Sandbox (Assisted Learning Mode):** A Windows-native environment where the AI acts as a real-time copilot to accelerate skill acquisition and provide instant performance analytics.
 
 ---
