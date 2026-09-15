@@ -6,7 +6,8 @@ create table public.profiles (
   id uuid references auth.users on delete cascade not null primary key,
   email text,
   full_name text,
-  subscription_tier text default 'free',
+  tier text default 'free',
+  subscription_expires_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
