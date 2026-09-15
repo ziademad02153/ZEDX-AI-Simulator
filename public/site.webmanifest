@@ -1,6 +1,7 @@
 {
-    "name": "ZEDX AI",
+    "name": "ZEDX AI Interview Simulator",
     "short_name": "ZEDX AI",
+    "description": "Master your next interview with ZEDX AI - The ultimate Voice-to-Voice AI Interview Simulator and Coach.",
     "icons": [
         {
             "src": "/zedx-logo.png",

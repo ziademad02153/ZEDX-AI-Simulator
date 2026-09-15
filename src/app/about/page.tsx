@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Shield, Mic, Timer, MessageSquare, BarChart, Zap } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { AnimatedOrb } from "@/components/animated-orb";
+import dynamic from 'next/dynamic';
+const AnimatedOrb = dynamic(() => import('@/components/animated-orb').then(mod => mod.AnimatedOrb), { ssr: false });
 import {
     GoogleStyleMicIcon,
     PrivacyShieldIcon,

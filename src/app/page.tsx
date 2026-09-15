@@ -29,12 +29,12 @@ export default function Home() {
               <span className="text-gradient-fusion">Before It Happens.</span>
             </h1>
 
-            <p className="text-[0.95rem] md:text-xl text-gray-500 dark:text-gray-400 mb-4 max-w-4xl mx-auto leading-relaxed font-medium px-6 md:px-0">
-              The ultimate training platform featuring a <strong>Voice-to-Voice AI Recruiter</strong> for rigorous mock interviews. Master your technical, behavioral, and system design interviews with high-fidelity simulations.
-            </p>
-            <p className="text-[0.85rem] md:text-lg text-emerald-600 dark:text-emerald-400 mb-8 md:mb-12 max-w-4xl mx-auto font-bold tracking-wide px-6 md:px-0">
-              AI Mock Interview Simulator • Real-time Feedback • Deep Performance Analytics
-            </p>
+            <h2 className="text-[0.95rem] md:text-xl text-gray-500 dark:text-gray-400 mb-4 max-w-4xl mx-auto leading-relaxed font-medium px-6 md:px-0">
+              The ultimate training platform featuring a <strong>Voice-to-Voice AI Interviewer</strong> for rigorous mock interviews. Master your technical, behavioral, and system design interviews with high-fidelity ZEDX AI simulations.
+            </h2>
+            <h3 className="text-[0.85rem] md:text-lg text-emerald-600 dark:text-emerald-400 mb-8 md:mb-12 max-w-4xl mx-auto font-bold tracking-wide px-6 md:px-0">
+              ZEDX AI Mock Interview Simulator • Real-time Feedback • Deep Performance Analytics
+            </h3>
 
             <div className="flex flex-wrap items-center gap-5 w-full justify-center mb-16 px-4 relative z-50">
               <StartButton variant="landing" />

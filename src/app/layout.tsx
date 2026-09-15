@@ -29,7 +29,9 @@ export const metadata: Metadata = {
     "ZEDX", "ZEDX AI", "ZEDX AI Simulator", "Mock Interview Coach", "Real-Time Transcription",
     "Interview Simulation", "Mock Interview Coach", "AI Interview Notes", "Real-time AI Coach",
     "Training Coach", "Interview Practice", "Job Seeker Coach", "AI Coach",
-    "interview simulator", "real-time transcription", "interview training", "artificial intelligence", "personal coach"
+    "interview simulator", "real-time transcription", "interview training", "artificial intelligence", "personal coach",
+    "زيدكس", "زيدكس AI", "موقع زيدكس", "محاكي المقابلات", "تدريب انترفيو", "الذكاء الاصطناعي للمقابلات",
+    "AI Interviewer", "AI Mock Interviewer", "Best AI Interview Prep", "ZEDX Interview"
   ],
   authors: [{ name: "ZEDX AI Team", url: "https://zedx-ai-simulator.vercel.app" }],
   creator: "ZEDX AI",
@@ -48,6 +50,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
+    alternateLocale: ["en_GB", "en_AU", "ar_EG", "ar_SA", "ar_AE", "de_DE"],
     url: "https://zedx-ai-simulator.vercel.app",
     siteName: "ZEDX AI Interview Simulator",
     title: "ZEDX AI Interview Simulator",
@@ -73,9 +76,6 @@ export const metadata: Metadata = {
     description: "Real-time AI interview simulation and verification insights.",
     images: ["/backgr.png"],
     creator: "@zedx_ai",
-  },
-  alternates: {
-    canonical: "https://zedx-ai-simulator.vercel.app",
   },
   verification: {
     google: "googleac3039da11f6677e",
@@ -144,7 +144,7 @@ export default async function RootLayout({
               "@context": "https://schema.org",
               "@type": "WebSite",
               "name": "ZEDX AI Interview Simulator",
-              "alternateName": ["ZEDX", "ZEDX AI Simulator", "ZedX AI Coach"],
+              "alternateName": ["ZEDX", "ZEDX AI Simulator", "ZedX AI Coach", "زيدكس", "زيدكس AI"],
               "url": "https://zedx-ai-simulator.vercel.app",
               "logo": "https://zedx-ai-simulator.vercel.app/zedx-logo.png",
               "image": "https://zedx-ai-simulator.vercel.app/zedx-logo.png",
@@ -181,7 +181,7 @@ export default async function RootLayout({
               "@context": "https://schema.org",
               "@type": "WebApplication",
               "name": "ZEDX AI Interview Simulator",
-              "alternateName": ["ZEDX AI Simulator", "ZEDX"],
+              "alternateName": ["ZEDX AI Simulator", "ZEDX", "زيدكس", "زيدكس AI"],
               "url": "https://zedx-ai-simulator.vercel.app",
               "description": "ZEDX AI Interview Simulator is a real-time AI interview simulation coach providing real-time transcriptions and answer verification.",
               "applicationCategory": "BusinessApplication",
@@ -222,12 +222,50 @@ export default async function RootLayout({
               "@context": "https://schema.org",
               "@type": "Organization",
               "name": "ZEDX AI Interview Simulator",
-              "alternateName": ["ZEDX", "ZEDX AI Simulator"],
+              "alternateName": ["ZEDX", "ZEDX AI Simulator", "زيدكس", "زيدكس AI"],
               "url": "https://zedx-ai-simulator.vercel.app",
               "logo": "https://zedx-ai-simulator.vercel.app/zedx-logo.png",
               "description": "ZEDX AI Interview Simulator - Free Real-Time Interview Simulation & Training Coach.",
               "sameAs": [
                 "https://www.producthunt.com/posts/zedx-ai"
+              ]
+            })
+          }}
+        />
+
+        {/* FAQ Schema for Generative Engine Optimization (GEO) */}
+        <script
+          key="schema-faq"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              "mainEntity": [
+                {
+                  "@type": "Question",
+                  "name": "What is ZEDX AI?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "ZEDX AI is a real-time Voice-to-Voice AI Interview Simulator and the best AI Interviewer. It acts as an artificial intelligence personal coach that conducts mock interviews, provides real-time transcription, and gives instant granular feedback to help job seekers prepare for actual interviews."
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": "How does the ZEDX AI Interview Simulator work?",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Users can start a session where the ZEDX AI Interviewer asks them technical or behavioral interview questions verbally. The user answers using their microphone, and the AI evaluates the response in real-time with zero latency across multiple languages."
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": "ما هو موقع زيدكس ZEDX AI؟",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "زيدكس (ZEDX AI) هو محاكي مقابلات عمل يعمل بالذكاء الاصطناعي الصوتي وأفضل محاور ذكاء اصطناعي (AI Interviewer). يقوم بإجراء مقابلات وهمية (Mock Interviews) مع المستخدم ويقيم إجاباته بشكل فوري لتدريبه على المقابلات الحقيقية."
+                  }
+                }
               ]
             })
           }}

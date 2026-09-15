@@ -11,7 +11,8 @@ import { SUPPORTED_LANGUAGES } from "@/lib/languages";
 import { resumeService, Resume } from "@/lib/resume-service";
 import { ModelChat } from "@/components/dashboard/model-chat";
 import { motion } from "framer-motion";
-import { AnimatedOrb } from "@/components/animated-orb";
+import dynamic from 'next/dynamic';
+const AnimatedOrb = dynamic(() => import('@/components/animated-orb').then(mod => mod.AnimatedOrb), { ssr: false });
 import { supabase } from "@/lib/supabase";
 
 // Custom SVG Icons

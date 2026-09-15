@@ -5,7 +5,8 @@ import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Check, Download, Monitor, Shield, Info } from "lucide-react";
 import Link from "next/link";
-import { AnimatedOrb } from "@/components/animated-orb";
+import dynamic from 'next/dynamic';
+const AnimatedOrb = dynamic(() => import('@/components/animated-orb').then(mod => mod.AnimatedOrb), { ssr: false });
 
 export default function DownloadPage() {
     return (

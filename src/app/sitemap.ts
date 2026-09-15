@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = 'https://zedx-ai-assistant-1.vercel.app';
+    const baseUrl = 'https://zedx-ai-simulator.vercel.app';
 
     const routes = [
         '',
@@ -13,7 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         '/terms'
     ].map((route) => ({
         url: `${baseUrl}${route}`,
-        lastModified: new Date(),
+        lastModified: new Date('2026-09-15'),
         changeFrequency: 'daily' as const,
         priority: route === '' ? 1 : 0.8,
     }));

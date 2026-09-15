@@ -7,7 +7,8 @@ import { Check, ArrowRight, ShieldCheck, Wallet, Globe, Copy, CheckCircle2, Help
 import { FcGoogle } from "react-icons/fc";
 import Image from "next/image";
 import Link from "next/link";
-import { AnimatedOrb } from "@/components/animated-orb";
+import dynamic from 'next/dynamic';
+const AnimatedOrb = dynamic(() => import('@/components/animated-orb').then(mod => mod.AnimatedOrb), { ssr: false });
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Navbar } from "@/components/navbar";
