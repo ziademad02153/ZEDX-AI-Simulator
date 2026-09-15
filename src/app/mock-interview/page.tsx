@@ -441,9 +441,15 @@ Resume Context: ${resume}`;
 
             if (language.startsWith('ar')) {
                 // Arabic goes to our Vercel API (which uses ElevenLabs)
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token || "";
+
                 const res = await fetch("/api/tts", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
                     body: JSON.stringify({ text, language })
                 });
 

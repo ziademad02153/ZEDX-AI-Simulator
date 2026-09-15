@@ -1,9 +1,36 @@
 import { NextResponse } from 'next/server';
-
+import { createClient } from '@supabase/supabase-js';
 import { SUPPORTED_LANGUAGES } from '@/lib/languages';
 
 export async function POST(req: Request) {
     try {
+        // 1. Authenticate Request
+        const authHeader = req.headers.get('Authorization');
+        let token = authHeader?.split(' ')[1];
+        if (token === 'undefined' || token === 'null') token = undefined;
+
+        if (!token) {
+            return NextResponse.json({ error: 'Unauthorized: No token provided' }, { status: 401 });
+        }
+
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseAdmin = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+
+        if (authError || !user) {
+            return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
+        }
+
+        // 2. Rate Limiting for TTS (15 requests per minute)
+        const { data: isAllowed, error: rateLimitError } = await supabaseAdmin.rpc('check_rate_limit', {
+            p_user_id: user.id,
+            p_max: 15
+        });
+
+        if (rateLimitError || !isAllowed) {
+            return NextResponse.json({ error: 'Rate limit exceeded for TTS' }, { status: 429 });
+        }
+
         const { text, language = 'en-US' } = await req.json();
 
         if (!text) {
