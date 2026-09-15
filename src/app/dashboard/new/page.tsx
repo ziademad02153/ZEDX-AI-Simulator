@@ -51,8 +51,8 @@ const AI_MODELS = [
         tier: "free"
     },
     {
-        id: "qwen/qwen3.6-27b",
-        name: "Qwen 3.6 27B",
+        id: "qwen/qwen3.8-27b",
+        name: "Qwen 3.8 27B",
         description: "Multilingual Pro",
         logo: "/qwen.png",
         gradient: "from-indigo-500/20 to-violet-500/20",
@@ -81,7 +81,7 @@ export default function NewInterviewPage() {
     const [language, setLanguage] = useState("en-US");
     const [difficulty, setDifficulty] = useState("Intermediate");
     const [questionCount, setQuestionCount] = useState("4");
-    const [selectedModel, setSelectedModel] = useState("qwen/qwen3.6-27b");
+    const [selectedModel, setSelectedModel] = useState("qwen/qwen3.8-27b");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -139,11 +139,15 @@ export default function NewInterviewPage() {
 
         try {
             const savedModel = localStorage.getItem("selected_ai_model");
-            if (savedModel) setSelectedModel(savedModel);
+            if (savedModel && AI_MODELS.some(m => m.id === savedModel)) {
+                setSelectedModel(savedModel);
+            } else {
+                setSelectedModel("qwen/qwen3.8-27b");
+            }
         } catch { }
     }, [router]);
 
-    const isValid = jobDescription.trim().length > 10 && resume.trim().length > 10;
+    const isValid = jobDescription.trim().length > 10 && resume.trim().length > 10 && AI_MODELS.some(m => m.id === selectedModel);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];

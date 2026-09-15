@@ -32,6 +32,7 @@ export default function HowToUsePage() {
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [isDetecting, setIsDetecting] = useState(true);
     const [audioLevel, setAudioLevel] = useState(0);
+    const [audioData, setAudioData] = useState<number[]>(new Array(20).fill(0));
     const [isTestingMic, setIsTestingMic] = useState(false);
     const [isMicTested, setIsMicTested] = useState(false);
     const [agreed, setAgreed] = useState(false);
@@ -114,13 +115,30 @@ export default function HowToUsePage() {
                     javascriptNode.onaudioprocess = () => {
                         const array = new Uint8Array(analyser.frequencyBinCount);
                         analyser.getByteFrequencyData(array);
-                        let values = 0;
-                        const length = array.length;
-                        for (let i = 0; i < length; i++) {
-                            values += (array[i]);
+                        const chunks = 10; // We will mirror these 10 chunks to make 20 bars
+                        const binsPerChunk = Math.floor(120 / chunks); 
+                        const halfAudioData = new Array(chunks).fill(0);
+                        let totalAvg = 0;
+
+                        for (let i = 0; i < chunks; i++) {
+                            let sum = 0;
+                            for (let j = 0; j < binsPerChunk; j++) {
+                                sum += array[i * binsPerChunk + j];
+                            }
+                            const avg = sum / binsPerChunk;
+                            halfAudioData[i] = avg * 0.5;
+                            totalAvg += avg;
                         }
-                        const average = values / length;
-                        setAudioLevel(average);
+                        
+                        // Create symmetrical 20-bar array: Center (index 9, 10) gets lowest frequencies (loudest)
+                        const symmetricalData = new Array(20).fill(0);
+                        for (let i = 0; i < 10; i++) {
+                            symmetricalData[9 - i] = halfAudioData[i];
+                            symmetricalData[10 + i] = halfAudioData[i];
+                        }
+                        
+                        setAudioData(symmetricalData);
+                        setAudioLevel((totalAvg / chunks) * 2.5);
                     };
                 } catch (err) {
                     console.error("Mic access error:", err);
@@ -273,25 +291,24 @@ export default function HowToUsePage() {
                                     </p>
                                     
                                     {/* Audio Visualizer */}
-                                    <div className="flex justify-center items-end gap-1.5 h-12 mb-8">
-                                        {[...Array(20)].map((_, i) => {
-                                            // Make center bars taller naturally, but modulate with audio level
+                                    <div className="flex justify-center items-center gap-1.5 h-16 mb-8">
+                                        {audioData.map((bandAmplitude, i) => {
+                                            // Make center bars taller naturally
                                             const centerDistance = Math.abs(10 - i);
-                                            const baseHeight = Math.max(15, 40 - (centerDistance * 3));
-                                            const activeHeight = isTestingMic ? baseHeight + (audioLevel * (0.5 + Math.random() * 0.5)) : baseHeight;
+                                            const baseHeight = Math.max(12, 30 - (centerDistance * 2));
+                                            const activeHeight = isTestingMic ? baseHeight + bandAmplitude : baseHeight;
+                                            const isGreen = isTestingMic && bandAmplitude > 4;
                                             
                                             return (
                                                 <motion.div 
                                                     key={i}
                                                     animate={{ height: Math.min(60, activeHeight) }}
-                                                    transition={{ duration: 0.1 }}
+                                                    transition={{ duration: 0.05, ease: "linear" }}
                                                     className={cn(
-                                                        "w-2 sm:w-3 rounded-full transition-colors",
-                                                        isTestingMic && audioLevel > 5 
-                                                            ? "bg-emerald-500" 
-                                                            : "bg-gray-200 dark:bg-white/10"
+                                                        "w-1.5 sm:w-2 rounded-full transition-colors",
+                                                        isGreen ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" : "bg-gray-200 dark:bg-white/10"
                                                     )}
-                                                    style={{ minHeight: "12px" }}
+                                                    style={{ minHeight: "8px" }}
                                                 />
                                             );
                                         })}
@@ -334,25 +351,12 @@ export default function HowToUsePage() {
                             </div>
                         </div>
 
-                        {/* Privacy Checkbox */}
-                        <label className="flex items-center gap-3 cursor-pointer mb-8 group" onClick={() => setAgreed(!agreed)}>
-                            <div className={cn(
-                                "w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors shrink-0",
-                                agreed ? "bg-emerald-500 border-emerald-500" : "border-gray-300 dark:border-gray-600 group-hover:border-emerald-400"
-                            )}>
-                                {agreed && <CheckCircle2 className="w-4 h-4 text-white" />}
-                            </div>
-                            <span className="text-gray-600 dark:text-gray-400 font-medium select-none">
-                                I agree to all <span className="text-blue-500 hover:underline">terms & privacy policies</span>
-                            </span>
-                        </label>
-
                         <Button
                             onClick={handleStart}
-                            disabled={!agreed}
+                            disabled={!isMicTested}
                             className={cn(
                                 "h-14 sm:h-16 px-12 text-lg sm:text-xl font-bold rounded-full shadow-lg transition-all",
-                                agreed 
+                                isMicTested 
                                     ? "bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white hover:scale-105 active:scale-95" 
                                     : "bg-gray-200 dark:bg-zinc-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                             )}

@@ -19,7 +19,7 @@ function shuffleArray<T>(arr: T[]): T[] {
 const GROQ_MODELS = [
     "openai/gpt-oss-20b",
     "openai/gpt-oss-120b",
-    "qwen/qwen3.6-27b"
+    "qwen/qwen3.8-27b"
 ];
 
 // Debug GET handler to verify endpoint reaches the server
@@ -124,10 +124,13 @@ export async function POST(request: Request) {
         // 5. Backend Model Security
         // Automatically fallback to free tier model if user doesn't have access
         let targetModel = model;
+        if (targetModel === "qwen/qwen3.6-27b") {
+            targetModel = "qwen/qwen3.8-27b";
+        }
         if (targetModel === "openai/gpt-oss-120b" && currentTier !== 'ultra') {
             targetModel = "openai/gpt-oss-20b";
         }
-        if (targetModel === "qwen/qwen3.6-27b" && currentTier === 'free') {
+        if (targetModel === "qwen/qwen3.8-27b" && currentTier === 'free') {
             targetModel = "openai/gpt-oss-20b";
         }
 

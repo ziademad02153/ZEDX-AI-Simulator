@@ -27,7 +27,7 @@ export default function MockInterviewPage() {
     const [interviewType, setInterviewType] = useState("Technical");
     const [questionCount, setQuestionCount] = useState(10);
     const [language, setLanguage] = useState("en-US");
-    const [model, setModel] = useState("qwen/qwen3.6-27b");
+    const [model, setModel] = useState("qwen/qwen3.8-27b");
 
     // Interview State
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -74,7 +74,7 @@ export default function MockInterviewPage() {
         const _type = localStorage.getItem("interview_context_type") || "Technical";
         const _count = parseInt(localStorage.getItem("interview_context_question_count") || "10", 10);
         const _lang = localStorage.getItem("interview_context_lang") || "en-US";
-        const _model = localStorage.getItem("selected_ai_model") || "qwen/qwen3.6-27b";
+        const _model = localStorage.getItem("selected_ai_model") || "qwen/qwen3.8-27b";
 
         if (!_jd || !_resume) {
             router.push("/dashboard/new");
@@ -330,7 +330,7 @@ Resume Context: ${resume}`;
                 const res = await fetch("/api/generate", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", ...(token ? { "Authorization": `Bearer ${token}` } : {}) },
-                    body: JSON.stringify({ model, promptType: 'mock_interview', promptContext: { interviewType, difficulty, language }, prompt })
+                    body: JSON.stringify({ model: (typeof window !== "undefined" ? localStorage.getItem("selected_ai_model") : null) || model, promptType: 'mock_interview', promptContext: { interviewType, difficulty, language }, prompt })
                 });
                 const data = await res.json().catch(() => ({}));
                 if (!isMounted.current) return;
@@ -421,6 +421,10 @@ Resume Context: ${resume}`;
             utteranceRef.current = utterance; // Prevent garbage collection
             utterance.lang = language;
             
+            // Make the fallback voice faster and more lively
+            utterance.rate = 1.15; // 15% faster
+            utterance.pitch = 1.1; // Slightly higher pitch for energy
+            
             const onEndOrError = () => {
                 setIsSpeaking(false);
                 setIsListening(true);
@@ -459,18 +463,53 @@ Resume Context: ${resume}`;
                 blob = await res.blob();
                 audioUrl = URL.createObjectURL(blob);
             } else {
-                // Non-Arabic uses Microsoft Edge TTS directly in the browser!
-                // This completely bypasses Vercel's IP bans/timeouts which were causing the 2 minute delay.
-                // @ts-ignore
-                const { EdgeTTS } = await import('@andresaya/edge-tts/dist/browser/edge-tts.esm.js');
-                const langConfig = SUPPORTED_LANGUAGES.find(l => l.code === language) || SUPPORTED_LANGUAGES[0];
-                const voiceName = langConfig.voice || 'en-US-ChristopherNeural';
-                
-                const tts = new EdgeTTS();
-                await tts.synthesize(text, voiceName);
-                const audioBuffer = tts.getAudioData();
-                blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
-                audioUrl = URL.createObjectURL(blob);
+                // Completely free, zero-latency client-side TTS using native browser voices
+                // This does NOT use WebSockets, so the red WebSocket error is impossible here.
+                const playPremiumNativeTTS = () => {
+                    setZedxText(text);
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utteranceRef.current = utterance;
+                    utterance.lang = language;
+                    
+                    // Apply speed and liveliness improvements
+                    utterance.rate = 1.15; // 15% faster
+                    utterance.pitch = 1.1; // Slightly higher pitch for energy
+                    
+                    const voices = window.speechSynthesis.getVoices();
+                    const langPrefix = language.split('-')[0]; // e.g. 'en', 'es', 'fr'
+                    
+                    // Prioritize premium MALE voices built into the user's OS/Browser for the specific language
+                    const bestMaleVoice = voices.find(v => 
+                        v.lang.startsWith(langPrefix) && 
+                        (v.name.includes("Google UK English Male") || v.name.includes("Daniel") || v.name.includes("Alex") || v.name.includes("David") || v.name.includes("Male"))
+                    ) || voices.find(v => v.lang.startsWith(langPrefix));
+                    
+                    if (bestMaleVoice) utterance.voice = bestMaleVoice;
+
+                    const onEndOrError = () => {
+                        setIsSpeaking(false);
+                        setIsListening(true);
+                        setUserTranscript("");
+                        if (recognitionRef.current) {
+                            try { recognitionRef.current.start(); } catch (e) {}
+                        }
+                    };
+                    
+                    utterance.onend = onEndOrError;
+                    utterance.onerror = onEndOrError;
+                    
+                    // Cancel any ongoing speech before starting
+                    window.speechSynthesis.cancel();
+                    window.speechSynthesis.speak(utterance);
+                };
+
+                // Browsers load voices asynchronously, we must ensure they are loaded before speaking
+                if (window.speechSynthesis.getVoices().length === 0) {
+                    window.speechSynthesis.onvoiceschanged = playPremiumNativeTTS;
+                } else {
+                    playPremiumNativeTTS();
+                }
+                return; // Exit early since audio playback is handled natively
             }
 
             if (!isMounted.current) return;

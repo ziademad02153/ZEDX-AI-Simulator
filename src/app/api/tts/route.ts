@@ -60,8 +60,12 @@ export async function POST(req: Request) {
             const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`;
 
             let lastError = null;
-            // Shuffle keys to distribute load evenly, but retry others if one is exhausted
-            const shuffledKeys = [...elevenLabsKeys].sort(() => Math.random() - 0.5);
+            // Proper Fisher-Yates shuffle to distribute keys evenly
+            const shuffledKeys = [...elevenLabsKeys];
+            for (let i = shuffledKeys.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledKeys[i], shuffledKeys[j]] = [shuffledKeys[j], shuffledKeys[i]];
+            }
 
             for (const apiKey of shuffledKeys) {
                 try {

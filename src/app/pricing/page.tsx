@@ -232,7 +232,7 @@ export default function PricingPage() {
                                 </div>
                                 <div>
                                     <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">2 Premium Models</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">GPT-OSS 20B & Qwen 3.6 27B</div>
+                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">GPT-OSS 20B & Qwen 3.8 27B</div>
                                 </div>
                             </div>
                         </div>
@@ -398,7 +398,7 @@ export default function PricingPage() {
                                 </div>
                                 <div>
                                     <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">3 Premium Models</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">GPT-OSS 120B, Qwen 3.6 27B, GPT-OSS 20B</div>
+                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">GPT-OSS 120B, Qwen 3.8 27B, GPT-OSS 20B</div>
                                 </div>
                             </div>
 

@@ -250,9 +250,9 @@ export default function InterviewPage() {
 
         try {
             // Get user's selected model
-            let selectedModel = "qwen/qwen3.6-27b";
+            let selectedModel = "qwen/qwen3.8-27b";
             try {
-                selectedModel = localStorage.getItem("selected_ai_model") || "qwen/qwen3.6-27b";
+                selectedModel = localStorage.getItem("selected_ai_model") || "qwen/qwen3.8-27b";
             } catch { /* localStorage unavailable */ }
 
             // Construct the prompt (Unified for all providers)
@@ -349,8 +349,8 @@ export default function InterviewPage() {
         setIsIndependentModeActive(false);
 
         try {
-            let selectedModel = "qwen/qwen3.6-27b";
-            try { selectedModel = localStorage.getItem("selected_ai_model") || "qwen/qwen3.6-27b"; } catch {}
+            let selectedModel = "qwen/qwen3.8-27b";
+            try { selectedModel = localStorage.getItem("selected_ai_model") || "qwen/qwen3.8-27b"; } catch {}
 
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;

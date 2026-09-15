@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 // import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, Sparkles, RefreshCw, Zap, Shield, Trophy } from "lucide-react";
+import { Eye, EyeOff, Sparkles, RefreshCw, Zap, Shield, Trophy, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { generateStrongPassword } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,6 +19,7 @@ export default function LoginPage() {
     const [isCheckingSession, setIsCheckingSession] = useState(true);
     const [mode, setMode] = useState<"signin" | "signup" | "verify" | "forgot" | "magiclink">("signin");
     const [showPassword, setShowPassword] = useState(false);
+    const [agreed, setAgreed] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
@@ -112,6 +113,12 @@ export default function LoginPage() {
         // Email validation
         if (mode !== "verify" && !validateEmail(formData.email)) {
             setError("Please enter a valid email address");
+            setIsLoading(false);
+            return;
+        }
+
+        if (mode === "signup" && !agreed) {
+            setError("You must agree to the Terms of Service and Privacy Policy to create an account.");
             setIsLoading(false);
             return;
         }
@@ -496,6 +503,16 @@ export default function LoginPage() {
                         )}
 
                         {/* Primary CTA */}
+                        {mode === 'signup' && (
+                            <label className="flex items-start gap-2.5 cursor-pointer mt-4 mb-2 group" onClick={() => setAgreed(!agreed)}>
+                                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors shrink-0 mt-0.5 ${agreed ? "bg-emerald-500 border-emerald-500" : "border-[#d1d1d6] dark:border-[#3a3a3c] group-hover:border-emerald-400"}`}>
+                                    {agreed && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                                </div>
+                                <span className="text-[13px] text-gray-600 dark:text-gray-400 font-medium select-none leading-tight">
+                                    I agree to the <span className="text-emerald-600 dark:text-emerald-400 hover:underline">Terms of Service</span> and <span className="text-emerald-600 dark:text-emerald-400 hover:underline">Privacy Policy</span>.
+                                </span>
+                            </label>
+                        )}
                         <button
                             type="submit"
                             disabled={isLoading}

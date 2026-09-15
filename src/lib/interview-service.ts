@@ -189,7 +189,8 @@ export const interviewService = {
                 .single();
 
             if (error) {
-                throw new InterviewServiceError("Failed to update meeting session", error);
+                console.error("Supabase update error:", error);
+                throw new InterviewServiceError(`Failed to update meeting session: ${error.message || JSON.stringify(error)}`, error);
             }
             
             return data as Interview;

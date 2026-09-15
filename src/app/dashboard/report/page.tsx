@@ -77,7 +77,7 @@ export default function ReportPage() {
                 const historyRaw = localStorage.getItem("interview_results");
                 if (!historyRaw) { router.push("/dashboard"); return; }
                 const history = JSON.parse(historyRaw);
-                const model = localStorage.getItem("selected_ai_model") || "qwen/qwen3.6-27b";
+                const model = localStorage.getItem("selected_ai_model") || "qwen/qwen3.8-27b";
                 const { supabase } = await import("@/lib/supabase");
                 let { data: { session } } = await supabase.auth.getSession();
                 
