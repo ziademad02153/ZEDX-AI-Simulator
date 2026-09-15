@@ -1,5 +1,5 @@
 export const SUPPORTED_LANGUAGES = [
-    { code: "en-US", voice: "en-US-ChristopherNeural", name: "English", native: "English", q1: "Welcome, I am ZED-X. I will be conducting your mock interview today. Are you ready to begin?", q2: "Great! Let's start. Could you please tell me a little bit about yourself?" },
+    { code: "en-US", voice: "en-US-GuyNeural", name: "English", native: "English", q1: "Welcome, I am ZED-X. I will be conducting your mock interview today. Are you ready to begin?", q2: "Great! Let's start. Could you please tell me a little bit about yourself?" },
     { code: "ar-EG", voice: "ar-EG-ShakirNeural", name: "Arabic (Egyptian)", native: "عربي (مصري)", q1: "أهلاً بيك، أنا زيد إكس. هعمل معاك الانترفيو التجريبي النهاردة. جاهز نبدأ؟", q2: "عظيم جداً! خلينا نبدأ.. ممكن تكلمني شوية عن نفسك وخبرتك؟" },
     { code: "ar-SA", voice: "ar-SA-HamedNeural", name: "Arabic (Formal)", native: "العربية (فصحى)", q1: "أهلاً بك، أنا زيد إكس. سأقوم بإجراء المقابلة التجريبية معك اليوم. هل أنت مستعد للبدء؟", q2: "عظيم! لنبدأ. هل يمكنك التحدث قليلاً عن نفسك وخبراتك؟" },
     { code: "es-ES", voice: "es-ES-AlvaroNeural", name: "Spanish", native: "Español", q1: "Bienvenido, soy ZED-X. Hoy realizaré tu entrevista de práctica. ¿Estás listo para empezar?", q2: "¡Genial! Empecemos. ¿Podrías hablarme un poco sobre ti?" },
