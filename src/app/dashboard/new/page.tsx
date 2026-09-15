@@ -11,8 +11,7 @@ import { SUPPORTED_LANGUAGES } from "@/lib/languages";
 import { resumeService, Resume } from "@/lib/resume-service";
 import { ModelChat } from "@/components/dashboard/model-chat";
 import { motion } from "framer-motion";
-import dynamic from 'next/dynamic';
-const AnimatedOrb = dynamic(() => import('@/components/animated-orb').then(mod => mod.AnimatedOrb), { ssr: false });
+import { AnimatedOrb } from '@/components/animated-orb-wrapper';
 import { supabase } from "@/lib/supabase";
 
 // Custom SVG Icons
@@ -87,9 +86,23 @@ export default function NewInterviewPage() {
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [savedResumes, setSavedResumes] = useState<Resume[]>([]);
+    const [isPremium, setIsPremium] = useState(false);
+    const [isLoadingPremium, setIsLoadingPremium] = useState(true);
     const [isDesktop, setIsDesktop] = useState(false);
     const [isPro, setIsPro] = useState(false);
     const [userTier, setUserTier] = useState<"free" | "pro" | "ultra">("free");
+
+    // Prevent accidental reload if the user has entered some data
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (jobDescription.length > 5 || resume) {
+                e.preventDefault();
+                e.returnValue = ''; // Standard way to trigger browser warning
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [jobDescription, resume]);
 
     // Load saved resumes
     useEffect(() => {

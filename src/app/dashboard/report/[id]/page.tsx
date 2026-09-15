@@ -30,6 +30,19 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [generationError, setGenerationError] = useState(false);
+
+    // Prevent accidental reload while generating the scorecard
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (isGenerating && !scorecard) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [isGenerating, scorecard]);
 
     useEffect(() => {
         const fetchInterview = async () => {
@@ -67,6 +80,9 @@ AI Responses generated during session (Candidate's Answers):
 ${data.analysis?.ai_responses?.length ? data.analysis.ai_responses.join("\n\n") : "Standard excellent responses."}
 `;
 
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 35000); // 35s frontend timeout
+
             const response = await fetch("/api/generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -76,15 +92,30 @@ ${data.analysis?.ai_responses?.length ? data.analysis.ai_responses.join("\n\n") 
                     promptContext: { language: data.analysis?.language || "en-US" },
                     prompt: userPrompt,
                     response_format: { type: "json_object" }
-                })
+                }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) throw new Error("Failed to generate scorecard");
 
             const resData = await response.json();
+            let parsedScorecard;
 
-            // With Structured Outputs (json_object), the response is guaranteed to be valid JSON
-            const parsedScorecard = JSON.parse(resData.content.trim());
+            try {
+                // With Structured Outputs (json_object), the response is guaranteed to be valid JSON
+                parsedScorecard = JSON.parse(resData.content.trim());
+            } catch (parseError) {
+                console.warn("Standard JSON parse failed, attempting regex extraction...", parseError);
+                // Robust fallback for markdown-wrapped JSON (e.g. ```json ... ```)
+                const jsonMatch = resData.content.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    parsedScorecard = JSON.parse(jsonMatch[0]);
+                } else {
+                    throw new Error("Could not extract JSON from AI response.");
+                }
+            }
 
             // Update the state
             setScorecard(parsedScorecard);
@@ -95,20 +126,7 @@ ${data.analysis?.ai_responses?.length ? data.analysis.ai_responses.join("\n\n") 
 
         } catch (err) {
             console.error("Error generating scorecard:", err);
-            // Fallback to a realistic default scorecard so the "Alibi" never crashes!
-            const fallbackScorecard: Scorecard = {
-                overallScore: 92,
-                technicalScore: 90,
-                communicationScore: 94,
-                strengths: ["Clear and concise communication", "Strong technical foundations", "Maintained composure under pressure"],
-                improvements: ["Could provide more real-world examples", "Elaborate slightly more on edge cases"],
-                detailedFeedback: "The candidate demonstrated an excellent grasp of the core concepts and communicated their thoughts clearly. They effectively utilized the generated insights to provide benchmark-level answers. Overall, a highly successful session with very minor areas for deeper elaboration."
-            };
-            setScorecard(fallbackScorecard);
-
-            // Save fallback to DB
-            const updatedAnalysis = { ...data.analysis, scorecard: fallbackScorecard as unknown as Record<string, unknown> };
-            await interviewService.updateInterview(id, { analysis: updatedAnalysis }).catch(console.error);
+            setGenerationError(true);
         } finally {
             setIsGenerating(false);
         }
@@ -133,6 +151,37 @@ ${data.analysis?.ai_responses?.length ? data.analysis.ai_responses.join("\n\n") 
                 </Link>
                 <div className="bg-red-50 text-red-600 p-6 rounded-2xl border border-red-100 max-w-2xl mx-auto">
                     {error || "Interview not found."}
+                </div>
+            </div>
+        );
+    }
+
+    if (generationError) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-[#0a0a0a]">
+                <div className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl p-10 rounded-[2.5rem] shadow-xl shadow-zinc-200/50 dark:shadow-none border border-red-200/50 dark:border-red-500/20 text-center max-w-md w-full relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-400 via-orange-500 to-red-400"></div>
+                    <AlertTriangle className="w-16 h-16 mx-auto mb-6 text-red-500" />
+                    <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">Analysis Failed</h2>
+                    <p className="text-gray-500 dark:text-gray-400 mb-8">
+                        We couldn't generate the scorecard due to a network or server issue. Your meeting data is saved safely. Please try again.
+                    </p>
+                    <div className="flex flex-col gap-3">
+                        <Button 
+                            onClick={() => {
+                                setGenerationError(false);
+                                if (interview) generateScorecard(interview);
+                            }}
+                            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl py-6"
+                        >
+                            Retry Analysis
+                        </Button>
+                        <Link href="/dashboard" className="w-full">
+                            <Button variant="ghost" className="w-full rounded-xl py-6 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                                Back to Dashboard
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
             </div>
         );

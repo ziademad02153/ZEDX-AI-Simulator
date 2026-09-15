@@ -165,7 +165,11 @@ export async function POST(request: Request) {
         // Helper function to call Groq with automatic fallback across models and keys
         const callGroqWithFallback = async (userPrompt: string, overrideMessages?: any[], keyOffset: number = 0) => {
             let lastError: Error | null = null;
+            let attempts = 0;
+            const MAX_ATTEMPTS = 3; // Prevent 45-minute freeze if API is down
+
             for (const currentModel of uniqueModels) {
+                if (attempts >= MAX_ATTEMPTS) break;
                 // Rotate keys per chunk so they don't all hit the same first key
                 const rotatedKeys = [
                     ...shuffledKeys.slice(keyOffset % shuffledKeys.length),
@@ -173,12 +177,16 @@ export async function POST(request: Request) {
                 ];
 
                 for (const apiKey of rotatedKeys) {
+                    if (attempts >= MAX_ATTEMPTS) break;
+                    attempts++;
+                    
                     try {
                         const groqMessages = overrideMessages || [{ role: "user", content: userPrompt }];
                         const finalMessages = systemPrompt ? [{ role: "system", content: systemPrompt }, ...groqMessages] : groqMessages;
 
                         const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 60000);
+                        // Reduce individual timeout to 30s so the user doesn't wait forever
+                        const timeoutId = setTimeout(() => controller.abort(), 30000);
 
                         // Fix max_tokens: 1000 -> 2048 for reports to prevent truncation
                         const requestBody: any = {
@@ -210,12 +218,12 @@ export async function POST(request: Request) {
 
                         return { content, modelUsed: currentModel };
                     } catch (error: any) {
-                        console.error(`[AI Fallback] Model: ${currentModel} | Key: ***${apiKey.slice(-4)} | Error:`, error.message);
+                        console.error(`[AI Fallback] Model: ${currentModel} | Key: ***${apiKey.slice(-4)} | Attempt: ${attempts}/${MAX_ATTEMPTS} | Error:`, error.message);
                         lastError = error;
                     }
                 }
             }
-            throw lastError || new Error("All Groq models and keys exhausted.");
+            throw lastError || new Error("AI request failed after maximum fallback attempts.");
         };
 
         try {

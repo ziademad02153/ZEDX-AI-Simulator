@@ -140,6 +140,19 @@ export default function InterviewPage() {
         };
     }, []);
 
+    // Prevent accidental reload during an active interview
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            // Only warn if they haven't explicitly ended the interview (isSaving = true means they clicked End)
+            if (!isSaving && (transcript.length > 5 || allQAPairs.length > 0)) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [isSaving, transcript, allQAPairs]);
+
     useEffect(() => {
         setHasMounted(true);
         try {
@@ -1197,6 +1210,30 @@ export default function InterviewPage() {
 
     // Handle End Interview - Save to history and navigate
     const handleEndInterview = async () => {
+        // Cleanup ALL streams immediately to prevent memory leak and turn off hardware lights
+        try {
+            if (videoRef.current && videoRef.current.srcObject) {
+                const stream = videoRef.current.srcObject as MediaStream;
+                stream.getTracks().forEach(track => track.stop());
+                videoRef.current.srcObject = null;
+            }
+            if (screenStreamRef.current) {
+                screenStreamRef.current.getTracks().forEach(track => track.stop());
+                screenStreamRef.current = null;
+            }
+            if (activeStreamsRef.current) {
+                activeStreamsRef.current.forEach(stream => {
+                    stream.getTracks().forEach(track => track.stop());
+                });
+                activeStreamsRef.current = [];
+            }
+            if (recognitionRef.current) {
+                recognitionRef.current.stop();
+            }
+        } catch (e) {
+            console.error("[Cleanup] Error stopping streams:", e);
+        }
+
         // Only save if there's meaningful content
         if (transcript.length < 10 && allQAPairs.length === 0) {
             router.push("/dashboard");
@@ -1217,7 +1254,8 @@ export default function InterviewPage() {
                 ? allQAPairs.map((qa, idx) => `Q${idx + 1}: ${qa.question}\n\nA${idx + 1}: ${qa.answer}`).join('\n\n---\n\n')
                 : transcript;
 
-            const savedInterview = await interviewService.saveInterview(
+            // Add a timeout to the save operation to prevent silent freeze
+            const savePromise = interviewService.saveInterview(
                 title,
                 formattedTranscript,
                 {
@@ -1229,11 +1267,21 @@ export default function InterviewPage() {
                     questions: allQAPairs.map(qa => qa.question)
                 }
             );
+
+            // 15 seconds timeout
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error("Save operation timed out")), 15000)
+            );
+
+            const savedInterview = await Promise.race([savePromise, timeoutPromise]) as any;
+
             showToast("Meeting saved to history", "success");
             router.push(`/dashboard/report/${savedInterview.id}`);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to save interview:", error);
-            showToast("Failed to save meeting. Please check your connection and try again.", "error");
+            showToast(error.message === "Save operation timed out" 
+                ? "Connection is slow. Please try saving again." 
+                : "Failed to save meeting. Please check your connection and try again.", "error");
             // Do NOT navigate away, let the user retry so data isn't lost!
         } finally {
             setIsSaving(false);
