@@ -8,6 +8,7 @@ import { interviewService, Interview } from "@/lib/interview-service";
 import { cn } from "@/lib/utils";
 import { useConfirmDialog } from "@/components/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePostHog } from 'posthog-js/react';
 
 interface QAPair {
     question: string;
@@ -79,6 +80,7 @@ export default function InterviewHistoryPage() {
     const [error, setError] = useState<string | null>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
+    const posthog = usePostHog();
     const loadInterviews = useCallback(async () => {
         try {
             setIsLoading(true);
@@ -155,6 +157,9 @@ export default function InterviewHistoryPage() {
     };
 
     const toggleExpand = (id: string) => {
+        if (expandedId !== id) {
+            posthog.capture('report_viewed', { interview_id: id });
+        }
         setExpandedId(expandedId === id ? null : id);
     };
 

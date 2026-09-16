@@ -13,6 +13,7 @@ import { ModelChat } from "@/components/dashboard/model-chat";
 import { motion } from "framer-motion";
 import { AnimatedOrb } from '@/components/animated-orb-wrapper';
 import { supabase } from "@/lib/supabase";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 // Custom SVG Icons
 const BriefcaseIcon = () => (
@@ -73,8 +74,11 @@ const AI_MODELS = [
 // ParticleWave removed to improve mobile performance/clarity
 // import { ParticleWave } from "@/components/ui/particle-wave";
 
+import { usePostHog } from 'posthog-js/react';
+
 export default function NewInterviewPage() {
     const router = useRouter();
+    const posthog = usePostHog();
     const [jobDescription, setJobDescription] = useState("");
     const [resume, setResume] = useState("");
     const [interviewType, setInterviewType] = useState("Technical");
@@ -82,6 +86,7 @@ export default function NewInterviewPage() {
     const [difficulty, setDifficulty] = useState("Intermediate");
     const [questionCount, setQuestionCount] = useState("4");
     const [selectedModel, setSelectedModel] = useState("qwen/qwen3.8-27b");
+    const [selectedResumeId, setSelectedResumeId] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -172,6 +177,8 @@ export default function NewInterviewPage() {
             setResume(data.text);
             setError(null);
             setSuccessMessage(`Resume "${file.name}" uploaded successfully!`);
+            
+            posthog.capture('cv_uploaded', { file_type: file.type });
 
             try {
                 const fileName = file.name.replace('.pdf', '').replace('.PDF', '');
@@ -192,6 +199,14 @@ export default function NewInterviewPage() {
         }
 
         setIsLoading(true);
+        posthog.capture('interview_started', {
+            mode: interviewType,
+            language: language,
+            difficulty: difficulty,
+            questions: questionCount,
+            model: selectedModel
+        });
+        
         try {
             localStorage.setItem("interview_context_jd", jobDescription);
             localStorage.setItem("interview_context_resume", resume);
@@ -297,17 +312,18 @@ export default function NewInterviewPage() {
                                         Upload New CV
                                         <input type="file" className="hidden" accept=".pdf,.txt" onChange={handleFileUpload} />
                                     </label>
-                                    <select
-                                        className="h-11 sm:h-12 px-4 w-full sm:w-56 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm text-gray-600 dark:text-gray-300 focus:outline-none focus:border-emerald-500/50 truncate order-2"
-                                        onChange={(e) => {
-                                            const r = savedResumes.find(sr => sr.id === e.target.value);
-                                            if (r) setResume(r.content);
-                                        }}
-                                        defaultValue=""
-                                    >
-                                        <option value="" disabled>Saved Resumes</option>
-                                        {savedResumes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                                    </select>
+                                    <div className="w-full sm:w-56 order-2">
+                                        <CustomSelect
+                                            options={savedResumes.map(r => ({ label: r.name, value: r.id }))}
+                                            value={selectedResumeId}
+                                            onChange={(id) => {
+                                                const r = savedResumes.find(sr => sr.id === id);
+                                                if (r) { setResume(r.content); setSelectedResumeId(id); }
+                                            }}
+                                            placeholder="Saved Resumes"
+                                            triggerClassName="h-11 sm:h-12"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                             <textarea
@@ -331,118 +347,96 @@ export default function NewInterviewPage() {
                             transition={{ duration: 0.4, delay: 0.2 }}
                             className="grid grid-cols-1 sm:grid-cols-2 gap-6"
                         >
-                            <div className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
+                            <div className="relative z-[60] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
                                 <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
                                     <div className="drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
                                         <Image src="/Interview-Logo.png" alt="Interview Type" width={28} height={28} className="object-contain dark:invert transition-all" />
                                     </div>
                                     Interview Type
                                 </label>
-                                <select
-                                    className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 sm:p-4 text-sm sm:text-base text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500/50"
+                                <CustomSelect
+                                    options={[
+                                        { label: "Technical", value: "Technical" },
+                                        { label: "Behavioral", value: "Behavioral" },
+                                        { label: "Project Deep Dive", value: "Project Deep Dive" },
+                                    ]}
                                     value={interviewType}
-                                    onChange={(e) => setInterviewType(e.target.value)}
-                                >
-                                    <option value="Technical">Technical</option>
-                                    <option value="Behavioral">Behavioral</option>
-                                    <option value="Project Deep Dive">Project Deep Dive</option>
-                                </select>
+                                    onChange={(v) => setInterviewType(v)}
+                                />
                             </div>
-                            <div className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
+                            <div className="relative z-[50] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
                                 <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
                                     <div className="text-emerald-600 dark:text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
                                         <Image src="/Multi-Language.png" alt="Language Globe" width={28} height={28} className="object-contain" />
                                     </div> 
                                     Language
                                 </label>
-                                <select
-                                    className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 sm:p-4 text-sm sm:text-base text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500/50"
-                                    value={language}
-                                    onChange={(e) => {
-                                        const idx = SUPPORTED_LANGUAGES.findIndex(l => l.code === e.target.value);
+                                <CustomSelect
+                                    options={SUPPORTED_LANGUAGES.map((lang, idx) => {
                                         const isUltraLang = idx >= 20;
                                         const isProLang = idx >= 2 && idx < 20;
-                                        
-                                        if (isUltraLang && userTier !== 'ultra' && !isDesktop) {
-                                            router.push("/pricing");
-                                            return;
-                                        }
-                                        if (isProLang && userTier === 'free' && !isDesktop) {
-                                            router.push("/pricing");
-                                            return;
-                                        }
-                                        setLanguage(e.target.value);
-                                    }}
-                                >
-                                    {SUPPORTED_LANGUAGES.map((lang, idx) => {
-                                        const isUltraLang = idx >= 20;
-                                        const isProLang = idx >= 2 && idx < 20;
-                                        
                                         let label = lang.native;
-                                        if (isUltraLang && userTier !== 'ultra' && !isDesktop) label += ' (ULTRA)';
-                                        if (isProLang && userTier === 'free' && !isDesktop) label += ' (PRO)';
-                                        
-                                        return (
-                                            <option key={lang.code} value={lang.code}>
-                                                {label}
-                                            </option>
-                                        );
+                                        if (isUltraLang && userTier !== 'ultra' && !isDesktop) label += ' 🔒 ULTRA';
+                                        if (isProLang && userTier === 'free' && !isDesktop) label += ' 🔒 PRO';
+                                        return { label, value: lang.code };
                                     })}
-                                </select>
+                                    value={language}
+                                    onChange={(val) => {
+                                        const idx = SUPPORTED_LANGUAGES.findIndex(l => l.code === val);
+                                        const isUltraLang = idx >= 20;
+                                        const isProLang = idx >= 2 && idx < 20;
+                                        if (isUltraLang && userTier !== 'ultra' && !isDesktop) { router.push("/pricing"); return; }
+                                        if (isProLang && userTier === 'free' && !isDesktop) { router.push("/pricing"); return; }
+                                        setLanguage(val);
+                                    }}
+                                />
                             </div>
                             {!isDesktop && (
                                 <>
-                                <div className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
+                                <div className="relative z-[40] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
                                     <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
                                         <div className="drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
                                             <Image src="/Granular Scorecards.png" alt="Difficulty Scorecard" width={28} height={28} className="object-contain" />
                                         </div> 
                                     Difficulty
                                 </label>
-                                <select
-                                    className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 sm:p-4 text-sm sm:text-base text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500/50"
+                                <CustomSelect
+                                    options={[
+                                        { label: "Beginner", value: "Beginner" },
+                                        { label: "Intermediate", value: "Intermediate" },
+                                        { label: `Expert${userTier !== 'ultra' && !isDesktop ? ' 🔒 ULTRA' : ''}`, value: "Expert" },
+                                    ]}
                                     value={difficulty}
-                                    onChange={(e) => {
-                                        if (e.target.value === "Expert" && userTier !== 'ultra' && !isDesktop) {
-                                            router.push("/pricing");
-                                            return;
-                                        }
-                                        setDifficulty(e.target.value);
+                                    onChange={(val) => {
+                                        if (val === "Expert" && userTier !== 'ultra' && !isDesktop) { router.push("/pricing"); return; }
+                                        setDifficulty(val);
                                     }}
-                                >
-                                    <option value="Beginner">Beginner</option>
-                                    <option value="Intermediate">Intermediate</option>
-                                    <option value="Expert">Expert {userTier !== 'ultra' && !isDesktop ? '(ULTRA)' : ''}</option>
-                                </select>
+                                />
                             </div>
-                            <div className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
+                            <div className="relative z-[30] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
                                 <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
                                     <div className="drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
                                         <Image src="/question.png" alt="Questions" width={36} height={36} className="object-contain scale-110" />
                                     </div> 
                                     Questions
                                 </label>
-                                <select
-                                    className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 sm:p-4 text-sm sm:text-base text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500/50"
+                                <CustomSelect
+                                    options={[
+                                        { label: "4 Questions (Free)", value: "4" },
+                                        { label: `10 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "10" },
+                                        { label: `15 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "15" },
+                                        { label: `20 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "20" },
+                                        { label: `25 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "25" },
+                                        { label: `30 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "30" },
+                                        { label: `35 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "35" },
+                                        { label: `40 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "40" },
+                                    ]}
                                     value={questionCount}
-                                    onChange={(e) => {
-                                        const val = parseInt(e.target.value);
-                                        if (val > 4 && !isPro && !isDesktop) {
-                                            router.push("/pricing");
-                                            return;
-                                        }
-                                        setQuestionCount(e.target.value);
+                                    onChange={(val) => {
+                                        if (parseInt(val) > 4 && !isPro && !isDesktop) { router.push("/pricing"); return; }
+                                        setQuestionCount(val);
                                     }}
-                                >
-                                    <option value="4">4 Questions (Free Limit)</option>
-                                    <option value="10">10 Questions {!isPro && !isDesktop ? '(PRO)' : ''}</option>
-                                    <option value="15">15 Questions {!isPro && !isDesktop ? '(PRO)' : ''}</option>
-                                    <option value="20">20 Questions {!isPro && !isDesktop ? '(PRO)' : ''}</option>
-                                    <option value="25">25 Questions {!isPro && !isDesktop ? '(PRO)' : ''}</option>
-                                    <option value="30">30 Questions {!isPro && !isDesktop ? '(PRO)' : ''}</option>
-                                    <option value="35">35 Questions {!isPro && !isDesktop ? '(PRO)' : ''}</option>
-                                    <option value="40">40 Questions {!isPro && !isDesktop ? '(PRO)' : ''}</option>
-                                </select>
+                                />
                             </div>
                                 </>
                             )}

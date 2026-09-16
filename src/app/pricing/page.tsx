@@ -14,9 +14,11 @@ import { supabase } from "@/lib/supabase";
 import { Navbar } from "@/components/navbar";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { usePostHog } from 'posthog-js/react';
 
 export default function PricingPage() {
     const router = useRouter();
+    const posthog = usePostHog();
     const [isInstapayModalOpen, setIsInstapayModalOpen] = useState(false);
     const [instapayTier, setInstapayTier] = useState<"pro" | "ultra">("pro");
     const [transactionId, setTransactionId] = useState("");
@@ -27,6 +29,7 @@ export default function PricingPage() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
+        posthog.capture('pricing_viewed');
         const fetchTier = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
@@ -36,7 +39,7 @@ export default function PricingPage() {
             }
         };
         fetchTier();
-    }, []);
+    }, [posthog]);
 
     const handleInstapaySubmit = async () => {
         if (!transactionId.trim()) return;
@@ -67,6 +70,7 @@ export default function PricingPage() {
                 setIsSubmitting(false);
                 return;
             } else {
+                posthog.capture('purchase_completed', { tier: instapayTier, method: 'instapay' });
                 setSubmitSuccess(true);
             }
         } catch (e) {
@@ -272,6 +276,7 @@ export default function PricingPage() {
                                                     router.push("/login");
                                                     return;
                                                 }
+                                                posthog.capture('checkout_started', { tier: 'pro', method: 'gumroad' });
                                                 window.open('https://ziademad5.gumroad.com/l/hkfdfv', '_blank');
                                             }}
                                         >
@@ -291,6 +296,7 @@ export default function PricingPage() {
                                                 router.push("/login");
                                                 return;
                                             }
+                                            posthog.capture('checkout_started', { tier: 'pro', method: 'instapay' });
                                             setInstapayTier("pro");
                                             setIsInstapayModalOpen(true);
                                         }}
@@ -439,6 +445,7 @@ export default function PricingPage() {
                                                     return;
                                                 }
                                                 // TODO: Update with real Ultra link
+                                                posthog.capture('checkout_started', { tier: 'ultra', method: 'gumroad' });
                                                 window.open('https://ziademad5.gumroad.com/l/molojy', '_blank');
                                             }}
                                         >
@@ -457,6 +464,7 @@ export default function PricingPage() {
                                                 router.push("/login");
                                                 return;
                                             }
+                                            posthog.capture('checkout_started', { tier: 'ultra', method: 'instapay' });
                                             setInstapayTier("ultra");
                                             setIsInstapayModalOpen(true);
                                         }}

@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { PageTransition } from "@/components/page-transition";
 
 
@@ -67,6 +67,7 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     const router = useRouter();
+    const pathname = usePathname();
     const [showSettings, setShowSettings] = useState(false);
     const [, setMobileMenuOpen] = useState(false);
     const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -78,6 +79,22 @@ export default function DashboardLayout({
                 router.push("/login?reason=expired");
                 return;
             }
+
+            // Skip onboarding check if user just finished an interview (on report page)
+            const isReportPage = pathname === '/dashboard/report' || pathname?.startsWith('/dashboard/report');
+            if (!isReportPage) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('profession, country')
+                    .eq('id', data.session.user.id)
+                    .single();
+
+                if (!profile?.profession || !profile?.country) {
+                    router.push("/onboarding");
+                    return;
+                }
+            }
+
             setIsAuthChecking(false);
         };
         checkAuth();
@@ -85,7 +102,7 @@ export default function DashboardLayout({
         const handleOpenSettings = () => setShowSettings(true);
         window.addEventListener('openSettings', handleOpenSettings);
         return () => window.removeEventListener('openSettings', handleOpenSettings);
-    }, [router]);
+    }, [router, pathname]);
 
     if (isAuthChecking) {
         return (

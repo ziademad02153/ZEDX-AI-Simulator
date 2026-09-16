@@ -13,6 +13,7 @@
   --foreground: #ededed;
   --card: #18181b;
   --card-foreground: #ededed;
+  color-scheme: dark;
 }
 
 /* 
@@ -43,12 +44,60 @@
 
 html, body {
   overflow-x: hidden;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-inter), sans-serif;
+}
+
+/* Global Webkit Scrollbar - Target ALL elements including the window itself */
+*, html, body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+}
+
+::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track,
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb,
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover,
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.8);
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-thumb,
+.dark html::-webkit-scrollbar-thumb,
+.dark body::-webkit-scrollbar-thumb {
+  background: rgba(161, 161, 170, 0.2);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover,
+.dark html::-webkit-scrollbar-thumb:hover,
+.dark body::-webkit-scrollbar-thumb:hover {
+  background: rgba(161, 161, 170, 0.5);
 }
 
 /* Utility classes for Tailwind */
@@ -66,6 +115,19 @@ body {
 
 .text-card-foreground {
   color: var(--card-foreground);
+}
+
+/* ── Native <select> dark mode fix ──────────────────────────────────────── */
+/* Forces the OS-rendered dropdown panel to use dark colours in dark mode   */
+.dark select {
+  color-scheme: dark;
+  background-color: #18181b;
+  color: #ededed;
+}
+
+.dark select option {
+  background-color: #18181b;
+  color: #ededed;
 }
 
 /* Custom Animations */

@@ -14,6 +14,7 @@ import { interviewService } from "@/lib/interview-service";
 import { supabase } from "@/lib/supabase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Lock } from "lucide-react";
+import { usePostHog } from 'posthog-js/react';
 // --- Types for Web Speech API ---
 interface SpeechRecognitionEvent extends Event {
     results: SpeechRecognitionResultList;
@@ -48,6 +49,7 @@ interface SpeechRecognition extends EventTarget {
 
 export default function InterviewPage() {
     const router = useRouter();
+    const posthog = usePostHog();
     const { showToast } = useConfirmDialog();
     const videoRef = useRef<HTMLVideoElement>(null);
     const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -69,7 +71,7 @@ export default function InterviewPage() {
     const [systemStatus, setSystemStatus] = useState({ browser: true, camera: false, mic: false });
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const _ignoreStatus = systemStatus;
-    const [interviewContext, setInterviewContext] = useState({ type: "", jd: "", resume: "", lang: "en-US" });
+    const [interviewContext, setInterviewContext] = useState({ type: "", jd: "", resume: "", lang: "en-US", difficulty: "Intermediate" });
     const [isAutoMode, setIsAutoMode] = useState(true); // Auto Answer ON by default
     const [lastTranscript, setLastTranscript] = useState<string>(""); // For retry functionality
     const [allQAPairs, setAllQAPairs] = useState<{ question: string, answer: string }[]>([]); // Track Q&A pairs
@@ -160,10 +162,11 @@ export default function InterviewPage() {
             const savedJD = localStorage.getItem("interview_context_jd") || "";
             const savedResume = localStorage.getItem("interview_context_resume") || "";
             const savedLang = localStorage.getItem("interview_context_lang") || "en-US";
-            setInterviewContext({ type: savedType, jd: savedJD, resume: savedResume, lang: savedLang });
+            const savedDifficulty = localStorage.getItem("interview_context_difficulty") || "Intermediate";
+            setInterviewContext({ type: savedType, jd: savedJD, resume: savedResume, lang: savedLang, difficulty: savedDifficulty });
         } catch {
             // localStorage unavailable (private mode)
-            setInterviewContext({ type: "General", jd: "", resume: "", lang: "en-US" });
+            setInterviewContext({ type: "General", jd: "", resume: "", lang: "en-US", difficulty: "Intermediate" });
         }
 
         // v18.0: Listen for scanner state changes (Atomic Sync)
@@ -1248,6 +1251,14 @@ export default function InterviewPage() {
 
             // Calculate interview duration in minutes
             const durationMinutes = Math.round((new Date().getTime() - interviewStartTime.getTime()) / 60000);
+
+            posthog.capture('interview_completed', {
+                duration_minutes: durationMinutes,
+                questions_answered: allQAPairs.length,
+                language: interviewContext.lang,
+                mode: interviewContext.type,
+                difficulty: interviewContext.difficulty
+            });
 
             // Format transcript with Q&A pairs for better history display
             const formattedTranscript = allQAPairs.length > 0

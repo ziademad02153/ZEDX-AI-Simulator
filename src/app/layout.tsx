@@ -6,6 +6,7 @@ import ErrorBoundary from "@/components/error-boundary";
 import { ConfirmDialogProvider } from "@/components/confirm-dialog";
 import { DesktopNavBar } from "@/components/desktop-nav";
 import { Toaster } from "sonner";
+import { PostHogProvider } from "@/components/posthog-provider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -278,17 +279,19 @@ export default async function RootLayout({
       >
         {!isHideNav && <DesktopNavBar />}
         <ErrorBoundary>
-          <ConfirmDialogProvider>
-            {children}
-            <Toaster position="bottom-right" richColors toastOptions={{
-              className: 'font-medium',
-              style: {
-                background: 'var(--background)',
-                color: 'var(--foreground)',
-                border: '1px solid var(--border)',
-              }
-            }} />
-          </ConfirmDialogProvider>
+          <PostHogProvider>
+            <ConfirmDialogProvider>
+              {children}
+              <Toaster position="bottom-right" richColors toastOptions={{
+                className: 'font-medium',
+                style: {
+                  background: 'var(--background)',
+                  color: 'var(--foreground)',
+                  border: '1px solid var(--border)',
+                }
+              }} />
+            </ConfirmDialogProvider>
+          </PostHogProvider>
         </ErrorBoundary>
       </body>
     </html>

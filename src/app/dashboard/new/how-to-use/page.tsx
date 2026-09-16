@@ -112,6 +112,8 @@ export default function HowToUsePage() {
                     analyser.connect(javascriptNode);
                     javascriptNode.connect(audioContext.destination);
                     
+                    let successTriggered = false;
+
                     javascriptNode.onaudioprocess = () => {
                         const array = new Uint8Array(analyser.frequencyBinCount);
                         analyser.getByteFrequencyData(array);
@@ -137,8 +139,19 @@ export default function HowToUsePage() {
                             symmetricalData[10 + i] = halfAudioData[i];
                         }
                         
+                        const avgLevel = totalAvg / chunks;
+                        
+                        // Automatically complete the mic test when enough sound is detected
+                        if (avgLevel > 15 && !successTriggered) {
+                            successTriggered = true;
+                            setTimeout(() => {
+                                setIsTestingMic(false);
+                                setIsMicTested(true);
+                            }, 800); // 800ms delay so they can see the visualizer jump before it closes
+                        }
+                        
                         setAudioData(symmetricalData);
-                        setAudioLevel((totalAvg / chunks) * 2.5);
+                        setAudioLevel(avgLevel * 2.5);
                     };
                 } catch (err) {
                     console.error("Mic access error:", err);
