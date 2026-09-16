@@ -71,7 +71,7 @@ export default function TermsOfServicePage() {
 
                     <section>
                         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">9. Contact</h2>
-                        <p>For questions about these Terms, contact us at: <a href="mailto:ziademadbts@gmail.com" className="text-emerald-600 hover:underline">ziademadbts@gmail.com</a></p>
+                        <p>For questions about these Terms, contact us at: <a href="mailto:zedx.ai.support@gmail.com" className="text-emerald-600 hover:underline">zedx.ai.support@gmail.com</a></p>
                     </section>
                 </div>
 

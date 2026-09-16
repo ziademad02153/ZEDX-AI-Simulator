@@ -88,7 +88,7 @@ export async function POST(req: Request) {
 
             const mailOptions = {
                 from: process.env.EMAIL_USER,
-                to: "ziademadbts@gmail.com",
+                to: "zedx.ai.support@gmail.com",
                 subject: "🚨 New Instapay Payment Request - ZEDX",
                 html: `
                     <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">

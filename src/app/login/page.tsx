@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { generateStrongPassword } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import { toast } from "sonner";
 
 export default function LoginPage() {
@@ -509,7 +510,7 @@ export default function LoginPage() {
                                     {agreed && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
                                 </div>
                                 <span className="text-[13px] text-gray-600 dark:text-gray-400 font-medium select-none leading-tight">
-                                    I agree to the <span className="text-emerald-600 dark:text-emerald-400 hover:underline">Terms of Service</span> and <span className="text-emerald-600 dark:text-emerald-400 hover:underline">Privacy Policy</span>.
+                                    I agree to the <Link href="/terms" target="_blank" className="text-emerald-600 dark:text-emerald-400 hover:underline" onClick={(e) => e.stopPropagation()}>Terms of Service</Link> and <Link href="/privacy" target="_blank" className="text-emerald-600 dark:text-emerald-400 hover:underline" onClick={(e) => e.stopPropagation()}>Privacy Policy</Link>.
                                 </span>
                             </label>
                         )}

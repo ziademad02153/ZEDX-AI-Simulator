@@ -181,7 +181,7 @@ export default function Home() {
             {/* Suggestion Button */}
             <div className="flex justify-center md:justify-end w-full mb-4 max-w-6xl mx-auto">
               <Link
-                href="mailto:ziademadbts@gmail.com"
+                href="mailto:zedx.ai.support@gmail.com"
                 className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-white dark:bg-[#111] border border-gray-200 dark:border-white/10 rounded-full shadow-sm hover:shadow-md transition-all hover:scale-105 group"
               >
                 <Image

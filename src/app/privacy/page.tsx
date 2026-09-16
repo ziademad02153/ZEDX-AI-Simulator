@@ -28,7 +28,7 @@ export default function PrivacyPolicyPage() {
                             <li>Engage with us in other related ways, including any sales, marketing, or events</li>
                         </ul>
                         <p className="mt-4 text-gray-600 dark:text-gray-300">
-                            <strong>Questions or concerns?</strong> Reading this Privacy Notice will help you understand your privacy rights and choices. If you do not agree with our policies and practices, please do not use our Services. If you still have any questions or concerns, please contact us at <a href="mailto:ziademadbts@gmail.com" className="text-emerald-600 hover:underline">ziademadbts@gmail.com</a>.
+                            <strong>Questions or concerns?</strong> Reading this Privacy Notice will help you understand your privacy rights and choices. If you do not agree with our policies and practices, please do not use our Services. If you still have any questions or concerns, please contact us at <a href="mailto:zedx.ai.support@gmail.com" className="text-emerald-600 hover:underline">zedx.ai.support@gmail.com</a>.
                         </p>
                     </section>
 
@@ -121,7 +121,7 @@ export default function PrivacyPolicyPage() {
                     <section id="section7" className="mb-10">
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">7. What are your privacy rights?</h2>
                         <p className="text-gray-600 dark:text-gray-300 mb-4">
-                            You have the right to request access, rectification, or erasure of your personal data. You can manage and delete your data directly in your Account Settings. For further assistance, contact us at <a href="mailto:ziademadbts@gmail.com" className="text-emerald-600 hover:underline">ziademadbts@gmail.com</a>.
+                            You have the right to request access, rectification, or erasure of your personal data. You can manage and delete your data directly in your Account Settings. For further assistance, contact us at <a href="mailto:zedx.ai.support@gmail.com" className="text-emerald-600 hover:underline">zedx.ai.support@gmail.com</a>.
                         </p>
                     </section>
                 </div>

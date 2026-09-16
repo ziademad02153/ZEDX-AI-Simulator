@@ -62,7 +62,7 @@ export async function POST(request: Request) {
                 tier: targetTier,
                 subscription_expires_at: expirationDate.toISOString()
             })
-            .eq("email", email.toLowerCase());
+            .ilike("email", email);
 
         if (error) {
             console.error("Gumroad Webhook DB Error:", error);

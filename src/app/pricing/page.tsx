@@ -604,7 +604,7 @@ export default function PricingPage() {
             {(userTier === 'pro' || userTier === 'ultra') && (
                 <div className="fixed bottom-6 left-6 z-50">
                     <Link 
-                        href="mailto:ziademadbts@gmail.com" 
+                        href="mailto:zedx.ai.support@gmail.com" 
                         className="flex items-center gap-3 bg-white dark:bg-[#111] border border-zinc-200 dark:border-white/10 px-5 py-3.5 rounded-full shadow-2xl hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_30px_rgba(255,255,255,0.05)] hover:-translate-y-1 transition-all group backdrop-blur-md"
                     >
                         <Image src="/Priority VIP Support.png" alt="Help Center" width={26} height={26} className="object-contain group-hover:scale-110 transition-transform" />
