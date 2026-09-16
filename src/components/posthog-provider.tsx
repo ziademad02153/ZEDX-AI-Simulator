@@ -13,7 +13,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       posthog.init(posthogKey, {
         api_host: posthogHost,
         person_profiles: 'identified_only',
-        capture_pageview: false 
+        capture_pageview: true 
       })
     }
   }, [])
