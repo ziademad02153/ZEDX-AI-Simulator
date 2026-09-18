@@ -40,9 +40,9 @@ export default function Home() {
               <StartButton variant="landing" />
             </div>
 
-            {/* Hero Visual: Realistic UI Mockup (Reverted) */}
+            {/* Hero Visual: Video Player */}
             <div className="relative w-full max-w-[56.25rem] lg:max-w-[900px] mx-auto perspective-1000 px-4">
-              <div className="bg-white dark:bg-zinc-900 rounded-[1.5rem] md:rounded-[2rem] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.12)] border border-gray-100 dark:border-zinc-700 overflow-hidden relative z-10 transition-transform duration-700 hover:rotate-x-1">
+              <div className="bg-black rounded-[1.5rem] md:rounded-[2rem] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.3)] border border-gray-100 dark:border-zinc-700 overflow-hidden relative z-10 transition-transform duration-700 hover:rotate-x-1">
                 <div className="bg-gray-50 dark:bg-zinc-800 border-b border-gray-100 dark:border-zinc-700 p-3 md:p-4 flex items-center gap-2 md:gap-2.5">
                   <div className="flex gap-1.5 md:gap-2">
                     <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-red-400"></div>
@@ -51,46 +51,20 @@ export default function Home() {
                   </div>
                   <div className="absolute left-0 right-0 flex justify-center pointer-events-none">
                     <span className="text-xs md:text-sm font-semibold text-gray-500 dark:text-gray-400">
-                      Real-Time Interview Simulation
+                      ZEDX AI Assistant Demo
                     </span>
                   </div>
                 </div>
-                <div className="p-4 md:p-10 bg-white dark:bg-zinc-900 min-h-[320px] md:min-h-[350px] flex flex-col items-center justify-center relative overflow-hidden">
-                  {/* Background Grid */}
-                  <div className="absolute inset-0 bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] bg-[size:3rem_3rem] md:bg-[size:5rem_5rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-60"></div>
-
-                  {/* Floating Chat Bubbles */}
-                  <div className="relative z-10 w-full max-w-4xl space-y-6 md:space-y-10">
-                    {/* Chat Bubble 1 (AI Question) */}
-                    <div className="flex gap-3 md:gap-7 items-start justify-start animate-fade-in-up w-full">
-                      <div className="w-8 h-8 md:w-13 md:h-13 rounded-full overflow-hidden bg-black flex items-center justify-center shadow-md flex-shrink-0 border border-gray-200">
-                        <Image src="/AI.jpg" alt="ZEDX AI Simulator" width={52} height={52} className="object-cover w-full h-full" />
-                      </div>
-                      <div className="bg-gray-100 dark:bg-zinc-800 rounded-[1.1rem] md:rounded-[2rem] rounded-tl-none p-3.5 md:p-6 text-[0.85rem] md:text-[1.05rem] text-gray-700 dark:text-gray-200 shadow-sm max-w-[calc(100%-3rem)] md:max-w-[85%] min-w-0 border border-gray-200/50 leading-relaxed font-medium">
-                        &quot;Can you explain how you optimized the database query performance in your previous e-commerce project?&quot;
-                      </div>
-                    </div>
-
-                    {/* Chat Bubble 2 (User Answer) */}
-                    <div className="flex gap-3 md:gap-7 items-start justify-end animate-fade-in-up w-full" style={{ animationDelay: '1s' }}>
-                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 border border-green-200 dark:border-green-800 rounded-[1.1rem] md:rounded-[2.1rem] rounded-tr-none p-4 md:p-8 text-[0.85rem] md:text-[1.1rem] text-gray-800 dark:text-gray-100 shadow-xl max-w-[calc(100%-3rem)] md:max-w-[85%] min-w-0 relative border-r-4 border-r-green-500 text-left">
-                        <div className="absolute -top-2.5 -left-2.5 md:-top-5 md:-left-5 bg-white dark:bg-zinc-800 border-2 border-green-500 dark:border-green-600 rounded-full p-1 md:p-2.5 shadow-xl">
-                          <Code className="w-4 h-4 md:w-6 md:h-6 text-green-500" />
-                        </div>
-                        <div className="mb-1 md:mb-2 text-left">
-                          <span className="text-[10px] md:text-xs font-bold text-emerald-700/80 dark:text-emerald-400/80 uppercase tracking-wider">
-                            Candidate Response
-                          </span>
-                        </div>
-                        <p className="leading-relaxed">
-                          &quot;I noticed the PostgreSQL join logic was causing a 4-second delay, so I added a composite index on the frequently queried columns, which decreased execution time by 85%.&quot;
-                        </p>
-                      </div>
-                      <div className="w-8 h-8 md:w-13 md:h-13 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center shadow-md flex-shrink-0 border border-gray-200">
-                        <Image src="/IIcon1.jpg" alt="User" width={52} height={52} className="object-cover w-full h-full" />
-                      </div>
-                    </div>
-                  </div>
+                <div className="relative w-full aspect-video bg-black flex items-center justify-center">
+                  <video
+                    src="/zedx.ai.0.1.DEMO.mp4"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    controls
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
                 </div>
               </div>
               {/* Massive Atmosphere Glow */}

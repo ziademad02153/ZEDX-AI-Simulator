@@ -620,7 +620,7 @@ Resume Context: ${resume}`;
                             exit={{ opacity: 0 }}
                             className="max-w-xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl relative"
                         >
-                            <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[10px] border-t-transparent border-r-[15px] border-r-white/5 border-b-[10px] border-b-transparent hidden md:block"></div>
+                            {/* Arrow removed for cleaner glassmorphism look */}
                             <p className="text-xl sm:text-2xl text-emerald-50 leading-relaxed">
                                 {zedxText}
                             </p>
