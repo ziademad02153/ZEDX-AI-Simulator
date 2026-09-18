@@ -86,7 +86,7 @@ export default function PricingPage() {
             {/* Background Glows */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-teal-500/10 blur-[120px] rounded-full pointer-events-none" />
-            
+
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-16 sm:pt-40 sm:pb-24 relative z-10 w-full">
                 <div className="text-center max-w-3xl mx-auto mb-10 md:mb-12 relative z-10">
                     <h1 className="text-[36px] md:text-[44px] lg:text-[48px] font-bold mb-3 md:mb-4 tracking-tight leading-[1.15] bg-clip-text text-transparent bg-gradient-to-b from-gray-900 to-gray-600 dark:from-white dark:to-zinc-300">
@@ -121,7 +121,7 @@ export default function PricingPage() {
                                 <Check className="w-[18px] h-[18px] text-emerald-500 shrink-0" strokeWidth={2.5} />
                                 <span className="text-[14px] font-medium">Basic AI model & feedback</span>
                             </div>
-                            
+
                             {/* Locked Pro Features */}
                             <div className="pt-3 space-y-5">
                                 <div className="flex items-start gap-3 text-gray-400 dark:text-zinc-600 min-h-[36px] items-center">
@@ -243,7 +243,7 @@ export default function PricingPage() {
 
                         <div className="space-y-3">
                             {userTier === 'pro' ? (
-                                <motion.div 
+                                <motion.div
                                     whileHover={{ scale: 1.01 }}
                                     className="w-full relative overflow-hidden flex flex-col items-center justify-center gap-3 rounded-full py-5 bg-black/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
                                 >
@@ -256,7 +256,7 @@ export default function PricingPage() {
                                     <span className="text-[11px] text-zinc-400 font-medium z-10 tracking-[0.15em] uppercase">Enjoy unlimited access</span>
                                 </motion.div>
                             ) : userTier === 'ultra' ? (
-                                <motion.div 
+                                <motion.div
                                     className="w-full relative overflow-hidden flex flex-col items-center justify-center gap-3 rounded-full py-5 bg-black/20 backdrop-blur-md border border-white/5 opacity-50 cursor-not-allowed"
                                 >
                                     <div className="flex items-center gap-3 z-10">
@@ -337,7 +337,7 @@ export default function PricingPage() {
                         </div>
 
                         <div className="space-y-4 mb-8 flex-1 relative z-10 border-t border-gray-200 dark:border-white/5 pt-6">
-                            
+
                             <div className="flex items-start gap-4">
                                 <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5">
                                     <AnimatedOrb />
@@ -347,17 +347,17 @@ export default function PricingPage() {
                                     <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">Zero latency, natural flowing conversations</div>
                                 </div>
                             </div>
-                            
+
                             <div className="flex items-start gap-4">
                                 <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5">
                                     <Image src="/Multi-Language.png" alt="Languages" width={32} height={32} className="object-contain opacity-90 sepia-[.3] hue-rotate-[-30deg] saturate-[2]" />
                                 </div>
                                 <div>
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">All 30+ Languages Unlocked</div>
+                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">All 29 Lnguages Unlocked</div>
                                     <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">Full global language access without limits</div>
                                 </div>
                             </div>
-                            
+
                             <div className="flex items-start gap-4">
                                 <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5">
                                     <Image src="/Interview-Logo.png" alt="Scenarios" width={26} height={26} className="object-contain dark:invert opacity-80" />
@@ -387,7 +387,7 @@ export default function PricingPage() {
                                     <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">The ultimate FAANG-level challenge</div>
                                 </div>
                             </div>
-                            
+
                             <div className="flex items-start gap-4">
                                 <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5">
                                     <Image src="/question.png" alt="Unlimited" width={26} height={26} className="object-contain opacity-80 sepia-[.3] hue-rotate-[-30deg]" />
@@ -421,7 +421,7 @@ export default function PricingPage() {
 
                         <div className="space-y-3">
                             {userTier === 'ultra' ? (
-                                <motion.div 
+                                <motion.div
                                     whileHover={{ scale: 1.01 }}
                                     className="w-full relative overflow-hidden flex flex-col items-center justify-center gap-3 rounded-full py-5 bg-black/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
                                 >
@@ -478,36 +478,36 @@ export default function PricingPage() {
                             )}
                         </div>
                     </div>
-                    
+
                     {/* Global Payment Methods Banner */}
                     <div className="mt-16 pt-8 flex flex-col items-center justify-center relative z-10 w-full mb-8">
                         <p className="text-zinc-500 dark:text-zinc-400 text-[15px] md:text-[16px] font-medium mb-8 text-center" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
                             Secured & Supported Payments
                         </p>
                         <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 px-4 max-w-full">
-                            
+
                             <img src="/visa.png" className="h-10 sm:h-16 w-auto object-contain shrink-0" alt="Visa" />
-                            
+
                             <div className="hidden sm:block h-10 w-[1px] bg-zinc-200 dark:bg-zinc-800 shrink-0"></div>
-                            
+
                             <img src="/master.png" className="h-12 sm:h-20 w-auto object-contain shrink-0" alt="Mastercard" />
-                            
+
                             <div className="hidden sm:block h-10 w-[1px] bg-zinc-200 dark:bg-zinc-800 shrink-0"></div>
-                            
+
                             {/* Google Pay dynamic component to handle dark mode text color */}
                             <div className="flex items-center gap-1.5 h-10 shrink-0">
                                 <FcGoogle className="w-8 h-8 sm:w-10 sm:h-10" />
                                 <span className="text-[20px] sm:text-[26px] font-medium tracking-tight text-zinc-900 dark:text-white" style={{ fontFamily: 'sans-serif' }}>Pay</span>
                             </div>
-                            
+
                             <div className="hidden sm:block h-10 w-[1px] bg-zinc-200 dark:bg-zinc-800 shrink-0"></div>
-                            
+
                             {/* Instapay flex layout because instapay.jpg is just a square circle icon */}
                             <div className="flex items-center gap-2 h-10 shrink-0">
                                 <img src="/instapay.jpg" className="h-8 w-8 sm:h-10 sm:w-10 object-contain rounded-full" alt="Instapay" />
                                 <span className="text-[18px] sm:text-[22px] font-bold tracking-tight text-zinc-900 dark:text-white">Instapay</span>
                             </div>
-                            
+
                         </div>
                     </div>
                 </div>
@@ -536,7 +536,7 @@ export default function PricingPage() {
                                     <div className="text-[18px] sm:text-[20px] font-mono font-semibold text-white tracking-wide">
                                         zyad02153@instapay
                                     </div>
-                                    <button 
+                                    <button
                                         onClick={async () => {
                                             try {
                                                 await navigator.clipboard.writeText("zyad02153@instapay");
@@ -611,8 +611,8 @@ export default function PricingPage() {
             {/* Floating Help Center Button (Pro/Ultra Only) */}
             {(userTier === 'pro' || userTier === 'ultra') && (
                 <div className="fixed bottom-6 left-6 z-50">
-                    <Link 
-                        href="mailto:zedx.ai.support@gmail.com" 
+                    <Link
+                        href="mailto:zedx.ai.support@gmail.com"
                         className="flex items-center gap-3 bg-white dark:bg-[#111] border border-zinc-200 dark:border-white/10 px-5 py-3.5 rounded-full shadow-2xl hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_30px_rgba(255,255,255,0.05)] hover:-translate-y-1 transition-all group backdrop-blur-md"
                     >
                         <Image src="/Priority VIP Support.png" alt="Help Center" width={26} height={26} className="object-contain group-hover:scale-110 transition-transform" />
