@@ -244,7 +244,7 @@ body::-webkit-scrollbar-thumb:hover {
 
 /* Gradient Text */
 .text-gradient-fusion {
-  background: linear-gradient(to right, #047857, #10b981, #bef264);
+  background: linear-gradient(to right, #4d7c0f, #84cc16, #bef264);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
