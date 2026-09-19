@@ -99,11 +99,13 @@ export async function POST(req: Request) {
                         <p><strong>Transaction ID/Username:</strong> ${transactionId}</p>
                         <p><strong>Amount:</strong> ${amount} EGP</p>
                         <hr style="border: 1px solid #eee; margin: 15px 0;" />
-                        <p>Please review and approve/reject this request from the Admin Dashboard:</p>
-                        <a href="https://zedx-ai-simulator.vercel.app/admin/payments" 
-                           style="display: inline-block; background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px;">
-                           Open Admin Dashboard
-                        </a>
+                        <p>Please review and approve/reject</p>
+                        <p style="margin: 30px 0; text-align: center;">
+                            <a href="https://zedx-ai.tech/admin/payments" 
+                               style="background-color: #84cc16; color: #111827; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                                Review Payment
+                            </a>
+                        </p>
                     </div>
                 `,
             };

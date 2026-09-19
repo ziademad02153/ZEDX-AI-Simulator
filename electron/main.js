@@ -24,7 +24,7 @@ let isAppVisible = false;
 let isScannerFrameOpen = false;
 
 const isDev = !app.isPackaged;
-const APP_URL = isDev ? 'http://localhost:3000' : 'https://zedx-ai-assistant-1.vercel.app';
+const APP_URL = isDev ? 'http://localhost:3000' : 'https://zedx-ai.tech';
 
 // --- ASSESSMENT OVERLAY FRAME ---
 function createScannerFrame() {

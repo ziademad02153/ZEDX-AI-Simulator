@@ -14,7 +14,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://zedx-ai-simulator.vercel.app"),
+  metadataBase: new URL("https://zedx-ai.tech"),
   applicationName: "ZEDX AI Interview Simulator",
   appleWebApp: {
     title: "ZEDX AI Interview Simulator",
@@ -25,6 +25,15 @@ export const metadata: Metadata = {
     default: "ZEDX AI Interview Simulator",
     template: "%s | ZEDX AI Interview Simulator"
   },
+  icons: {
+    icon: [
+      { url: '/favicon.ico?v=3', sizes: 'any' },
+      { url: '/icon.jpg?v=3', type: 'image/jpeg' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png?v=3', sizes: '180x180', type: 'image/png' },
+    ],
+  },
   description: "ZEDX AI Interview Simulator is a real-time AI coach that dynamically adapts to your CV and Job Description. Master your next interview in any profession: Software Engineering, Medicine, Sales, Finance, HR, and more.",
   keywords: [
     "ZEDX", "ZEDX AI", "ZEDX AI Simulator", "Mock Interview Coach", "Real-Time Transcription",
@@ -34,7 +43,7 @@ export const metadata: Metadata = {
     "زياد عماد", "Ziad Emad", "محاكي انترفيو", "انترفيو مهندسين", "انترفيو دكاترة", "انترفيو مبيعات",
     "AI Interviewer", "AI Mock Interviewer", "Best AI Interview Prep", "ZEDX Interview"
   ],
-  authors: [{ name: "ZEDX AI Team", url: "https://zedx-ai-simulator.vercel.app" }],
+  authors: [{ name: "ZEDX AI Team", url: "https://zedx-ai.tech" }],
   creator: "ZEDX AI",
   publisher: "ZEDX AI",
   robots: {
@@ -52,7 +61,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     alternateLocale: ["en_GB", "en_AU", "ar_EG", "ar_SA", "ar_AE", "de_DE"],
-    url: "https://zedx-ai-simulator.vercel.app",
+    url: "https://zedx-ai.tech",
     siteName: "ZEDX AI Interview Simulator",
     title: "ZEDX AI Interview Simulator",
     description: "Your real-time interview simulation and training coach.",
@@ -134,12 +143,12 @@ export default async function RootLayout({
               "@type": "WebSite",
               "name": "ZEDX AI Interview Simulator",
               "alternateName": ["ZEDX", "ZEDX AI Simulator", "ZedX AI Coach", "زيدكس", "زيدكس AI"],
-              "url": "https://zedx-ai-simulator.vercel.app",
-              "logo": "https://zedx-ai-simulator.vercel.app/zedx-logo.png",
-              "image": "https://zedx-ai-simulator.vercel.app/zedx-logo.png",
+              "url": "https://zedx-ai.tech",
+              "logo": "https://zedx-ai.tech/zedx-logo.png",
+              "image": "https://zedx-ai.tech/zedx-logo.png",
               "potentialAction": {
                 "@type": "SearchAction",
-                "target": "https://zedx-ai-simulator.vercel.app/dashboard?q={search_term_string}",
+                "target": "https://zedx-ai.tech/dashboard?q={search_term_string}",
                 "query-input": "required name=search_term_string"
               }
             })
@@ -155,8 +164,8 @@ export default async function RootLayout({
               "@context": "https://schema.org",
               "@type": "Organization",
               "name": "ZEDX AI Interview Simulator",
-              "url": "https://zedx-ai-simulator.vercel.app",
-              "logo": "https://zedx-ai-simulator.vercel.app/zedx-logo.png",
+              "url": "https://zedx-ai.tech",
+              "logo": "https://zedx-ai.tech/zedx-logo.png",
               "sameAs": [
                 "https://github.com/ziademad02153/ZEDX-AI-Assistant"
               ]
@@ -173,7 +182,7 @@ export default async function RootLayout({
               "@type": "WebApplication",
               "name": "ZEDX AI Interview Simulator",
               "alternateName": ["ZEDX AI Simulator", "ZEDX", "زيدكس", "زيدكس AI"],
-              "url": "https://zedx-ai-simulator.vercel.app",
+              "url": "https://zedx-ai.tech",
               "description": "ZEDX AI Interview Simulator is a real-time AI interview simulation coach providing real-time transcriptions and answer verification.",
               "applicationCategory": "BusinessApplication",
               "operatingSystem": "Web Browser",
@@ -190,8 +199,8 @@ export default async function RootLayout({
               "author": {
                 "@type": "Organization",
                 "name": "ZEDX AI Interview Simulator",
-                "url": "https://zedx-ai-simulator.vercel.app",
-                "logo": "https://zedx-ai-simulator.vercel.app/zedx-logo.png"
+                "url": "https://zedx-ai.tech",
+                "logo": "https://zedx-ai.tech/zedx-logo.png"
               },
               "brand": {
                 "@type": "Brand",
@@ -215,8 +224,8 @@ export default async function RootLayout({
               "@type": "Organization",
               "name": "ZEDX AI Interview Simulator",
               "alternateName": ["ZEDX", "ZEDX AI Simulator", "زيدكس", "زيدكس AI"],
-              "url": "https://zedx-ai-simulator.vercel.app",
-              "logo": "https://zedx-ai-simulator.vercel.app/zedx-logo.png",
+              "url": "https://zedx-ai.tech",
+              "logo": "https://zedx-ai.tech/zedx-logo.png",
               "description": "ZEDX AI Interview Simulator - Free Real-Time Interview Simulation & Training Coach.",
               "sameAs": [
                 "https://www.producthunt.com/posts/zedx-ai"
