@@ -245,25 +245,24 @@ export default function PricingPage() {
                             {userTier === 'pro' ? (
                                 <motion.div
                                     whileHover={{ scale: 1.01 }}
-                                    className="w-full relative overflow-hidden flex flex-col items-center justify-center gap-3 rounded-full py-5 bg-black/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
+                                    className="w-full relative overflow-hidden flex flex-col items-center justify-center gap-1.5 rounded-full py-[14px] bg-[#0a0a0a] backdrop-blur-2xl border border-white/5 shadow-lg cursor-default"
                                 >
-
-                                    <div className="absolute top-0 right-1/4 w-32 h-32 bg-[#a3e635]/10 blur-[50px] rounded-full"></div>
-                                    <div className="flex items-center gap-3 z-10">
-                                        <Image src="/zedx-logo.png" alt="ZEDX" width={28} height={28} className="object-contain" />
-                                        <span className="text-white font-semibold text-[17px] tracking-tight font-sans">ZEDX Pro Active</span>
+                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-16 bg-[#a3e635]/15 blur-[25px] rounded-full pointer-events-none"></div>
+                                    
+                                    <div className="flex items-center justify-center z-10">
+                                        <Image src="/zedx-logo.png" alt="ZEDX" width={85} height={24} className="object-contain opacity-90 -mr-1.5" priority />
+                                        <span className="text-white font-bold text-[16px] tracking-tight font-sans leading-none mt-0.5">Pro Active</span>
                                     </div>
-                                    <span className="text-[11px] text-zinc-400 font-medium z-10 tracking-[0.15em] uppercase">Enjoy unlimited access</span>
+                                    
+                                    <span className="text-[9px] text-zinc-500 font-bold z-10 tracking-[0.25em] uppercase leading-none">Enjoy unlimited access</span>
                                 </motion.div>
                             ) : userTier === 'ultra' ? (
-                                <motion.div
-                                    className="w-full relative overflow-hidden flex flex-col items-center justify-center gap-3 rounded-full py-5 bg-black/20 backdrop-blur-md border border-white/5 opacity-50 cursor-not-allowed"
+                                <div
+                                    className="w-full flex items-center justify-center gap-2 rounded-full py-4 bg-white/5 border border-white/10 opacity-50 cursor-not-allowed"
                                 >
-                                    <div className="flex items-center gap-3 z-10">
-                                        <CheckCircle2 className="text-zinc-500 w-5 h-5" />
-                                        <span className="text-zinc-400 font-semibold text-[15px] tracking-tight font-sans">Included in Ultra</span>
-                                    </div>
-                                </motion.div>
+                                    <CheckCircle2 className="text-zinc-500 w-5 h-5" />
+                                    <span className="text-zinc-400 font-bold text-[15px] tracking-wide">Included in Ultra</span>
+                                </div>
                             ) : (
                                 <>
                                     {/* Global Payment */}
@@ -423,15 +422,16 @@ export default function PricingPage() {
                             {userTier === 'ultra' ? (
                                 <motion.div
                                     whileHover={{ scale: 1.01 }}
-                                    className="w-full relative overflow-hidden flex flex-col items-center justify-center gap-3 rounded-full py-5 bg-black/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
+                                    className="w-full relative overflow-hidden flex flex-col items-center justify-center gap-1.5 rounded-full py-[14px] bg-[#0a0a0a] backdrop-blur-2xl border border-white/5 shadow-lg cursor-default"
                                 >
-
-                                    <div className="absolute top-0 right-1/4 w-32 h-32 bg-amber-500/10 blur-[50px] rounded-full"></div>
-                                    <div className="flex items-center gap-3 z-10">
-                                        <Image src="/zedx-logo.png" alt="ZEDX" width={28} height={28} className="object-contain" />
-                                        <span className="text-white font-semibold text-[17px] tracking-tight font-sans">Ultra Active</span>
+                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-16 bg-amber-500/15 blur-[25px] rounded-full pointer-events-none"></div>
+                                    
+                                    <div className="flex items-center justify-center z-10">
+                                        <Image src="/zedx-logo.png" alt="ZEDX" width={85} height={24} className="object-contain opacity-90 -mr-1.5" priority />
+                                        <span className="text-white font-bold text-[16px] tracking-tight font-sans leading-none mt-0.5">Ultra Active</span>
                                     </div>
-                                    <span className="text-[11px] text-zinc-400 font-medium z-10 tracking-[0.15em] uppercase">Ultimate access unlocked</span>
+                                    
+                                    <span className="text-[9px] text-zinc-500 font-bold z-10 tracking-[0.25em] uppercase leading-none">Ultimate access unlocked</span>
                                 </motion.div>
                             ) : (
                                 <>

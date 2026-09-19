@@ -93,7 +93,13 @@ export default function ReportPage() {
                     }
                 }
 
-                const lang = localStorage.getItem("interview_context_lang") || "en-US";
+                let lang = "en-US";
+                try {
+                    const { useInterviewStore } = await import("@/lib/store");
+                    lang = useInterviewStore.getState().language || localStorage.getItem("interview_context_lang") || "en-US";
+                } catch (e) {
+                    lang = localStorage.getItem("interview_context_lang") || "en-US";
+                }
                 
                 // Send a SINGLE request to the backend with the full history. 
                 // The backend will chunk and parallelize it to prevent Supabase Auth rate limits (401 errors).
@@ -148,26 +154,26 @@ export default function ReportPage() {
         return (
             <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-6 relative overflow-hidden">
                 <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-[120px] animate-pulse" />
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-emerald-500/15 rounded-full blur-[60px]" />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#84cc16]/10 rounded-full blur-[120px] animate-pulse" />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-[#84cc16]/15 rounded-full blur-[60px]" />
                 </div>
                 <div className="z-10 flex flex-col items-center gap-8">
-                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 8, repeat: Infinity, ease: "linear" }} className="relative w-32 h-32">
-                        <svg className="w-full h-full" viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(16,185,129,0.08)" strokeWidth="2" />
+                    <div className="relative w-48 h-48">
+                        <motion.svg animate={{ rotate: 360 }} transition={{ duration: 3, repeat: Infinity, ease: "linear" }} className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(132,204,22,0.08)" strokeWidth="2" />
                             <circle cx="50" cy="50" r="45" fill="none" stroke="url(#lg)" strokeWidth="2" strokeLinecap="round" strokeDasharray="70 212" />
-                            <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#10b981" stopOpacity="0" /><stop offset="100%" stopColor="#10b981" stopOpacity="1" /></linearGradient></defs>
-                        </svg>
+                            <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#84cc16" stopOpacity="0" /><stop offset="100%" stopColor="#84cc16" stopOpacity="1" /></linearGradient></defs>
+                        </motion.svg>
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-20 h-20 relative"><Image src="/zedx-logo.png" alt="ZEDX" fill className="object-contain filter drop-shadow-[0_0_20px_rgba(16,185,129,0.7)]" /></div>
+                            <div className="w-24 h-24 relative"><Image src="/icon.jpg" alt="ZEDX" fill className="object-contain filter drop-shadow-[0_0_20px_rgba(132,204,22,0.7)] rounded-2xl" /></div>
                         </div>
-                    </motion.div>
+                    </div>
                     <div className="text-center">
                         <motion.h2 animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }} className="text-2xl font-light tracking-[0.3em] uppercase text-white mb-2">Analyzing Performance</motion.h2>
                         <p className="text-white/30 text-sm tracking-widest">AI is reviewing your interview...</p>
                     </div>
                     <div className="w-72 h-[2px] bg-white/5 rounded-full overflow-hidden">
-                        <motion.div className="h-full rounded-full" style={{ background: "linear-gradient(90deg, transparent, #10b981, transparent)", boxShadow: "0 0 20px rgba(16,185,129,0.8)" }} initial={{ x: "-100%" }} animate={{ x: "200%" }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} />
+                        <motion.div className="h-full rounded-full" style={{ background: "linear-gradient(90deg, transparent, #84cc16, transparent)", boxShadow: "0 0 20px rgba(132,204,22,0.8)" }} initial={{ x: "-100%" }} animate={{ x: "200%" }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} />
                     </div>
                 </div>
             </div>
@@ -218,13 +224,13 @@ export default function ReportPage() {
                         <div>
                             <h1 className="text-2xl sm:text-3xl font-extralight tracking-tight text-white print:text-black">Performance Analysis <span className="font-semibold">Report</span></h1>
                             <div className="flex items-center gap-2 mt-1">
-                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
-                                <p className="text-[11px] text-emerald-500/60 uppercase tracking-[0.25em] font-medium">ZEDX AI Assessment</p>
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#84cc16] shadow-[0_0_6px_rgba(132,204,22,0.8)]" />
+                                <p className="text-[11px] text-[#84cc16]/70 uppercase tracking-[0.25em] font-medium">ZEDX AI Assessment</p>
                             </div>
                         </div>
                     </div>
                     <div className="hidden sm:flex items-center gap-2 bg-white/[0.03] border border-white/[0.07] rounded-2xl px-4 py-2.5 print:hidden">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                        <div className="w-2 h-2 rounded-full bg-[#84cc16] animate-pulse shadow-[0_0_8px_rgba(132,204,22,0.8)]" />
                         <span className="text-xs text-white/40 tracking-wider">{report.length} Questions Analyzed</span>
                     </div>
                 </motion.div>
@@ -305,10 +311,10 @@ export default function ReportPage() {
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    <div className="rounded-2xl p-5 bg-emerald-500/[0.04] border border-emerald-500/[0.1]">
+                                                    <div className="rounded-2xl p-5 bg-[#84cc16]/[0.04] border border-[#84cc16]/[0.1]">
                                                         <div className="flex items-center gap-2.5 mb-4">
-                                                            <div className="w-7 h-7 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center"><BarChart2 className="w-3.5 h-3.5 text-emerald-400" /></div>
-                                                            <span className="text-[10px] font-bold text-emerald-400/80 uppercase tracking-[0.25em]">ZEDX Analysis</span>
+                                                            <div className="w-7 h-7 rounded-xl bg-[#84cc16]/10 border border-[#84cc16]/20 flex items-center justify-center"><BarChart2 className="w-3.5 h-3.5 text-[#84cc16]" /></div>
+                                                            <span className="text-[10px] font-bold text-[#84cc16] uppercase tracking-[0.25em]">ZEDX Analysis</span>
                                                         </div>
                                                         <p className="text-white/55 font-light text-sm leading-relaxed print:text-gray-700">{item.feedback}</p>
                                                     </div>
@@ -328,7 +334,7 @@ export default function ReportPage() {
 
                 {/* Action Buttons */}
                 <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mt-16 mb-24 flex flex-col sm:flex-row justify-center items-center gap-4 print:hidden">
-                    <motion.button whileHover={{ scale: 1.02, boxShadow: "0 0 50px rgba(16,185,129,0.4)" }} whileTap={{ scale: 0.98 }} onClick={() => window.print()} className="h-14 px-10 text-base font-medium tracking-wide rounded-2xl text-white transition-all" style={{ background: "linear-gradient(135deg, #059669, #10b981)", boxShadow: "0 0 30px rgba(16,185,129,0.25), inset 0 1px 0 rgba(255,255,255,0.15)" }}>
+                    <motion.button whileHover={{ scale: 1.02, boxShadow: "0 0 50px rgba(132,204,22,0.4)" }} whileTap={{ scale: 0.98 }} onClick={() => window.print()} className="h-14 px-10 text-base font-medium tracking-wide rounded-2xl text-white dark:text-gray-900 transition-all" style={{ background: "linear-gradient(135deg, #65a30d, #84cc16)", boxShadow: "0 0 30px rgba(132,204,22,0.25), inset 0 1px 0 rgba(255,255,255,0.15)" }}>
                         Export PDF Report
                     </motion.button>
                     <Link href="/dashboard">

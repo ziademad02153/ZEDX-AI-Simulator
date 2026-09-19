@@ -21,7 +21,7 @@ export function Footer() {
                             <Image
                                 src="/zedx-logo.png"
                                 alt="ZEDX AI Logo"
-                                width={48}
+                                width={144}
                                 height={48}
                                 className="object-contain"
                             />

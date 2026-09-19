@@ -99,9 +99,13 @@ export default function DashboardPage() {
     return (
         <div className="flex-1 flex flex-col space-y-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-                    <p className="text-gray-600 dark:text-gray-300">Welcome back! Ready for your next interview?</p>
+                <div className="space-y-1">
+                    <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                        Dashboard <span className="inline-block origin-bottom-right hover:animate-wave">👋</span>
+                    </h1>
+                    <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium">
+                        Welcome back! Ready for your next interview?
+                    </p>
                 </div>
                 <StartButton variant="dashboard" className="w-full sm:w-auto" />
             </div>

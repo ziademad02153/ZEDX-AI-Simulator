@@ -3,6 +3,7 @@
 import React, { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { interviewService, Interview } from "@/lib/interview-service";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, Target, MessageSquare, Brain, CheckCircle, AlertTriangle } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
@@ -71,58 +72,31 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
     const generateScorecard = async (data: Interview) => {
         setIsGenerating(true);
         try {
-            const userPrompt = `
-Interview Type: ${data.analysis?.interview_type || "General"}
-Questions and Transcript:
-${data.transcript || "No transcript available. Assume a standard successful interview."}
-
-AI Responses generated during session (Candidate's Answers):
-${data.analysis?.ai_responses?.length ? data.analysis.ai_responses.join("\n\n") : "Standard excellent responses."}
-`;
-
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 35000); // 35s frontend timeout
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s frontend timeout for backend processing
 
-            const response = await fetch("/api/generate", {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            const response = await fetch("/api/generate-report", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    model: "openai/gpt-oss-120b", // Using a stronger model for analysis
-                    promptType: 'report_deep_analysis',
-                    promptContext: { language: data.analysis?.language || "en-US" },
-                    prompt: userPrompt,
-                    response_format: { type: "json_object" }
-                }),
+                headers: { 
+                    "Content-Type": "application/json",
+                    ...(token ? { "Authorization": `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({ interviewId: id }),
                 signal: controller.signal
             });
 
             clearTimeout(timeoutId);
 
-            if (!response.ok) throw new Error("Failed to generate scorecard");
-
-            const resData = await response.json();
-            let parsedScorecard;
-
-            try {
-                // With Structured Outputs (json_object), the response is guaranteed to be valid JSON
-                parsedScorecard = JSON.parse(resData.content.trim());
-            } catch (parseError) {
-                console.warn("Standard JSON parse failed, attempting regex extraction...", parseError);
-                // Robust fallback for markdown-wrapped JSON (e.g. ```json ... ```)
-                const jsonMatch = resData.content.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    parsedScorecard = JSON.parse(jsonMatch[0]);
-                } else {
-                    throw new Error("Could not extract JSON from AI response.");
-                }
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error?.message || "Failed to generate scorecard");
             }
 
-            // Update the state
-            setScorecard(parsedScorecard);
-
-            // Save back to DB
-            const updatedAnalysis = { ...data.analysis, scorecard: parsedScorecard as Record<string, unknown> };
-            await interviewService.updateInterview(id, { analysis: updatedAnalysis });
+            const resData = await response.json();
+            setScorecard(resData.scorecard);
 
         } catch (err) {
             console.error("Error generating scorecard:", err);

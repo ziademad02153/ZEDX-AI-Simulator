@@ -51,16 +51,31 @@ export async function POST(request: Request) {
             process.env.SUPABASE_SERVICE_ROLE_KEY!
         );
 
-        // Calculate expiration date
-        const expirationDate = new Date();
-        expirationDate.setMonth(expirationDate.getMonth() + monthsToAdd);
+        // Fetch current user profile to check existing expiration date
+        const { data: profile } = await supabaseAdmin
+            .from("profiles")
+            .select("subscription_expires_at")
+            .ilike("email", email)
+            .single();
+
+        let baseDate = new Date();
+        if (profile?.subscription_expires_at) {
+            const currentExp = new Date(profile.subscription_expires_at);
+            if (currentExp > baseDate) {
+                // If they still have time left, add to their existing time
+                baseDate = currentExp;
+            }
+        }
+
+        // Calculate new expiration date
+        baseDate.setMonth(baseDate.getMonth() + monthsToAdd);
 
         // Update the user in Supabase by email
         const { error } = await supabaseAdmin
             .from("profiles")
             .update({
                 tier: targetTier,
-                subscription_expires_at: expirationDate.toISOString()
+                subscription_expires_at: baseDate.toISOString()
             })
             .ilike("email", email);
 

@@ -82,19 +82,6 @@ export const metadata: Metadata = {
     google: "googleac3039da11f6677e",
   },
   category: "Technology",
-  icons: {
-    icon: [
-      { url: "/favicon.ico" },
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-      { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" }, // Favicon for Google Search
-      { url: "/zedx-logo.png", sizes: "192x192", type: "image/png" },
-    ],
-    shortcut: "/favicon.ico",
-    apple: [
-      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
-    ],
-  },
   manifest: "/site.webmanifest",
 };
 
@@ -140,6 +127,7 @@ export default async function RootLayout({
         <script
           key="schema-site-identity"
           type="application/ld+json"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
@@ -161,6 +149,7 @@ export default async function RootLayout({
         <script
           key="schema-org-logo"
           type="application/ld+json"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
@@ -177,6 +166,7 @@ export default async function RootLayout({
         <script
           key="schema-webapp"
           type="application/ld+json"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
@@ -218,6 +208,7 @@ export default async function RootLayout({
         <script
           key="schema-org-brand"
           type="application/ld+json"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
@@ -238,6 +229,7 @@ export default async function RootLayout({
         <script
           key="schema-faq"
           type="application/ld+json"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",

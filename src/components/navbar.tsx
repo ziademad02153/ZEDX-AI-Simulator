@@ -34,9 +34,13 @@ const NavGroup = () => (
 
 export function Navbar() {
     const [scrolled, setScrolled] = useState(false);
-    const [isDesktop, setIsDesktop] = useState(
-        typeof window !== "undefined" ? !!(window as any).electronAPI?.isElectron : false
-    );
+    const [isDesktop, setIsDesktop] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== "undefined" && (window as any).electronAPI?.isElectron) {
+            setIsDesktop(true);
+        }
+    }, []);
     const router = useRouter();
 
     useEffect(() => {
@@ -60,27 +64,30 @@ export function Navbar() {
             <div className={cn(
                 "flex items-center justify-between rounded-full border transition-all duration-500 ease-out",
                     scrolled
-                        ? "bg-white/90 dark:bg-[#0a0a0a]/85 backdrop-blur-3xl border-zinc-200/80 dark:border-white/15 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_16px_50px_rgba(0,0,0,0.8)] px-3 sm:px-6 h-12 sm:h-14"
-                        : "bg-white/70 dark:bg-[#0a0a0a]/60 backdrop-blur-xl border-zinc-200/40 dark:border-white/10 shadow-[0_4px_20px_rgb(0,0,0,0.05)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] px-3 sm:px-8 h-14 sm:h-[68px]"
+                        ? "bg-white/90 dark:bg-[#0a0a0a]/85 backdrop-blur-3xl border-zinc-200/80 dark:border-white/15 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_16px_50px_rgba(0,0,0,0.8)] pl-0 pr-4 sm:pl-2 sm:pr-8 h-12 sm:h-14"
+                        : "bg-white/70 dark:bg-[#0a0a0a]/60 backdrop-blur-xl border-zinc-200/40 dark:border-white/10 shadow-[0_4px_20px_rgb(0,0,0,0.05)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] pl-0 pr-6 sm:pl-2 sm:pr-10 md:pl-3 md:pr-12 h-14 sm:h-[68px]"
             )}>
                 
                 {/* Logo */}
-                <Link href="/" className="flex items-center gap-2 group shrink-0">
+                <Link href="/" className="flex items-center gap-2 group shrink-0 -ml-2 sm:-ml-4 md:-ml-6">
                     <Image
                         src="/zedx-logo.png"
                         alt="ZEDX-AI Logo"
-                        width={120}
+                        width={360}
                         height={120}
                         className={cn(
                             "object-contain transition-all duration-500 group-hover:scale-105",
-                            scrolled ? "w-9 h-9 sm:w-11 sm:h-11 md:w-12 md:h-12" : "w-10 h-10 sm:w-12 sm:h-12 md:w-[60px] md:h-[60px]"
+                            scrolled ? "w-32 sm:w-36 md:w-[185px] h-auto" : "w-36 sm:w-44 md:w-[218px] h-auto"
                         )}
+                        style={{ height: "auto" }}
                         priority
                     />
                 </Link>
 
                 {/* Desktop & Mobile Marquee Links */}
-                <div className="flex flex-1 overflow-hidden relative w-full mx-2 sm:mx-8 h-full items-center justify-start [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+                <div 
+                    className="flex flex-1 overflow-hidden relative w-full -ml-2 mr-4 sm:-ml-4 sm:mr-8 md:-ml-6 md:mr-12 h-full items-center justify-start [mask-image:linear-gradient(to_right,transparent,black_60px,black_calc(100%_-_60px),transparent)]"
+                >
                     <DraggableMarquee />
                 </div>
 

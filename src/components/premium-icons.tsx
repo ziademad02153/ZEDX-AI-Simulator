@@ -50,27 +50,28 @@ export const PremiumMultiLangIcon = () => (
       src="/Multi-Language.png"
       alt="Multi-Language"
       fill
+      sizes="(max-width: 768px) 100vw, 100px"
       className="object-contain"
     />
     {/* Top Box */}
     <div className="absolute top-[7%] left-[41.5%] w-[17%] h-[11%] rounded-[1.5px] overflow-hidden z-10 opacity-90 hover:opacity-100 transition-opacity">
-      <Image src="/ARABIC.png" alt="Arabic" fill className="object-cover" />
+      <Image src="/ARABIC.png" alt="Arabic" fill sizes="20px" className="object-cover" />
     </div>
     {/* Left Box */}
     <div className="absolute top-[37%] left-[5%] w-[17%] h-[11%] rounded-[1.5px] overflow-hidden z-10 opacity-90 hover:opacity-100 transition-opacity">
-      <Image src="/ENG.png" alt="English" fill className="object-cover" />
+      <Image src="/ENG.png" alt="English" fill sizes="20px" className="object-cover" />
     </div>
     {/* Bottom Right Box */}
     <div className="absolute top-[76%] left-[72.5%] w-[17%] h-[11%] rounded-[1.5px] overflow-hidden z-10 opacity-90 hover:opacity-100 transition-opacity">
-      <Image src="/SPAIN%20LANG.png" alt="Spanish" fill className="object-cover" />
+      <Image src="/SPAIN%20LANG.png" alt="Spanish" fill sizes="20px" className="object-cover" />
     </div>
     {/* Top Right Box (France) */}
     <div className="absolute top-[22%] left-[80%] w-[17%] h-[11%] rounded-[1.5px] overflow-hidden z-10 opacity-90 hover:opacity-100 transition-opacity">
-      <Image src="/France%20lang.png" alt="French" fill className="object-cover" />
+      <Image src="/France%20lang.png" alt="French" fill sizes="20px" className="object-cover" />
     </div>
     {/* Bottom Left Box (German) */}
     <div className="absolute top-[75%] left-[10%] w-[17%] h-[11%] rounded-[1.5px] overflow-hidden z-10 opacity-90 hover:opacity-100 transition-opacity">
-      <Image src="/german.png" alt="German" fill className="object-cover" />
+      <Image src="/german.png" alt="German" fill sizes="20px" className="object-cover" />
     </div>
   </div>
 );

@@ -50,22 +50,34 @@ export async function POST(req: Request) {
                 return NextResponse.json({ error: "Approval not found" }, { status: 404 });
             }
 
-            // 2. Update the user's profile to PRO or ULTRA FIRST!
+            // 2. Fetch the current user's profile to get existing expiration date
+            const { data: profile, error: profileError } = await supabaseAdmin
+                .from("profiles")
+                .select("subscription_expires_at")
+                .eq("id", approval.user_id)
+                .single();
+                
+            if (profileError) throw profileError;
+
             const targetTier = (approval.amount && approval.amount >= 600) ? 'ultra' : 'pro';
+            const monthsToAdd = targetTier === 'ultra' ? 3 : 1;
             
-            // Calculate expiration date
-            const expirationDate = new Date();
-            if (targetTier === 'ultra') {
-                expirationDate.setMonth(expirationDate.getMonth() + 3);
-            } else {
-                expirationDate.setMonth(expirationDate.getMonth() + 1);
+            // Calculate expiration date properly by accumulating time
+            let baseDate = new Date();
+            if (profile?.subscription_expires_at) {
+                const currentExp = new Date(profile.subscription_expires_at);
+                if (currentExp > baseDate) {
+                    baseDate = currentExp;
+                }
             }
+            
+            baseDate.setMonth(baseDate.getMonth() + monthsToAdd);
 
             const { error: updateProfileError } = await supabaseAdmin
                 .from("profiles")
                 .update({ 
                     tier: targetTier,
-                    subscription_expires_at: expirationDate.toISOString()
+                    subscription_expires_at: baseDate.toISOString()
                 })
                 .eq("id", approval.user_id);
             

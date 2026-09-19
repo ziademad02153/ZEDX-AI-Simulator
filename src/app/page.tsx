@@ -285,12 +285,12 @@ export default function Home() {
                     <div className="absolute inset-0 z-20 pointer-events-none" style={{ animation: 'spin 20s linear infinite' }}>
                       <div className="absolute top-0 left-1/2 -ml-[14px] -mt-[10px] pointer-events-auto" style={{ animation: 'spin 20s linear infinite reverse' }}>
                         <div className="relative w-7 h-5 rounded overflow-hidden shadow-md hover:scale-125 transition-transform cursor-pointer">
-                          <Image src="/ARABIC.png" alt="Arabic" fill className="object-cover" />
+                          <Image src="/ARABIC.png" alt="Arabic" fill sizes="28px" className="object-cover" />
                         </div>
                       </div>
                       <div className="absolute bottom-0 left-1/2 -ml-[14px] -mb-[10px] pointer-events-auto" style={{ animation: 'spin 20s linear infinite reverse' }}>
                         <div className="relative w-7 h-5 rounded overflow-hidden shadow-md hover:scale-125 transition-transform cursor-pointer">
-                          <Image src="/SPAIN%20LANG.png" alt="Spanish" fill className="object-cover" />
+                          <Image src="/SPAIN%20LANG.png" alt="Spanish" fill sizes="28px" className="object-cover" />
                         </div>
                       </div>
                     </div>
@@ -299,21 +299,21 @@ export default function Home() {
                     <div className="absolute inset-4 z-20 pointer-events-none" style={{ animation: 'spin 15s linear infinite reverse' }}>
                       <div className="absolute top-1/2 left-0 -mt-[10px] -ml-[14px] pointer-events-auto" style={{ animation: 'spin 15s linear infinite' }}>
                         <div className="relative w-7 h-5 rounded overflow-hidden shadow-md hover:scale-125 transition-transform cursor-pointer">
-                          <Image src="/ENG.png" alt="English" fill className="object-cover" />
+                          <Image src="/ENG.png" alt="English" fill sizes="28px" className="object-cover" />
                         </div>
                       </div>
                       <div className="absolute top-1/2 right-0 -mt-[10px] -mr-[14px] pointer-events-auto" style={{ animation: 'spin 15s linear infinite' }}>
                         <div className="relative w-7 h-5 rounded overflow-hidden shadow-md hover:scale-125 transition-transform cursor-pointer">
-                          <Image src="/France%20lang.png" alt="French" fill className="object-cover" />
+                          <Image src="/France%20lang.png" alt="French" fill sizes="28px" className="object-cover" />
                         </div>
                       </div>
                     </div>
 
                     {/* Inner Orbit */}
-                    <div className="absolute inset-8 z-20 pointer-events-none" style={{ animation: 'spin 12s linear infinite' }}>
-                      <div className="absolute top-0 left-1/2 -ml-[14px] -mt-[10px] pointer-events-auto" style={{ animation: 'spin 12s linear infinite reverse' }}>
+                    <div className="absolute inset-8 z-20 pointer-events-none" style={{ animation: 'spin 10s linear infinite' }}>
+                      <div className="absolute top-0 right-0 -mt-[5px] -mr-[5px] pointer-events-auto" style={{ animation: 'spin 10s linear infinite reverse' }}>
                         <div className="relative w-7 h-5 rounded overflow-hidden shadow-md hover:scale-125 transition-transform cursor-pointer">
-                          <Image src="/german.png" alt="German" fill className="object-cover" />
+                          <Image src="/german.png" alt="German" fill sizes="28px" className="object-cover" />
                         </div>
                       </div>
                     </div>

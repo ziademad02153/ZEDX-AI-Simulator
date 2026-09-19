@@ -187,7 +187,7 @@ export function ModelChat({ modelId, modelName, modelLogo }: ModelChatProps) {
                             <div className={cn(
                                 "p-3 rounded-2xl text-sm leading-relaxed",
                                 msg.role === "user"
-                                    ? "bg-emerald-600 text-white rounded-tr-sm"
+                                    ? "bg-[#84cc16] text-white sm:text-gray-900 rounded-tr-sm"
                                     : "bg-gray-100 dark:bg-white/10 text-gray-800 dark:text-gray-100 rounded-tl-sm"
                             )}>
                                 {msg.content}
@@ -217,11 +217,11 @@ export function ModelChat({ modelId, modelName, modelLogo }: ModelChatProps) {
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleSend()}
                         placeholder={`Message ${modelName}...`}
-                        className="w-full bg-white dark:bg-black/20 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/30 border border-gray-200 dark:border-white/10 rounded-xl py-3 pl-4 pr-12 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all"
+                        className="w-full bg-white dark:bg-black/20 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/30 border border-gray-200 dark:border-white/10 rounded-xl py-3 pl-4 pr-12 focus:outline-none focus:border-[#84cc16]/50 focus:ring-1 focus:ring-[#84cc16]/50 transition-all"
                     />
                     <Button
                         size="icon"
-                        className="absolute right-1.5 h-8 w-8 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors"
+                        className="absolute right-1.5 h-8 w-8 bg-[#84cc16] hover:bg-[#65a30d] text-white sm:text-gray-900 rounded-lg transition-colors"
                         onClick={handleSend}
                         disabled={!input.trim() || isLoading}
                     >

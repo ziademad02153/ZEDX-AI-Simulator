@@ -54,8 +54,8 @@ export function StartButton({ variant, className }: StartButtonProps) {
           <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-orange-500 border-2 border-white dark:border-[#050505]"></span>
         </span>
       )}
-      <Button className="w-full sm:w-auto px-6 py-5 rounded-2xl bg-black dark:bg-white/[0.05] border border-gray-800 dark:border-white/10 backdrop-blur-md text-white transition-all duration-300 hover:bg-gray-900 dark:hover:bg-white/10 hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] font-semibold tracking-wide flex items-center justify-center cursor-pointer">
-        <Plus className="mr-2 h-4 w-4" />
+      <Button className="w-full sm:w-auto px-6 py-5 rounded-2xl bg-[#a3e635] hover:bg-[#84cc16] text-black shadow-none border-none transition-all duration-300 font-bold tracking-wide flex items-center justify-center cursor-pointer">
+        <Plus className="mr-2 h-5 w-5" />
         Start New Interview
       </Button>
     </Link>

@@ -70,15 +70,10 @@ export default function DashboardLayout({
     const pathname = usePathname();
     const [showSettings, setShowSettings] = useState(false);
     const [, setMobileMenuOpen] = useState(false);
-    const [isAuthChecking, setIsAuthChecking] = useState(true);
-
     useEffect(() => {
-        const checkAuth = async () => {
+        const checkOnboarding = async () => {
             const { data } = await supabase.auth.getSession();
-            if (!data.session) {
-                router.push("/login?reason=expired");
-                return;
-            }
+            if (!data.session) return;
 
             // Skip onboarding check if user just finished an interview (on report page)
             const isReportPage = pathname === '/dashboard/report' || pathname?.startsWith('/dashboard/report');
@@ -91,31 +86,18 @@ export default function DashboardLayout({
 
                 if (!profile?.profession || !profile?.country) {
                     router.push("/onboarding");
-                    return;
                 }
             }
-
-            setIsAuthChecking(false);
         };
-        checkAuth();
+        checkOnboarding();
 
         const handleOpenSettings = () => setShowSettings(true);
         window.addEventListener('openSettings', handleOpenSettings);
         return () => window.removeEventListener('openSettings', handleOpenSettings);
     }, [router, pathname]);
 
-    if (isAuthChecking) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <Loader2 className="w-10 h-10 animate-spin text-green-600" />
-            </div>
-        );
-    }
-
-
-
     return (
-        <div className="min-h-screen bg-gray-50/50 dark:bg-black flex flex-col transition-colors duration-300 overflow-x-hidden">
+        <div suppressHydrationWarning className="min-h-screen bg-gray-50/50 dark:bg-black flex flex-col transition-colors duration-300 overflow-x-hidden">
             <Navbar />
             <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
 

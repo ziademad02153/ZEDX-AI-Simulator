@@ -75,6 +75,7 @@ const AI_MODELS = [
 // import { ParticleWave } from "@/components/ui/particle-wave";
 
 import { usePostHog } from 'posthog-js/react';
+import { useInterviewStore } from "@/lib/store";
 
 export default function NewInterviewPage() {
     const router = useRouter();
@@ -208,13 +209,15 @@ export default function NewInterviewPage() {
         });
         
         try {
-            localStorage.setItem("interview_context_jd", jobDescription);
-            localStorage.setItem("interview_context_resume", resume);
-            localStorage.setItem("interview_context_type", interviewType);
-            localStorage.setItem("interview_context_lang", language);
-            localStorage.setItem("interview_context_difficulty", difficulty);
-            localStorage.setItem("interview_context_question_count", questionCount);
-            localStorage.setItem("selected_ai_model", selectedModel);
+            useInterviewStore.getState().setInterviewContext({
+                interviewType,
+                jobDescription,
+                resumeText: resume,
+                language,
+                difficulty,
+            });
+            localStorage.setItem("selected_ai_model", selectedModel); // Keep model in localstorage since it's a preference
+            localStorage.setItem("interview_context_question_count", questionCount); // Question count is small
         } catch (e) {
             console.warn(e);
         }
@@ -278,10 +281,10 @@ export default function NewInterviewPage() {
                                             <p className="text-base sm:text-lg text-gray-500 font-medium">Paste the target role details.</p>
                                         </div>
                                     </div>
-                                    <span className="text-[10px] sm:text-sm font-bold font-mono text-emerald-800 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl tracking-wider uppercase">REQUIRED</span>
+                                    <span className="text-[10px] sm:text-sm font-bold font-mono text-[#84cc16] dark:text-[#a3e635] bg-[#84cc16]/10 dark:bg-[#84cc16]/20 border border-[#84cc16]/20 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl tracking-wider uppercase">REQUIRED</span>
                                 </div>
                                 <textarea
-                                    className="w-full flex-1 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 sm:p-6 text-base sm:text-lg text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 resize-none transition-all min-h-[180px] sm:min-h-[220px] leading-relaxed"
+                                    className="w-full flex-1 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 sm:p-6 text-base sm:text-lg text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:outline-none focus:border-[#84cc16]/50 focus:ring-1 focus:ring-[#84cc16]/50 resize-none transition-all min-h-[180px] sm:min-h-[220px] leading-relaxed"
                                     placeholder="e.g. Senior React Developer at Netflix..."
                                     value={jobDescription}
                                     onChange={(e) => setJobDescription(e.target.value)}
@@ -307,7 +310,7 @@ export default function NewInterviewPage() {
                                     </div>
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                                    <label className="h-11 sm:h-12 px-6 flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-bold rounded-xl cursor-pointer transition-colors w-full sm:w-auto shadow-lg shadow-emerald-500/20 order-1">
+                                    <label className="h-11 sm:h-12 px-6 flex items-center justify-center gap-2 bg-[#84cc16] hover:bg-[#65a30d] text-white sm:text-gray-900 font-bold rounded-xl cursor-pointer transition-colors w-full sm:w-auto shadow-lg shadow-[#84cc16]/20 order-1">
                                         <Upload size={18} />
                                         Upload New CV
                                         <input type="file" className="hidden" accept=".pdf,.txt" onChange={handleFileUpload} />
@@ -327,7 +330,7 @@ export default function NewInterviewPage() {
                                 </div>
                             </div>
                             <textarea
-                                className="w-full flex-1 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 sm:p-6 text-base sm:text-lg text-gray-900 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 resize-none transition-all min-h-[180px] sm:min-h-[220px]"
+                                className="w-full flex-1 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 sm:p-6 text-base sm:text-lg text-gray-900 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:outline-none focus:border-[#84cc16]/50 focus:ring-1 focus:ring-[#84cc16]/50 resize-none transition-all min-h-[180px] sm:min-h-[220px]"
                                 placeholder="Paste resume text or upload PDF..."
                                 value={resume}
                                 onChange={(e) => setResume(e.target.value)}
@@ -485,7 +488,7 @@ export default function NewInterviewPage() {
                                         className={cn(
                                             "relative p-3.5 sm:p-5 rounded-2xl border-2 transition-all flex items-center gap-4 sm:gap-5 group/item overflow-hidden",
                                             selectedModel === model.id
-                                                ? "bg-white dark:bg-white/5 border-emerald-500 shadow-sm"
+                                                ? "bg-white dark:bg-white/5 border-[#84cc16] shadow-sm"
                                                 : "bg-gray-50 dark:bg-black/20 border-transparent hover:bg-gray-100 dark:hover:bg-white/5",
                                             isLocked ? "cursor-pointer" : "cursor-pointer"
                                         )}
@@ -516,7 +519,7 @@ export default function NewInterviewPage() {
                                                     {model.name}
                                                 </h4>
                                                 {selectedModel === model.id && !isLocked && (
-                                                    <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]"></div>
+                                                    <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#84cc16] shadow-[0_0_12px_rgba(132,204,22,0.5)]"></div>
                                                 )}
                                             </div>
                                             <p className="text-[10px] sm:text-sm text-gray-400 dark:text-gray-500">{model.description}</p>
@@ -562,7 +565,7 @@ export default function NewInterviewPage() {
                                         className={cn(
                                             "w-full h-14 sm:h-16 text-lg sm:text-xl font-bold rounded-2xl transition-all duration-300 shadow-xl",
                                             isValid
-                                                ? "bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white shadow-emerald-500/25 hover:shadow-emerald-500/35 hover:-translate-y-0.5 active:translate-y-0"
+                                                ? "bg-[#84cc16] hover:bg-[#65a30d] text-white dark:text-gray-900 shadow-[#84cc16]/25 hover:shadow-[#84cc16]/35 hover:-translate-y-0.5 active:translate-y-0"
                                                 : "bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                                         )}
                                     >

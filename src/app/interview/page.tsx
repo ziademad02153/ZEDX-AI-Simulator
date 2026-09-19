@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { useConfirmDialog } from "@/components/confirm-dialog";
 import { interviewService } from "@/lib/interview-service";
+import { useInterviewStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Lock } from "lucide-react";
@@ -158,11 +159,14 @@ export default function InterviewPage() {
     useEffect(() => {
         setHasMounted(true);
         try {
-            const savedType = localStorage.getItem("interview_context_type") || "General";
-            const savedJD = localStorage.getItem("interview_context_jd") || "";
-            const savedResume = localStorage.getItem("interview_context_resume") || "";
-            const savedLang = localStorage.getItem("interview_context_lang") || "en-US";
-            const savedDifficulty = localStorage.getItem("interview_context_difficulty") || "Intermediate";
+            const state = useInterviewStore.getState();
+            // Fallback to localStorage just in case it's a hard refresh and Zustand is empty, 
+            // though Zustand is the primary source of truth now.
+            const savedType = state.interviewType || localStorage.getItem("interview_context_type") || "General";
+            const savedJD = state.jobDescription || localStorage.getItem("interview_context_jd") || "";
+            const savedResume = state.resumeText || localStorage.getItem("interview_context_resume") || "";
+            const savedLang = state.language || localStorage.getItem("interview_context_lang") || "en-US";
+            const savedDifficulty = state.difficulty || localStorage.getItem("interview_context_difficulty") || "Intermediate";
             setInterviewContext({ type: savedType, jd: savedJD, resume: savedResume, lang: savedLang, difficulty: savedDifficulty });
         } catch {
             // localStorage unavailable (private mode)

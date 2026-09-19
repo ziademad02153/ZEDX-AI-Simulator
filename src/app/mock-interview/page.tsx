@@ -10,6 +10,7 @@ import Image from "next/image";
 import { SUPPORTED_LANGUAGES } from "@/lib/languages";
 import { supabase } from "@/lib/supabase";
 import { interviewService } from "@/lib/interview-service";
+import { useInterviewStore } from "@/lib/store";
 
 export default function MockInterviewPage() {
     const router = useRouter();
@@ -66,15 +67,28 @@ export default function MockInterviewPage() {
         };
     }, [isListening, questionsAsked, currentQuestionIndex, userTranscript]);
 
-    // Initialize context from localStorage
+    // Initialize context from Zustand (and fallback to localStorage for backwards compatibility/hard reloads if any)
     useEffect(() => {
-        const _jd = localStorage.getItem("interview_context_jd") || "";
-        const _resume = localStorage.getItem("interview_context_resume") || "";
-        const _diff = localStorage.getItem("interview_context_difficulty") || "Intermediate";
-        const _type = localStorage.getItem("interview_context_type") || "Technical";
-        const _count = parseInt(localStorage.getItem("interview_context_question_count") || "10", 10);
-        const _lang = localStorage.getItem("interview_context_lang") || "en-US";
-        const _model = localStorage.getItem("selected_ai_model") || "qwen/qwen3.8-27b";
+        let _jd = "";
+        let _resume = "";
+        let _diff = "Intermediate";
+        let _type = "Technical";
+        let _count = 10;
+        let _lang = "en-US";
+        let _model = "qwen/qwen3.8-27b";
+
+        try {
+            const state = useInterviewStore.getState();
+            _jd = state.jobDescription || localStorage.getItem("interview_context_jd") || "";
+            _resume = state.resumeText || localStorage.getItem("interview_context_resume") || "";
+            _diff = state.difficulty || localStorage.getItem("interview_context_difficulty") || "Intermediate";
+            _type = state.interviewType || localStorage.getItem("interview_context_type") || "Technical";
+            _count = parseInt(localStorage.getItem("interview_context_question_count") || "10", 10);
+            _lang = state.language || localStorage.getItem("interview_context_lang") || "en-US";
+            _model = localStorage.getItem("selected_ai_model") || "qwen/qwen3.8-27b";
+        } catch (e) {
+            console.warn("Could not read interview state", e);
+        }
 
         if (!_jd || !_resume) {
             router.push("/dashboard/new");
@@ -165,6 +179,8 @@ export default function MockInterviewPage() {
             recognition.lang = language;
             
             recognition.onresult = (event: any) => {
+                if (!stateRef.current.isListening) return; // Prevent trailing events after stop()
+
                 let interimTranscript = "";
                 let hasValidSpeech = false;
                 
@@ -265,6 +281,7 @@ export default function MockInterviewPage() {
         
         if (!currentIsListening) return;
         setIsListening(false);
+        stateRef.current.isListening = false; // Synchronous block for trailing events
         if (recognitionRef.current) recognitionRef.current.stop();
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
 
@@ -560,18 +577,16 @@ Resume Context: ${resume}`;
         <div className="min-h-screen bg-black text-white relative overflow-hidden flex flex-col">
             {/* Top Bar */}
             <div className="w-full p-6 flex justify-between items-center z-20">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1 -ml-4">
                     <Image
-                        src="/zedx-logo.png"
+                        src="/ZEDX-NEW LOGO-2.png"
                         alt="ZEDX-AI Logo"
-                        width={40}
-                        height={40}
+                        width={180}
+                        height={50}
                         className="object-contain"
                     />
-                    <div>
-                        <h2 className="font-bold text-lg leading-none">ZEDX Interviewer</h2>
-                        <p className="text-emerald-400 text-xs">Question {currentQuestionIndex + 1} of {questionCount}</p>
-                    </div>
+                    <div className="h-8 w-[1px] bg-white/20 mx-2"></div>
+                    <p className="text-[#84cc16] text-sm font-semibold whitespace-nowrap mt-1">Question {currentQuestionIndex + 1} of {questionCount}</p>
                 </div>
                 <Button onClick={endInterview} variant="ghost" className="text-red-400 hover:text-red-300 hover:bg-red-500/10">
                     <X className="mr-2 w-4 h-4" /> End Interview
@@ -589,23 +604,23 @@ Resume Context: ${resume}`;
                             opacity: isSpeaking ? [0.7, 1, 0.7] : 0.5
                         }}
                         transition={{ duration: 1.5, repeat: Infinity }}
-                        className="absolute inset-0 bg-emerald-500 rounded-full blur-[80px]"
+                        className="absolute inset-0 bg-[#84cc16] rounded-full blur-[80px]"
                     ></motion.div>
                     
-                    <div className="relative w-32 h-32 sm:w-48 sm:h-48 rounded-full bg-gradient-to-b from-gray-900 to-black border-2 border-emerald-500/50 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.3)] z-10 overflow-hidden">
+                    <div className="relative w-32 h-32 sm:w-48 sm:h-48 rounded-full bg-black border-2 border-[#84cc16]/50 flex items-center justify-center shadow-[0_0_40px_rgba(132,204,22,0.3)] z-10 overflow-hidden">
                         {isSpeaking ? (
-                            <div className="flex gap-2 items-center h-12">
+                            <div className="flex gap-2 items-center h-12 z-20">
                                 {[1, 2, 3, 4, 5].map((i) => (
                                     <motion.div 
                                         key={i}
                                         animate={{ height: ["20%", "100%", "20%"] }}
                                         transition={{ duration: Math.random() * 0.5 + 0.5, repeat: Infinity, delay: i * 0.1 }}
-                                        className="w-2 sm:w-3 bg-emerald-400 rounded-full"
+                                        className="w-2 sm:w-3 bg-[#84cc16] rounded-full"
                                     ></motion.div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-emerald-500/50 text-6xl">Z</div>
+                            <Image src="/icon.jpg" alt="ZEDX" fill className="object-cover scale-[0.70] opacity-100" />
                         )}
                     </div>
                 </div>

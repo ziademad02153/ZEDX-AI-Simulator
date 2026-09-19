@@ -87,7 +87,7 @@
     "tesseract.js": "^7.0.0",
     "three": "^0.185.1",
     "unpdf": "^1.4.0",
-    "zustand": "^5.0.9"
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
