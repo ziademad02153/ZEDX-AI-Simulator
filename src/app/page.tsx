@@ -51,7 +51,7 @@ export default function Home() {
                   </div>
                   <div className="absolute left-0 right-0 flex justify-center pointer-events-none">
                     <span className="text-xs md:text-sm font-semibold text-gray-500 dark:text-gray-400">
-                      ZEDX AI Assistant Demo
+                      ZEDX AI Demo
                     </span>
                   </div>
                 </div>
