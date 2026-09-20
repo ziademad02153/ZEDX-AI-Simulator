@@ -25,7 +25,8 @@
 ---
 
 ### 🎥 Watch ZEDX AI in Action
-https://github.com/ziademad02153/ZEDX-AI-Assistant/raw/main/public/zedx.ai.0.1.DEMO.mp4
+
+[![ZEDX AI Demo](https://img.youtube.com/vi/EFQORaZ4DN4/maxresdefault.jpg)](https://youtu.be/EFQORaZ4DN4)
 
 ---
 
