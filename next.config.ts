@@ -31,6 +31,17 @@ const nextConfig: NextConfig = {
         destination: 'https://zedx-ai.tech/:path*',
         permanent: true,
       },
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'zedx-ai-assistant-1.vercel.app',
+          },
+        ],
+        destination: 'https://zedx-ai.tech/:path*',
+        permanent: true,
+      },
     ];
   },
   typescript: {
