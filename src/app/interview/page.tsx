@@ -1341,7 +1341,7 @@ export default function InterviewPage() {
     );
 
     return (
-        <div className={cn("min-h-screen flex flex-col lg:flex-row gap-4 p-2 sm:p-4 pt-20 transition-colors duration-300 overflow-auto", !isElectron && "bg-gray-50 dark:bg-zinc-950")}>
+        <div className={cn("min-h-screen lg:h-screen lg:h-[100dvh] lg:overflow-hidden flex flex-col lg:flex-row gap-4 p-2 sm:p-4 pt-20 transition-colors duration-300 overflow-auto", !isElectron && "bg-gray-50 dark:bg-zinc-950")}>
             {paywallDialog}
             {/* Drag Handle for Electron */}
             {isElectron && (
@@ -1368,7 +1368,7 @@ export default function InterviewPage() {
             <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
 
             {/* Left Panel: Video & Transcript */}
-            <div className={cn("flex flex-col gap-4 transition-all duration-300 w-full", isCameraVisible ? "lg:w-1/2" : "lg:w-1/3")}>
+            <div className={cn("flex flex-col gap-4 transition-all duration-300 w-full lg:h-full lg:pb-4", isCameraVisible ? "lg:w-1/2" : "lg:w-1/3")}>
                 {/* Video Feed */}
                 {isCameraVisible && (
                     <div className="flex-1 bg-black rounded-2xl overflow-hidden relative shadow-lg min-h-[300px]">
@@ -1538,9 +1538,9 @@ export default function InterviewPage() {
             </div>
 
             {/* Right Panel: AI Response */}
-            <div className="w-full lg:w-1/2 flex flex-col gap-4">
-                <div className={cn("p-6 rounded-2xl shadow-sm border flex-1 flex flex-col transition-colors", isElectron ? "bg-black/60 backdrop-blur-md border-white/10 shadow-[0_0_15px_rgba(0,0,0,0.5)]" : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800")}>
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+            <div className="w-full lg:w-1/2 flex flex-col gap-4 lg:h-full lg:pb-4">
+                <div className={cn("p-6 rounded-2xl shadow-sm border flex-1 flex flex-col transition-colors min-h-0", isElectron ? "bg-black/60 backdrop-blur-md border-white/10 shadow-[0_0_15px_rgba(0,0,0,0.5)]" : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800")}>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 shrink-0">
                         <h3 className={cn("font-bold flex items-center gap-2 text-lg", isElectron ? "text-emerald-400" : "text-gray-900 dark:text-white")}>
                             <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
                             Example of a Strong Answer
@@ -1586,7 +1586,7 @@ export default function InterviewPage() {
                     </div>
 
                     {/* Manual Input for Coding Questions */}
-                    <div className="mb-4">
+                    <div className="mb-4 shrink-0">
                         <div className="flex items-center justify-between mb-2">
                             <label className={cn("text-xs font-bold uppercase tracking-wider", isElectron ? "text-emerald-400" : "text-gray-500 dark:text-gray-400")}>
                                 Manual Question / Code

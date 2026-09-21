@@ -101,22 +101,27 @@ export default function AuthCallbackPage() {
     }, []);
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 to-gray-100 dark:from-zinc-900 dark:to-black">
-            <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-lg text-center max-w-md">
+        <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gray-50 dark:bg-[#0a0a0a] px-4 py-8 relative overflow-hidden">
+            
+            {/* Apple-style background blur elements */}
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#a3e635]/10 dark:bg-[#a3e635]/5 blur-[120px] rounded-full pointer-events-none" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 dark:bg-blue-500/5 blur-[120px] rounded-full pointer-events-none" />
+
+            <div className="w-full max-w-[420px] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-2xl rounded-[32px] shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.3)] border border-white/50 dark:border-white/5 p-8 text-center z-10 relative">
                 {error ? (
                     <>
-                        <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <span className="text-red-500 text-3xl">✕</span>
+                        <div className="w-16 h-16 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <span className="text-red-500 text-2xl font-bold">✕</span>
                         </div>
-                        <p className="text-red-600 dark:text-red-400 text-lg font-medium mb-2">Login Failed</p>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">{error}</p>
-                        <p className="text-gray-400 text-xs mt-4">Redirecting to login page...</p>
+                        <p className="text-red-600 dark:text-red-400 text-[20px] font-semibold mb-2 tracking-tight">Login Failed</p>
+                        <p className="text-gray-500 dark:text-gray-400 text-[15px]">{error}</p>
+                        <p className="text-gray-400 dark:text-gray-500 text-[13px] mt-6 font-medium">Redirecting to login page...</p>
                     </>
                 ) : (
                     <>
-                        <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-                        <p className="text-gray-700 dark:text-gray-200 text-lg font-medium">{status}</p>
-                        <p className="text-gray-400 text-sm mt-2">Please wait...</p>
+                        <div className="w-14 h-14 border-[3px] border-gray-200 dark:border-zinc-700 border-t-[#a3e635] dark:border-t-[#a3e635] rounded-full animate-spin mx-auto mb-6"></div>
+                        <p className="text-gray-900 dark:text-white text-[20px] font-semibold tracking-tight">{status}</p>
+                        <p className="text-gray-500 dark:text-gray-400 text-[15px] mt-3 leading-relaxed">Please wait while we securely log you in...</p>
                     </>
                 )}
             </div>

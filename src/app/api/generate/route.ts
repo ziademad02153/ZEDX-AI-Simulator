@@ -107,9 +107,12 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: { message: "Rate limit exceeded. Please wait a minute." } }, { status: 429 });
         }
 
+        const body = await request.json();
+        const { model, messages, promptType, promptContext, prompt, response_format, history } = body;
+
         // 5. Teaser Mode Limit Check & Early Lock (Fix TOCTOU Race Condition)
         let isQuestionLocked = false;
-        if (currentTier === 'free') {
+        if (currentTier === 'free' && promptType !== 'report_evaluator') {
             if (profile.questions_asked >= 4) {
                 return NextResponse.json({ error: { message: "PAYWALL_LIMIT_REACHED", code: "PAYWALL_LIMIT_REACHED" } }, { status: 403 });
             }
@@ -117,9 +120,6 @@ export async function POST(request: Request) {
             await supabaseAdmin.rpc('increment_questions', { user_id: user.id });
             isQuestionLocked = true;
         }
-
-        const body = await request.json();
-        const { model, messages, promptType, promptContext, prompt, response_format } = body;
 
         // 5. Backend Model Security
         // Automatically fallback to free tier model if user doesn't have access

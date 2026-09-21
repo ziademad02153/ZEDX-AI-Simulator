@@ -341,7 +341,7 @@ export default function HowToUsePage() {
                                             "w-full sm:w-3/4 mx-auto h-14 rounded-xl text-lg font-bold transition-all",
                                             isTestingMic 
                                                 ? "bg-red-500 hover:bg-red-600 text-white" 
-                                                : isMicTested ? "bg-emerald-600 hover:bg-emerald-700 text-white border-2 border-emerald-500/50" : "bg-blue-600 hover:bg-blue-700 text-white"
+                                                : isMicTested ? "bg-[#a3e635] hover:bg-[#84cc16] text-black border-0" : "bg-blue-600 hover:bg-blue-700 text-white"
                                         )}
                                     >
                                         {isTestingMic ? "Stop Testing" : isMicTested ? "Test Again" : "Speak"}
@@ -370,7 +370,7 @@ export default function HowToUsePage() {
                             className={cn(
                                 "h-14 sm:h-16 px-12 text-lg sm:text-xl font-bold rounded-full shadow-lg transition-all",
                                 isMicTested 
-                                    ? "bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white hover:scale-105 active:scale-95" 
+                                    ? "bg-[#a3e635] hover:bg-[#84cc16] text-black hover:scale-105 active:scale-95 shadow-[#a3e635]/30" 
                                     : "bg-gray-200 dark:bg-zinc-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                             )}
                         >
