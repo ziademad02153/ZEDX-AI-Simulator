@@ -120,6 +120,17 @@ export async function POST(request: NextRequest) {
 
         const finalMessages = systemPrompt ? [{ role: "system", content: systemPrompt }, ...messages] : messages;
 
+        // 9. Enforce model tier server-side (mirrors /api/generate logic - SECURITY CRITICAL)
+        // Free users are always downgraded to the free model regardless of what the client sends.
+        const PRO_MODELS = ["qwen/qwen3.8-27b"];
+        const ULTRA_MODELS = ["openai/gpt-oss-120b"];
+        let targetModel = model || "openai/gpt-oss-20b";
+        if (currentTier === 'free' && (PRO_MODELS.includes(targetModel) || ULTRA_MODELS.includes(targetModel))) {
+            targetModel = "openai/gpt-oss-20b";
+        } else if (currentTier === 'pro' && ULTRA_MODELS.includes(targetModel)) {
+            targetModel = "qwen/qwen3.8-27b"; // pro cap
+        }
+
         // 9. Try each key with fallback
         let lastError: string | null = null;
         for (const apiKey of shuffledKeys) {
@@ -134,7 +145,7 @@ export async function POST(request: NextRequest) {
                         "Authorization": `Bearer ${apiKey}`
                     },
                     body: JSON.stringify({
-                        model: model || "openai/gpt-oss-20b",
+                        model: targetModel,
                         messages: finalMessages,
                         max_tokens: 4096,
                         temperature: 0.1,

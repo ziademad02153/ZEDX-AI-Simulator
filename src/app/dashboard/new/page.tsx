@@ -44,28 +44,28 @@ const GlobeIcon = () => (
 const AI_MODELS = [
     {
         id: "openai/gpt-oss-20b",
-        name: "GPT-OSS 20B",
-        description: "Fast & Efficient",
-        logo: "/openai-logo.png",
-        gradient: "from-blue-500/20 to-cyan-500/20",
+        name: "Gemini 3.8 Flash",
+        description: "Lightning Fast",
+        logo: "/icons8-gemini-48.png",
+        gradient: "from-blue-500/20 to-indigo-500/20",
         border: "group-hover:border-blue-500/50",
         tier: "free"
     },
     {
         id: "qwen/qwen3.8-27b",
-        name: "Qwen 3.8 27B",
+        name: "Claude Fable 5.1",
         description: "Multilingual Pro",
-        logo: "/qwen.png",
-        gradient: "from-indigo-500/20 to-violet-500/20",
-        border: "group-hover:border-indigo-500/50",
+        logo: "/icons8-claude-48.png",
+        gradient: "from-orange-500/20 to-rose-500/20",
+        border: "group-hover:border-orange-500/50",
         tier: "pro"
     },
     {
         id: "openai/gpt-oss-120b",
-        name: "GPT-OSS 120B",
+        name: "GPT-6 Astra",
         description: "Ultra Intelligence",
         logo: "/openai-logo.png",
-        gradient: "from-amber-500/20 to-orange-500/20",
+        gradient: "from-amber-500/20 to-yellow-400/20",
         border: "group-hover:border-amber-500/50",
         tier: "ultra"
     }
@@ -86,7 +86,7 @@ export default function NewInterviewPage() {
     const [language, setLanguage] = useState("en-US");
     const [difficulty, setDifficulty] = useState("Intermediate");
     const [questionCount, setQuestionCount] = useState("4");
-    const [selectedModel, setSelectedModel] = useState("qwen/qwen3.8-27b");
+    const [selectedModel, setSelectedModel] = useState("openai/gpt-oss-20b");
     const [selectedResumeId, setSelectedResumeId] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -135,6 +135,16 @@ export default function NewInterviewPage() {
                     if (profile?.tier) {
                         setUserTier(profile.tier as "free" | "pro" | "ultra");
                         if (profile.tier === 'pro' || profile.tier === 'ultra') setIsPro(true);
+                        // Security: reset model if free user has a pro/ultra model in state (e.g. from localStorage)
+                        if (profile.tier === 'free') {
+                            setSelectedModel((current) => {
+                                const modelData = AI_MODELS.find(m => m.id === current);
+                                if (modelData && modelData.tier !== 'free') {
+                                    return "openai/gpt-oss-20b";
+                                }
+                                return current;
+                            });
+                        }
                     }
                 }
             } catch (err) {
@@ -148,7 +158,7 @@ export default function NewInterviewPage() {
             if (savedModel && AI_MODELS.some(m => m.id === savedModel)) {
                 setSelectedModel(savedModel);
             } else {
-                setSelectedModel("qwen/qwen3.8-27b");
+                setSelectedModel("openai/gpt-oss-20b");
             }
         } catch { }
     }, [router]);

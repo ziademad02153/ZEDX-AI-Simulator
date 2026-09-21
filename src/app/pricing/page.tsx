@@ -119,7 +119,7 @@ export default function PricingPage() {
                             </div>
                             <div className="flex items-start gap-3 text-gray-700 dark:text-zinc-300 min-h-[36px] items-center">
                                 <Check className="w-[18px] h-[18px] text-emerald-500 shrink-0" strokeWidth={2.5} />
-                                <span className="text-[14px] font-medium">Basic AI model & feedback</span>
+                                <span className="text-[14px] font-medium">Gemini 3.8 Flash AI model</span>
                             </div>
 
                             {/* Locked Pro Features */}
@@ -234,9 +234,22 @@ export default function PricingPage() {
                                 <div className="w-9 h-9 rounded-[10px] overflow-hidden shrink-0 flex items-center justify-center mt-0.5 bg-gray-800 dark:bg-black border border-gray-600 dark:border-white/10">
                                     <Image src="/AI.jpg" alt="AI Engine" width={36} height={36} className="w-full h-full object-cover scale-110 opacity-90" />
                                 </div>
-                                <div>
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">2 Premium Models</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">GPT-OSS 20B & Qwen 3.8 27B</div>
+                                <div className="flex-1">
+                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-2">2 Premium Models</div>
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-5 h-5 rounded-md bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                                <Image src="/icons8-gemini-48.png" alt="Gemini" width={14} height={14} className="object-contain" />
+                                            </div>
+                                            <span className="text-[12px] text-gray-500 dark:text-zinc-400 font-medium">Gemini 3.8 Flash</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-5 h-5 rounded-md bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                                <Image src="/icons8-claude-48.png" alt="Claude" width={14} height={14} className="object-contain" />
+                                            </div>
+                                            <span className="text-[12px] text-gray-500 dark:text-zinc-400 font-medium">Claude Fable 5.1</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -401,9 +414,28 @@ export default function PricingPage() {
                                 <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5 rounded-[10px] bg-gray-800 dark:bg-black border border-gray-600 dark:border-white/10 overflow-hidden">
                                     <Image src="/AI.jpg" alt="AI Models" width={36} height={36} className="w-full h-full object-cover scale-110 opacity-90 sepia-[.2] hue-rotate-[20deg]" />
                                 </div>
-                                <div>
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">3 Premium Models</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">GPT-OSS 120B, Qwen 3.8 27B, GPT-OSS 20B</div>
+                                <div className="flex-1">
+                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-2">3 Premium Models</div>
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-5 h-5 rounded-md bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                                <Image src="/icons8-gemini-48.png" alt="Gemini" width={14} height={14} className="object-contain" />
+                                            </div>
+                                            <span className="text-[12px] text-gray-500 dark:text-zinc-400 font-medium">Gemini 3.8 Flash</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-5 h-5 rounded-md bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                                <Image src="/icons8-claude-48.png" alt="Claude" width={14} height={14} className="object-contain" />
+                                            </div>
+                                            <span className="text-[12px] text-gray-500 dark:text-zinc-400 font-medium">Claude Fable 5.1</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-5 h-5 rounded-md bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                                <Image src="/openai-logo.png" alt="GPT-6 Astra" width={14} height={14} className="object-contain dark:invert" />
+                                            </div>
+                                            <span className="text-[12px] text-gray-500 dark:text-zinc-400 font-medium">GPT-6 Astra</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 

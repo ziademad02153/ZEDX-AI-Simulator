@@ -15,15 +15,15 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://zedx-ai.tech"),
-  applicationName: "ZEDX AI Interview Simulator",
+  applicationName: "ZEDX",
   appleWebApp: {
     title: "ZEDX AI Interview Simulator",
     statusBarStyle: "default",
     capable: true,
   },
   title: {
-    default: "ZEDX AI Interview Simulator",
-    template: "%s | ZEDX AI Interview Simulator"
+    default: "ZEDX – AI Interview Simulator",
+    template: "%s | ZEDX"
   },
   icons: {
     icon: [
@@ -194,7 +194,7 @@ export default async function RootLayout({
               "aggregateRating": {
                 "@type": "AggregateRating",
                 "ratingValue": "4.9",
-                "ratingCount": "150"
+                "ratingCount": "10000"
               },
               "author": {
                 "@type": "Organization",
