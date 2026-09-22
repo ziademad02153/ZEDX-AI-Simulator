@@ -13,6 +13,11 @@ export default function Home() {
       <Navbar />
 
       <main className="flex-grow pt-24 relative">
+        <div className="flex justify-center my-4 relative z-50">
+          <a href="https://launchbuff.com/products/zedx-ai-interviewer-k0d1w3" target="_blank" rel="noopener noreferrer" title="Featured on LaunchBuff">
+            <img src="https://launchbuff.com/badge-featured-light.svg" alt="Featured on LaunchBuff" width="256" height="80" />
+          </a>
+        </div>
         {/* Global Background Fusion */}
         <div className="fixed inset-0 pointer-events-none z-0">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-green-100/40 rounded-full blur-[100px] animate-float"></div>
