@@ -167,7 +167,9 @@ export default async function RootLayout({
               "url": "https://zedx-ai.tech",
               "logo": "https://zedx-ai.tech/zedx-logo.png",
               "sameAs": [
-                "https://github.com/ziademad02153/ZEDX-AI-Assistant"
+                "https://github.com/ziademad02153/ZEDX-AI-Assistant",
+                "https://www.producthunt.com/posts/zedx-ai-interviewer",
+                "https://launchbuff.com/products/zedx-ai-interviewer-k0d1w3"
               ]
             })
           }}
@@ -208,7 +210,9 @@ export default async function RootLayout({
                 "alternateName": ["ZEDX", "zedx"]
               },
               "sameAs": [
-                "https://www.producthunt.com/posts/zedx-ai"
+                "https://www.producthunt.com/posts/zedx-ai-interviewer",
+                "https://launchbuff.com/products/zedx-ai-interviewer-k0d1w3",
+                "https://github.com/ziademad02153/ZEDX-AI-Assistant"
               ]
             })
           }}
@@ -228,7 +232,9 @@ export default async function RootLayout({
               "logo": "https://zedx-ai.tech/zedx-logo.png",
               "description": "ZEDX AI Interview Simulator - Free Real-Time Interview Simulation & Training Coach.",
               "sameAs": [
-                "https://www.producthunt.com/posts/zedx-ai"
+                "https://www.producthunt.com/posts/zedx-ai-interviewer",
+                "https://launchbuff.com/products/zedx-ai-interviewer-k0d1w3",
+                "https://github.com/ziademad02153/ZEDX-AI-Assistant"
               ]
             })
           }}
