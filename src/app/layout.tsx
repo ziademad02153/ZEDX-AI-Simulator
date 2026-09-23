@@ -169,7 +169,13 @@ export default async function RootLayout({
               "sameAs": [
                 "https://github.com/ziademad02153/ZEDX-AI-Assistant",
                 "https://www.producthunt.com/posts/zedx-ai-interviewer",
-                "https://launchbuff.com/products/zedx-ai-interviewer-k0d1w3"
+                "https://launchbuff.com/products/zedx-ai-interviewer-k0d1w3",
+                "https://www.instagram.com/zedx.ai.assistant",
+                "https://www.tiktok.com/@zedx.ai.interview",
+                "https://www.facebook.com/share/1dQDsJktQZ/",
+                "https://www.youtube.com/@ZEDX-AI",
+                "https://www.linkedin.com/company/zedx-ai",
+                "https://x.com/ZEDX_AI_"
               ]
             })
           }}
@@ -212,7 +218,13 @@ export default async function RootLayout({
               "sameAs": [
                 "https://www.producthunt.com/posts/zedx-ai-interviewer",
                 "https://launchbuff.com/products/zedx-ai-interviewer-k0d1w3",
-                "https://github.com/ziademad02153/ZEDX-AI-Assistant"
+                "https://github.com/ziademad02153/ZEDX-AI-Assistant",
+                "https://www.instagram.com/zedx.ai.assistant",
+                "https://www.tiktok.com/@zedx.ai.interview",
+                "https://www.facebook.com/share/1dQDsJktQZ/",
+                "https://www.youtube.com/@ZEDX-AI",
+                "https://www.linkedin.com/company/zedx-ai",
+                "https://x.com/ZEDX_AI_"
               ]
             })
           }}
@@ -234,7 +246,13 @@ export default async function RootLayout({
               "sameAs": [
                 "https://www.producthunt.com/posts/zedx-ai-interviewer",
                 "https://launchbuff.com/products/zedx-ai-interviewer-k0d1w3",
-                "https://github.com/ziademad02153/ZEDX-AI-Assistant"
+                "https://github.com/ziademad02153/ZEDX-AI-Assistant",
+                "https://www.instagram.com/zedx.ai.assistant",
+                "https://www.tiktok.com/@zedx.ai.interview",
+                "https://www.facebook.com/share/1dQDsJktQZ/",
+                "https://www.youtube.com/@ZEDX-AI",
+                "https://www.linkedin.com/company/zedx-ai",
+                "https://x.com/ZEDX_AI_"
               ]
             })
           }}
