@@ -129,7 +129,7 @@ export const AnimatedOrb = ({ className = "w-12 h-12" }: { className?: string })
 
   return (
     <div className={className}>
-      <Canvas camera={{ position: [0, 0, 2.2] }} gl={{ alpha: true, antialias: true }} dpr={[1.5, 2]}>
+      <Canvas camera={{ position: [0, 0, 2.2] }} gl={{ alpha: true, antialias: true, powerPreference: "low-power" }} dpr={[1, 1.5]}>
         <ambientLight intensity={1} />
         <Sphere args={[1, 64, 64]}>
           <OrbMaterial />

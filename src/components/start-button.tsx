@@ -36,7 +36,7 @@ export function StartButton({ variant, className }: StartButtonProps) {
             <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-orange-500 border-2 border-[#050505]"></span>
           </span>
         )}
-        <Button className="w-full sm:w-auto text-base md:text-lg px-8 py-4 md:px-10 md:py-7 rounded-full bg-white/10 dark:bg-white/[0.05] border border-white/20 backdrop-blur-md text-white transition-all duration-300 hover:bg-white/20 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.15)] font-semibold tracking-wide flex items-center justify-center cursor-pointer shadow-lg overflow-hidden relative">
+        <Button className="w-full sm:w-auto text-base md:text-lg px-8 py-4 md:px-10 md:py-7 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 transition-all duration-300 hover:scale-105 hover:bg-zinc-800 dark:hover:bg-zinc-200 font-semibold tracking-wide flex items-center justify-center cursor-pointer shadow-xl overflow-hidden relative border-none">
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-teal-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
           <span className="relative z-10 flex items-center">
             Start Practicing Now <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />

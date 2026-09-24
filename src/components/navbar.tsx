@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Menu, LayoutDashboard, PlayCircle, FolderOpen, History, MonitorSmartphone, Info, LogOut } from "lucide-react";
-import { motion, AnimatePresence, useAnimationFrame, useMotionValue, useMotionValueEvent } from "framer-motion";
+import { Menu, LayoutDashboard, PlayCircle, FolderOpen, History, MonitorSmartphone, Info, LogOut, ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -13,24 +13,17 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const NAV_LINKS = [
     { label: "Dashboard", href: "/dashboard" },
-    { label: "New Simulation", href: "/dashboard/new" },
+    { label: "New Interview", href: "/dashboard/new" },
     { label: "My Context Files", href: "/dashboard/resumes" },
     { label: "Training History", href: "/dashboard/history" },
     { label: "Pricing", href: "/pricing" },
     { label: "How it Works", href: "/#features" },
     { label: "Desktop App", href: "/download" },
     { label: "About ZEDX", href: "/about" },
+    { label: "Contact Sales", href: "/contact-sales" },
 ];
 
-const NavGroup = () => (
-    <div className="flex gap-8 md:gap-12 items-center pr-8 md:pr-12 w-max shrink-0">
-        {NAV_LINKS.map((link, idx) => (
-            <Link key={idx} href={link.href} className="whitespace-nowrap text-[14px] font-semibold tracking-wide text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-white transition-colors duration-300 shrink-0">
-                {link.label}
-            </Link>
-        ))}
-    </div>
-);
+
 
 export function Navbar() {
     const [scrolled, setScrolled] = useState(false);
@@ -56,119 +49,83 @@ export function Navbar() {
 
     return (
         <nav className={cn(
-            "fixed left-1/2 -translate-x-1/2 z-50 transition-all duration-500 ease-out print:hidden",
+            "fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out print:hidden",
             scrolled
-                ? "top-4 w-[90%] max-w-[56.25rem] lg:max-w-[900px]"
-                : "top-6 sm:top-8 w-[95%] max-w-[65.625rem] lg:max-w-[1050px]"
+                ? "bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-black/5 dark:border-white/10 shadow-sm"
+                : "bg-transparent border-b border-transparent"
         )}>
-            <div className={cn(
-                "flex items-center justify-between rounded-full border transition-all duration-500 ease-out",
-                    scrolled
-                        ? "bg-white/90 dark:bg-[#0a0a0a]/85 backdrop-blur-3xl border-zinc-200/80 dark:border-white/15 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_16px_50px_rgba(0,0,0,0.8)] pl-0 pr-4 sm:pl-2 sm:pr-8 h-12 sm:h-14"
-                        : "bg-white/70 dark:bg-[#0a0a0a]/60 backdrop-blur-xl border-zinc-200/40 dark:border-white/10 shadow-[0_4px_20px_rgb(0,0,0,0.05)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] pl-0 pr-6 sm:pl-2 sm:pr-10 md:pl-3 md:pr-12 h-14 sm:h-[68px]"
-            )}>
-                
-                {/* Logo */}
-                <Link href="/" className="flex items-center gap-2 group shrink-0 -ml-2 sm:-ml-4 md:-ml-6">
-                    <Image
-                        src="/zedx-logo.png"
-                        alt="ZEDX-AI Logo"
-                        width={360}
-                        height={120}
-                        className={cn(
-                            "object-contain transition-all duration-500 group-hover:scale-105",
-                            scrolled ? "w-32 sm:w-36 md:w-[185px] h-auto" : "w-36 sm:w-44 md:w-[218px] h-auto"
-                        )}
-                        style={{ height: "auto" }}
-                        priority
-                    />
-                </Link>
+            <div className="w-full">
+                <div className="max-w-[1400px] mx-auto flex items-center justify-between h-16 sm:h-20 px-6 md:px-10">
 
-                {/* Desktop & Mobile Marquee Links */}
-                <div 
-                    className="flex flex-1 overflow-hidden relative w-full -ml-2 mr-4 sm:-ml-4 sm:mr-8 md:-ml-6 md:mr-12 h-full items-center justify-start [mask-image:linear-gradient(to_right,transparent,black_60px,black_calc(100%_-_60px),transparent)]"
-                >
-                    <DraggableMarquee />
-                </div>
+                    <Link href="/" className="flex items-center gap-2 group shrink-0 -ml-[39px] sm:-ml-[44px]">
+                        <Image
+                            src="/zedx-logo.png"
+                            alt="ZEDX-AI Logo"
+                            width={400}
+                            height={133}
+                            className="object-contain object-left transition-all duration-300 group-hover:opacity-80 w-52 sm:w-64 h-auto drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)] dark:drop-shadow-none"
+                            priority
+                        />
+                    </Link>
 
-                {/* Right Side (Auth) */}
-                <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
-                    <div className="block">
-                        <AuthButtons scrolled={scrolled} />
+                    {/* Desktop Static Links */}
+                    <div className="hidden xl:flex flex-1 items-center justify-center gap-7 2xl:gap-10 px-6">
+                        {NAV_LINKS.map((link, idx) => (
+                            <Link key={idx} href={link.href} className="whitespace-nowrap text-[14px] md:text-[15px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-black dark:hover:text-white transition-colors duration-200">
+                                {link.label}
+                            </Link>
+                        ))}
                     </div>
-                </div>
 
+                    <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+                        <div className="hidden xl:flex items-center gap-3">
+                            <AuthButtons scrolled={scrolled} />
+                        </div>
+                        <div className="xl:hidden">
+                            <MobileMenu />
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </nav>
     );
 }
 
-function DraggableMarquee() {
-    const baseX = useMotionValue(0);
-    const contentRef = useRef<HTMLDivElement>(null);
-    const [isHovered, setIsHovered] = useState(false);
-    const initialized = useRef(false);
-
-    useAnimationFrame((t, delta) => {
-        if (contentRef.current) {
-            const singleGroupWidth = contentRef.current.scrollWidth / 16;
-            
-            // Initialize position in the exact middle to ensure content exists on both left and right
-            if (!initialized.current && singleGroupWidth > 0) {
-                baseX.set(-singleGroupWidth * 8);
-                initialized.current = true;
-                return;
-            }
-
-            if (!isHovered) {
-                // Speed of auto scroll: 40px per second to the left
-                const moveBy = -40 * (delta / 1000);
-                let newX = baseX.get() + moveBy;
-                
-                // Keep the value perfectly bounded between group 7 and 9
-                // to guarantee endless scrolling on ultra-wide monitors
-                if (newX <= -singleGroupWidth * 9) {
-                    newX += singleGroupWidth;
-                } else if (newX > -singleGroupWidth * 7) {
-                    newX -= singleGroupWidth;
-                }
-                baseX.set(newX);
-            }
-        }
-    });
-
+function MobileMenu() {
+    const [open, setOpen] = useState(false);
     return (
-        <motion.div
-            ref={contentRef}
-            className="flex w-max items-center cursor-grab active:cursor-grabbing"
-            style={{ x: baseX }}
-            drag="x"
-            dragConstraints={{ left: -100000, right: 100000 }} // virtually unbounded for infinite dragging
-            dragElastic={0} // no bouncing
-            onDrag={(e, info) => {
-                if (contentRef.current) {
-                    const singleGroupWidth = contentRef.current.scrollWidth / 16;
-                    let newX = baseX.get(); // drag="x" automatically updates baseX
-                    
-                    // Seamlessly wrap during manual drag
-                    if (newX <= -singleGroupWidth * 9) {
-                        baseX.set(newX + singleGroupWidth);
-                    } else if (newX > -singleGroupWidth * 7) {
-                        baseX.set(newX - singleGroupWidth);
-                    }
-                }
-            }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onTouchStart={() => setIsHovered(true)}
-            onTouchEnd={() => setIsHovered(false)}
-        >
-            {Array.from({ length: 16 }).map((_, i) => (
-                <NavGroup key={i} />
-            ))}
-        </motion.div>
+        <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="w-10 h-10 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                    <Menu className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
+                </Button>
+            </SheetTrigger>
+            <SheetContent side="top" className="w-full h-[100dvh] bg-white/95 dark:bg-[#0a0a0a]/95 backdrop-blur-xl border-none p-6 pt-24 flex flex-col items-center gap-8">
+                <div className="absolute top-4 left-4 h-[36px] flex items-center gap-2 -ml-[24px]">
+                    <Image src="/zedx-logo.png" alt="ZEDX-AI Logo" width={140} height={45} className="object-contain object-left drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)] dark:drop-shadow-none" />
+                </div>
+                <div className="flex flex-col items-center justify-start mt-4 gap-8 overflow-y-auto w-full max-w-sm flex-1 pb-4">
+                    {NAV_LINKS.map((link, idx) => (
+                        <Link 
+                            key={idx} 
+                            href={link.href} 
+                            onClick={() => setOpen(false)}
+                            className="text-2xl font-bold text-zinc-800 dark:text-zinc-100 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
+                        >
+                            {link.label}
+                        </Link>
+                    ))}
+                </div>
+                <div className="w-full max-w-sm pb-8">
+                    <AuthButtons isMobile onSheetClose={() => setOpen(false)} />
+                </div>
+            </SheetContent>
+        </Sheet>
     );
 }
+
+
 
 function AuthButtons({ isMobile, scrolled, onSheetClose }: { isMobile?: boolean, scrolled?: boolean, onSheetClose?: () => void }) {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -221,39 +178,38 @@ function AuthButtons({ isMobile, scrolled, onSheetClose }: { isMobile?: boolean,
     if (isLoggedIn) {
         if (isMobile) {
             return (
-                <div className="w-full flex flex-col gap-2">
-                    <div className="flex items-center gap-3 p-2 mb-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl">
+                <div className="w-full flex flex-col gap-4">
+                    <div className="flex flex-col items-center gap-3 p-4">
                         <div className="relative shrink-0 flex items-center justify-center">
                             <div className={cn(
-                                "w-12 h-12 rounded-full overflow-hidden shrink-0 transition-all",
-                                userTier === 'pro' ? "ring-2 ring-[#a3e635] ring-offset-2 ring-offset-white dark:ring-offset-zinc-800" : "border border-zinc-200 dark:border-zinc-700"
+                                "w-20 h-20 rounded-full overflow-hidden shrink-0 transition-all",
+                                userTier === 'pro' ? "ring-[3px] ring-[#a3e635] ring-offset-4 ring-offset-transparent dark:ring-offset-transparent" : 
+                                userTier === 'ultra' ? "ring-[3px] ring-amber-400 ring-offset-4 ring-offset-transparent dark:ring-offset-transparent" : 
+                                "border border-zinc-200 dark:border-zinc-700"
                             )}>
                                 {userAvatar ? (
-                                    <Image src={userAvatar} alt="Avatar" width={48} height={48} className="w-full h-full object-cover" />
+                                    <Image src={userAvatar} alt="Avatar" width={80} height={80} className="w-full h-full object-cover" />
                                 ) : (
-                                    <div className="w-full h-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-400 font-bold text-xl">
+                                    <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-400 font-bold text-3xl">
                                         {userName?.charAt(0).toUpperCase() || 'U'}
                                     </div>
                                 )}
                             </div>
                             {(userTier === 'pro' || userTier === 'ultra') && (
                                 <div className={cn(
-                                    "absolute -bottom-3.5 text-black text-[9px] tracking-wider font-extrabold px-2 py-0.5 rounded-full border-[1.5px] shadow-md z-10 uppercase",
-                                    userTier === 'ultra' ? "bg-gradient-to-r from-amber-500 to-yellow-300 border-white dark:border-zinc-800" : "bg-gradient-to-r from-emerald-500 to-[#a3e635] border-white dark:border-zinc-800"
+                                    "absolute -bottom-3 left-1/2 -translate-x-1/2 text-black text-[9px] tracking-[0.1em] font-black px-2.5 py-0.5 rounded-full shadow-md z-10 uppercase whitespace-nowrap pointer-events-none",
+                                    userTier === 'ultra' ? "bg-gradient-to-r from-amber-500 to-yellow-300" : "bg-gradient-to-r from-emerald-500 to-[#a3e635]"
                                 )}>
                                     {userTier.toUpperCase()}
                                 </div>
                             )}
                         </div>
-                        <div className="flex-1 min-w-0 pl-1">
-                            <p className="font-semibold text-gray-900 dark:text-white truncate">{userName || 'User'}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{userEmail}</p>
+                        <div className="text-center w-full mt-2">
+                            <p className="font-bold text-2xl text-gray-900 dark:text-white truncate">{userName || 'User'}</p>
+                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate mt-0.5">{userEmail}</p>
                         </div>
                     </div>
-                    <Button onClick={() => { router.push('/dashboard'); onSheetClose?.(); }} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl">
-                        Go to Dashboard
-                    </Button>
-                    <button onClick={() => { handleLogout(); onSheetClose?.(); }} className="w-full flex items-center gap-3 px-4 py-3 text-left text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors font-medium">
+                    <button onClick={() => { handleLogout(); onSheetClose?.(); }} className="w-full flex items-center justify-center gap-2 px-4 py-3 text-red-500 hover:text-red-600 transition-colors font-semibold text-lg mt-1">
                         <LogOut className="w-5 h-5" /> Sign Out
                     </button>
                 </div>
@@ -275,12 +231,16 @@ function AuthButtons({ isMobile, scrolled, onSheetClose }: { isMobile?: boolean,
     }
 
     return (
-        <div className={cn("flex gap-1.5 sm:gap-2", isMobile ? "flex-col" : "items-center")}>
-            <Button asChild variant="ghost" className="text-[11px] sm:text-[12px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-black dark:hover:text-white px-2 sm:px-4 rounded-full">
-                <Link href="/login" onClick={onSheetClose}>Sign in</Link>
-            </Button>
-            <Button asChild className="text-[11px] sm:text-[12px] font-semibold bg-gradient-to-r from-[#047857] to-[#bef264] text-white px-3 sm:px-4 rounded-full transition-all hover:scale-105 border-none shadow-none">
-                <Link href="/login" onClick={onSheetClose}>Try Free</Link>
+        <div className={cn("flex gap-3", isMobile ? "flex-col w-full" : "items-center")}>
+            <Button asChild className={cn(
+                "font-semibold transition-all border-none shadow-none",
+                isMobile 
+                    ? "w-full bg-[#84cc16] hover:bg-[#65a30d] text-white rounded-full h-14 text-lg shadow-lg shadow-[#84cc16]/25" 
+                    : "text-[14px] bg-white text-black hover:bg-zinc-200 px-5 rounded-full h-10"
+            )}>
+                <Link href="/login" onClick={onSheetClose}>
+                    Try for free
+                </Link>
             </Button>
         </div>
     );
@@ -331,8 +291,8 @@ function DesktopUserDropdown({ userAvatar, userName, userEmail, userTier, handle
                 </div>
                 {(userTier === 'pro' || userTier === 'ultra') && (
                     <div className={cn(
-                        "absolute -bottom-2.5 left-1/2 -translate-x-1/2 text-black text-[9px] tracking-wider font-extrabold px-2 py-0.5 rounded-full border-[1.5px] shadow-md z-10 uppercase whitespace-nowrap pointer-events-none",
-                        userTier === 'ultra' ? "bg-gradient-to-r from-amber-500 to-yellow-300 border-white dark:border-[#0a0a0a]" : "bg-gradient-to-r from-emerald-500 to-[#a3e635] border-white dark:border-[#0a0a0a]"
+                        "absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-black text-[6.5px] tracking-[0.1em] font-black px-1.5 py-[2px] rounded-full shadow-sm z-10 uppercase whitespace-nowrap pointer-events-none",
+                        userTier === 'ultra' ? "bg-gradient-to-r from-amber-500 to-yellow-300" : "bg-gradient-to-r from-emerald-500 to-[#a3e635]"
                     )}>
                         {userTier.toUpperCase()}
                     </div>

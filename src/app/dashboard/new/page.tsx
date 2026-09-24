@@ -82,7 +82,7 @@ export default function NewInterviewPage() {
     const posthog = usePostHog();
     const [jobDescription, setJobDescription] = useState("");
     const [resume, setResume] = useState("");
-    const [interviewType, setInterviewType] = useState("Technical");
+    const [interviewType, setInterviewType] = useState("Role-Specific");
     const [language, setLanguage] = useState("en-US");
     const [difficulty, setDifficulty] = useState("Intermediate");
     const [questionCount, setQuestionCount] = useState("4");
@@ -203,13 +203,40 @@ export default function NewInterviewPage() {
         }
     };
 
-    const handleStart = () => {
+    const handleStart = async () => {
         if (!isValid) {
             setError("Please fill in Job Description and Resume to proceed.");
             return;
         }
 
         setIsLoading(true);
+
+        // Check Rate Limits (4 interviews per month for Free tier)
+        if (userTier === "free") {
+            try {
+                const startOfMonth = new Date();
+                startOfMonth.setDate(1);
+                startOfMonth.setHours(0, 0, 0, 0);
+
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    const { count, error } = await supabase
+                        .from('interviews')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('user_id', session.user.id)
+                        .gte('created_at', startOfMonth.toISOString());
+
+                    if (count !== null && count >= 4) {
+                        setError("You have reached the Free tier limit of 4 interviews this month. Please upgrade to Pro for unlimited interviews.");
+                        setIsLoading(false);
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to check rate limits", err);
+            }
+        }
+
         posthog.capture('interview_started', {
             mode: interviewType,
             language: language,
@@ -261,7 +288,7 @@ export default function NewInterviewPage() {
                             <h1 className="text-3xl sm:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-500 dark:from-white dark:to-gray-400 mb-1 sm:mb-2 tracking-tight">
                                 Setup Interview
                             </h1>
-                            <p className="text-base sm:text-lg text-gray-500 dark:text-gray-400 font-medium tracking-wide">Configure your AI simulator for the perfect session.</p>
+                            <p className="text-base sm:text-lg text-gray-500 dark:text-gray-400 font-medium tracking-wide">Set up the interview you're preparing for.</p>
                         </div>
                     </div>
                 </div>
@@ -295,7 +322,7 @@ export default function NewInterviewPage() {
                                 </div>
                                 <textarea
                                     className="w-full flex-1 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 sm:p-6 text-base sm:text-lg text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:outline-none focus:border-[#84cc16]/50 focus:ring-1 focus:ring-[#84cc16]/50 resize-none transition-all min-h-[180px] sm:min-h-[220px] leading-relaxed"
-                                    placeholder="e.g. Senior React Developer at Netflix..."
+                                    placeholder="Paste the job description for the role you're applying to..."
                                     value={jobDescription}
                                     onChange={(e) => setJobDescription(e.target.value)}
                                 />
@@ -358,9 +385,9 @@ export default function NewInterviewPage() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.4, delay: 0.2 }}
-                            className="grid grid-cols-1 sm:grid-cols-2 gap-6"
+                            className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
                         >
-                            <div className="relative z-[60] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
+                            <div className="relative z-[60] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-4 sm:p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
                                 <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
                                     <div className="drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
                                         <Image src="/Interview-Logo.png" alt="Interview Type" width={28} height={28} className="object-contain dark:invert transition-all" />
@@ -369,15 +396,16 @@ export default function NewInterviewPage() {
                                 </label>
                                 <CustomSelect
                                     options={[
-                                        { label: "Technical", value: "Technical" },
+                                        { label: "Role-Specific", value: "Role-Specific" },
                                         { label: "Behavioral", value: "Behavioral" },
+                                        { label: "Technical", value: "Technical" },
                                         { label: "Project Deep Dive", value: "Project Deep Dive" },
                                     ]}
                                     value={interviewType}
                                     onChange={(v) => setInterviewType(v)}
                                 />
                             </div>
-                            <div className="relative z-[50] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
+                            <div className="relative z-[50] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-4 sm:p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
                                 <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
                                     <div className="text-emerald-600 dark:text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
                                         <Image src="/Multi-Language.png" alt="Language Globe" width={28} height={28} className="object-contain" />
@@ -406,7 +434,7 @@ export default function NewInterviewPage() {
                             </div>
                             {!isDesktop && (
                                 <>
-                                <div className="relative z-[40] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
+                                <div className="relative z-[40] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-4 sm:p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
                                     <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
                                         <div className="drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
                                             <Image src="/Granular Scorecards.png" alt="Difficulty Scorecard" width={28} height={28} className="object-contain" />
@@ -426,7 +454,7 @@ export default function NewInterviewPage() {
                                     }}
                                 />
                             </div>
-                            <div className="relative z-[30] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
+                            <div className="relative z-[30] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-4 sm:p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
                                 <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
                                     <div className="drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
                                         <Image src="/question.png" alt="Questions" width={36} height={36} className="object-contain scale-110" />
@@ -474,8 +502,8 @@ export default function NewInterviewPage() {
                                     <Image src="/AI.jpg" alt="AI Model" width={48} height={48} className="w-full h-full object-cover" />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-gray-900 dark:text-white text-xl sm:text-2xl tracking-tight">AI Model</h3>
-                                    <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium">Choose the brain behind ZEDX</p>
+                                    <h3 className="font-semibold text-gray-900 dark:text-white text-xl sm:text-2xl tracking-tight">Interview Engine</h3>
+                                    <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium">Select your preferred AI interviewer</p>
                                 </div>
                             </div>
 
@@ -553,7 +581,7 @@ export default function NewInterviewPage() {
                                         Test Drive Model
                                     </h3>
                                 </div>
-                                <div className="flex-1 min-h-[400px] mb-6">
+                                <div className="flex-1 h-[250px] sm:h-[350px] mb-6">
                                     <ModelChat
                                         modelId={selectedModel}
                                         modelName={currentModelData.name}

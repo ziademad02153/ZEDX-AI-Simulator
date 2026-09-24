@@ -44,6 +44,39 @@ export async function POST(request: Request) {
             return NextResponse.json({ scorecard: interview.analysis.scorecard });
         }
 
+        // --- Rate Limiting Check (4 Reports/Month for Free Tier) ---
+        const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('tier')
+            .eq('id', user.id)
+            .single();
+
+        const userTier = profile?.tier || 'free';
+
+        if (userTier === 'free') {
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0, 0, 0, 0);
+
+            // Fetch all interviews this month for the user to check how many have scorecards
+            const { data: monthInterviews, error: limitCheckError } = await supabaseAdmin
+                .from('interviews')
+                .select('analysis')
+                .eq('user_id', user.id)
+                .gte('created_at', startOfMonth.toISOString());
+
+            if (!limitCheckError && monthInterviews) {
+                const reportCount = monthInterviews.filter(i => i.analysis?.scorecard).length;
+                if (reportCount >= 4) {
+                    return NextResponse.json(
+                        { error: { message: "You have reached your Free tier limit of 4 AI PDF reports this month. Please upgrade to Pro to generate unlimited reports." } }, 
+                        { status: 403 }
+                    );
+                }
+            }
+        }
+        // ---------------------------------------------------------
+
         // Determine language
         const lang = interview.analysis?.language || "en-US";
         

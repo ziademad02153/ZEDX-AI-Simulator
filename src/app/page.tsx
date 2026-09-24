@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
 import { Check, Globe, Sparkles, ChevronDown, ArrowRight, Star, Code, HelpCircle } from "lucide-react";
+import { SiAnthropic, SiGooglegemini, SiElevenlabs, SiSupabase } from "react-icons/si";
 import { PlatformSection } from "@/components/platform-section";
 import { StartButton } from "@/components/start-button";
 
@@ -15,14 +16,13 @@ export default function Home() {
       <main className="flex-grow pt-24 relative">
         {/* Global Background Fusion */}
         <div className="fixed inset-0 pointer-events-none z-0">
-          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-green-100/40 rounded-full blur-[100px] animate-float"></div>
-          <div className="absolute top-[20%] right-[-10%] w-[40%] h-[60%] bg-teal-50/40 rounded-full blur-[120px] animate-float-delayed"></div>
+          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-green-100/40 rounded-full blur-[100px]"></div>
+          <div className="absolute top-[20%] right-[-10%] w-[40%] h-[60%] bg-teal-50/40 rounded-full blur-[120px]"></div>
         </div>
 
         {/* Hero Section */}
         <section className="py-12 md:py-20 text-center container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto flex flex-col items-center">
-
 
             <h1 className="text-[2.25rem] xs:text-4xl sm:text-5xl md:text-6xl lg:text-[4.5rem] font-bold tracking-tight text-gray-900 dark:text-white mb-6 md:mb-8 leading-[1.15] md:leading-[1.1] max-w-[90rem] mx-auto px-4">
               Master Your Next Interview <br className="xs:hidden" />
@@ -36,26 +36,43 @@ export default function Home() {
               Universal AI Mock Interview Simulator • Real-time Feedback • Deep Performance Analytics
             </h3>
 
-            <div className="flex flex-wrap items-center gap-5 w-full justify-center mb-16 px-4 relative z-50">
+            <div className="flex flex-col sm:flex-row items-center gap-6 md:gap-8 w-full justify-center mb-16 px-4 relative z-50">
               <StartButton variant="landing" />
+              
+              <div className="flex items-center gap-4">
+                <div className="flex -space-x-3">
+                  <img src="https://cdn.21st.dev/assets/localized/59a2b5a0dfc1531e2d1ea42d71ae8615f37582e1f8a17e4a1b1aff9afc7ef878.jpg" alt="Client 1" className="w-10 h-10 rounded-full border-[2px] border-white dark:border-black object-cover shrink-0" />
+                  <img src="https://cdn.21st.dev/assets/localized/c7097eeb66ad097b6e5f9dbb95ae857cd6b55c0ad398c1ea84f3ab90a02c631e.jpg" alt="Client 2" className="w-10 h-10 rounded-full border-[2px] border-white dark:border-black object-cover shrink-0" />
+                  <img src="https://cdn.21st.dev/assets/localized/c70d48e47d3a2d79ad07d16bff3aa3cff686580be031b6102cad73a15b47d8fd.jpg" alt="Client 3" className="w-10 h-10 rounded-full border-[2px] border-white dark:border-black object-cover shrink-0" />
+                  <img src="https://cdn.21st.dev/assets/localized/51c9ed392f6e7fce7fd85a78648e3e06bfdcd91999ab5fa48485888231589abf.jpg" alt="Client 4" className="w-10 h-10 rounded-full border-[2px] border-white dark:border-black object-cover shrink-0" />
+                </div>
+                <div className="flex flex-col items-start gap-1 text-left">
+                  <div className="flex items-center gap-0.5">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="w-[18px] h-[18px] fill-[#ff9933] text-[#ff9933]" />
+                    ))}
+                  </div>
+                  <span className="text-[13px] md:text-[14px] font-medium text-gray-600 dark:text-gray-300">Trusted by 1000+ clients</span>
+                </div>
+              </div>
             </div>
 
             {/* Hero Visual: Video Player */}
-            <div className="relative w-full max-w-[56.25rem] lg:max-w-[900px] mx-auto perspective-1000 px-4">
-              <div className="bg-black rounded-[1.5rem] md:rounded-[2rem] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.3)] border border-gray-100 dark:border-zinc-700 overflow-hidden relative z-10 transition-transform duration-700 hover:rotate-x-1">
-                <div className="bg-gray-50 dark:bg-zinc-800 border-b border-gray-100 dark:border-zinc-700 p-3 md:p-4 flex items-center gap-2 md:gap-2.5">
-                  <div className="flex gap-1.5 md:gap-2">
+            <div className="relative w-full max-w-6xl mx-auto perspective-1000 px-4 mt-8">
+              <div className="bg-[#050505] rounded-[1.5rem] md:rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(16,185,129,0.15)] border border-gray-200 dark:border-white/10 overflow-hidden relative z-10 transition-transform duration-700 hover:rotate-x-1 ring-1 ring-white/5">
+                <div className="bg-gray-50/80 dark:bg-[#111]/80 backdrop-blur-md border-b border-gray-200 dark:border-white/5 p-3 md:p-4 flex items-center gap-2 md:gap-2.5">
+                  <div className="flex gap-1.5 md:gap-2 opacity-80 hover:opacity-100 transition-opacity">
                     <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-red-400"></div>
                     <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-yellow-400"></div>
                     <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-green-400"></div>
                   </div>
                   <div className="absolute left-0 right-0 flex justify-center pointer-events-none">
-                    <span className="text-xs md:text-sm font-semibold text-gray-500 dark:text-gray-400">
-                      ZEDX AI Demo
+                    <span className="text-xs md:text-sm font-medium text-gray-500 dark:text-gray-400/80 tracking-wide">
+                      ZEDX AI Interview
                     </span>
                   </div>
                 </div>
-                <div className="relative w-full aspect-video bg-black flex items-center justify-center">
+                <div className="relative w-full aspect-video bg-black flex items-center justify-center p-0.5">
                   <video
                     src="/zedx.ai.0.1.DEMO.mp4"
                     autoPlay
@@ -63,17 +80,17 @@ export default function Home() {
                     muted
                     playsInline
                     controls
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover rounded-b-[1.4rem] md:rounded-b-[1.9rem]"
                   />
                 </div>
               </div>
-              {/* Massive Atmosphere Glow */}
-              <div className="absolute -inset-32 bg-gradient-to-r from-green-600/40 via-[#1fa34c]/40 to-emerald-600/40 blur-[160px] -z-10 rounded-[4rem] opacity-90 animate-pulse"></div>
+              {/* Massive Atmosphere Glow - Softened and Static */}
+              <div className="absolute -inset-32 bg-gradient-to-r from-green-500/20 via-[#1fa34c]/20 to-emerald-500/20 blur-[120px] -z-10 rounded-[4rem] opacity-70 pointer-events-none"></div>
             </div>
 
           </div>
 
-          <div className="mt-16 md:mt-24 relative w-full max-w-[56.25rem] lg:max-w-[900px] mx-auto perspective-1000 px-4">
+          <div className="mt-16 md:mt-24 relative w-full max-w-6xl mx-auto perspective-1000 px-4">
             <div className="text-center mb-10 md:mb-16">
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-6">
                 Technical <span className="text-gradient-fusion">Precision.</span>
@@ -98,26 +115,26 @@ export default function Home() {
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] bg-[size:3rem_3rem] md:bg-[size:5rem_5rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-60"></div>
 
                 {/* Floating Chat Bubbles */}
-                <div className="relative z-10 w-full max-w-5xl space-y-6 md:space-y-10">
+                <div className="relative z-10 w-full max-w-5xl space-y-6 md:space-y-10 min-w-0">
                   {/* Chat Bubble 1 (AI Question) */}
-                  <div className="flex gap-3 md:gap-7 items-start justify-start animate-fade-in-up w-full">
+                  <div className="flex gap-3 md:gap-7 items-start justify-start animate-fade-in-up w-full min-w-0">
                     <div className="w-8 h-8 md:w-13 md:h-13 rounded-full overflow-hidden bg-green-100 flex items-center justify-center shadow-xl border-2 border-green-500/20 flex-shrink-0">
                       <Image src="/AI.jpg" alt="ZEDX AI Simulator" width={52} height={52} className="object-cover w-full h-full" />
                     </div>
-                    <div className="bg-gray-100 dark:bg-zinc-800 rounded-[1.1rem] md:rounded-[2rem] rounded-tl-none p-3.5 md:p-6 text-[0.85rem] md:text-[1.05rem] text-gray-700 dark:text-gray-200 shadow-sm w-full max-w-[calc(100%-3rem)] md:max-w-[85%] min-w-0 border border-gray-200/50 leading-relaxed font-medium">
+                    <div className="bg-gray-100 dark:bg-zinc-800 rounded-[1.1rem] md:rounded-[2rem] rounded-tl-none p-3.5 md:p-6 text-[0.85rem] md:text-[1.05rem] text-gray-700 dark:text-gray-200 shadow-sm w-full max-w-[calc(100%-3rem)] md:max-w-[85%] min-w-0 border border-gray-200/50 leading-relaxed font-medium break-words">
                       &quot;Can you implement a robust custom React hook for fetching data that includes an abort controller for cleanup, as well as comprehensive loading and error state management?&quot;
                     </div>
                   </div>
 
                   {/* Chat Bubble 2 (User Code) */}
-                  <div className="flex gap-3 md:gap-7 items-start justify-end animate-fade-in-up w-full" style={{ animationDelay: '1s' }}>
+                  <div className="flex gap-3 md:gap-7 items-start justify-end animate-fade-in-up w-full min-w-0" style={{ animationDelay: '1s' }}>
                     <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/40 dark:to-emerald-900/40 border border-green-200 dark:border-green-800 rounded-[1.1rem] md:rounded-[2.1rem] rounded-tr-none p-4 md:p-8 shadow-xl w-full max-w-[calc(100%-3rem)] md:max-w-[92%] min-w-0 relative border-r-4 border-r-green-500">
                       <div className="absolute -top-2.5 -left-2.5 md:-top-5 md:-left-5 bg-white dark:bg-zinc-800 border-2 border-green-500 dark:border-green-600 rounded-full p-1 md:p-2.5 shadow-xl">
                         <Code className="w-4 h-4 md:w-6 md:h-6 text-green-500" />
                       </div>
 
-                      <div className="bg-white/50 dark:bg-black/30 rounded-xl p-3 md:p-6 mb-3 md:mb-4 font-mono text-[0.65rem] md:text-[0.8rem] leading-relaxed overflow-x-auto border border-black/5 dark:border-white/10 shadow-inner w-full max-w-full">
-                        <pre className="text-gray-800 dark:text-gray-200">
+                      <div className="bg-white/50 dark:bg-black/30 rounded-xl p-3 md:p-6 mb-3 md:mb-4 font-mono text-[0.65rem] md:text-[0.8rem] leading-relaxed overflow-x-auto border border-black/5 dark:border-white/10 shadow-inner w-full min-w-0">
+                        <pre className="text-gray-800 dark:text-gray-200 w-full min-w-0">
                           <span className="text-pink-600 dark:text-pink-400 font-semibold">export function</span> <span className="text-blue-600 dark:text-blue-400">useFetch</span>&lt;<span className="text-teal-600 dark:text-teal-400">T</span>&gt;(<span className="text-orange-600 dark:text-orange-300">url</span>: <span className="text-teal-600 dark:text-teal-400">string</span>) {"{\n"}
                           {"  "}<span className="text-pink-600 dark:text-pink-400 font-semibold">const</span> [<span className="text-sky-600 dark:text-sky-300">data</span>, <span className="text-blue-600 dark:text-blue-400">setData</span>] = <span className="text-yellow-600 dark:text-yellow-200">useState</span>&lt;<span className="text-teal-600 dark:text-teal-400">T | null</span>&gt;(<span className="text-purple-600 dark:text-purple-400">null</span>);{"\n"}
                           {"  "}<span className="text-pink-600 dark:text-pink-400 font-semibold">const</span> [<span className="text-sky-600 dark:text-sky-300">error</span>, <span className="text-blue-600 dark:text-blue-400">setError</span>] = <span className="text-yellow-600 dark:text-yellow-200">useState</span>&lt;<span className="text-teal-600 dark:text-teal-400">Error | null</span>&gt;(<span className="text-purple-600 dark:text-purple-400">null</span>);{"\n"}
@@ -152,23 +169,56 @@ export default function Home() {
         <section id="features" className="py-24 relative z-10">
           <div className="container mx-auto px-4">
 
-            {/* Suggestion Button */}
-            <div className="flex justify-center md:justify-end w-full mb-4 max-w-6xl mx-auto">
-              <Link
-                href="mailto:zedx.ai.support@gmail.com"
-                className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-white dark:bg-[#111] border border-gray-200 dark:border-white/10 rounded-full shadow-sm hover:shadow-md transition-all hover:scale-105 group"
+            {/* Partners / Trusted By Marquee */}
+            <div className="flex flex-col items-center justify-center w-full mb-28 mt-8 overflow-hidden relative">
+              <p className="text-[13px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-[0.25em] mb-12 text-center">
+                Powered by industry-leading AI
+              </p>
+
+              <div 
+                className="relative w-full max-w-[90rem] mx-auto flex items-center overflow-hidden"
+                style={{ 
+                  maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)', 
+                  WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' 
+                }}
               >
-                <Image
-                  src="/suggestion logo.png"
-                  alt="Suggestion"
-                  width={22}
-                  height={22}
-                  className="dark:invert opacity-80 group-hover:opacity-100 transition-opacity object-contain"
-                />
-                <span className="text-[14px] font-medium text-gray-700 dark:text-gray-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                  Have a suggestion?
-                </span>
-              </Link>
+                {/* Marquee Wrapper */}
+                <div className="flex w-max animate-marquee will-change-transform" style={{ animationDuration: '40s' }}>
+                  
+                  {/* Two identical sets for seamless loop */}
+                  {[...Array(2)].map((_, setIdx) => (
+                    <div key={`partner-set-${setIdx}`} className="flex flex-nowrap items-center gap-20 md:gap-32 pr-20 md:pr-32 opacity-60 dark:opacity-50 hover:opacity-100 transition-opacity duration-300">
+                      
+                      <div className="flex items-center gap-3 shrink-0 text-gray-800 dark:text-gray-200">
+                        <Image src="/openai-logo.png" alt="OpenAI" width={38} height={38} className="dark:invert object-contain shrink-0" />
+                        <span className="text-2xl font-bold tracking-tight whitespace-nowrap">OpenAI</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 shrink-0 text-gray-800 dark:text-gray-200">
+                        <SiAnthropic className="w-9 h-9 shrink-0" />
+                        <span className="text-2xl font-bold tracking-tight whitespace-nowrap" style={{ fontFamily: 'Georgia, serif' }}>Anthropic</span>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0 text-gray-800 dark:text-gray-200">
+                        <SiGooglegemini className="w-9 h-9 shrink-0" />
+                        <span className="text-2xl font-bold tracking-tight whitespace-nowrap">Google Gemini</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 shrink-0 text-gray-800 dark:text-gray-200">
+                        <SiElevenlabs className="w-8 h-8 shrink-0" />
+                        <span className="text-[1.3rem] font-bold tracking-wider whitespace-nowrap uppercase">ElevenLabs</span>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0 text-gray-800 dark:text-gray-200">
+                        <SiSupabase className="w-9 h-9 shrink-0" />
+                        <span className="text-2xl font-bold tracking-tight whitespace-nowrap">Supabase</span>
+                      </div>
+
+                    </div>
+                  ))}
+
+                </div>
+              </div>
             </div>
 
             <div className="text-center mb-20">

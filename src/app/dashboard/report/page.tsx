@@ -37,7 +37,7 @@ function ScoreRing({ score, size = 180, strokeWidth = 10 }: { score: number; siz
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <motion.span initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, delay: 1.2 }} className="font-thin leading-none" style={{ fontSize: size * 0.28, color: colors.text }}>{score}</motion.span>
-                <span className="text-white/30 font-light" style={{ fontSize: size * 0.1 }}>/10</span>
+                <span className="text-gray-600 dark:text-white/30 font-light" style={{ fontSize: size * 0.1 }}>/10</span>
             </div>
         </div>
     );
@@ -152,7 +152,7 @@ export default function ReportPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+            <div className="min-h-screen bg-gray-50 dark:bg-[#050505] flex flex-col items-center justify-center p-6 relative overflow-hidden">
                 <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#84cc16]/10 rounded-full blur-[120px] animate-pulse" />
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-[#84cc16]/15 rounded-full blur-[60px]" />
@@ -169,10 +169,10 @@ export default function ReportPage() {
                         </div>
                     </div>
                     <div className="text-center">
-                        <motion.h2 animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }} className="text-2xl font-light tracking-[0.3em] uppercase text-white mb-2">Analyzing Performance</motion.h2>
-                        <p className="text-white/30 text-sm tracking-widest">AI is reviewing your interview...</p>
+                        <motion.h2 animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }} className="text-2xl font-light tracking-[0.3em] uppercase text-gray-900 dark:text-white mb-2">Analyzing Performance</motion.h2>
+                        <p className="text-gray-600 dark:text-white/30 text-sm tracking-widest">AI is reviewing your interview...</p>
                     </div>
-                    <div className="w-72 h-[2px] bg-white/5 rounded-full overflow-hidden">
+                    <div className="w-72 h-[2px] bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
                         <motion.div className="h-full rounded-full" style={{ background: "linear-gradient(90deg, transparent, #84cc16, transparent)", boxShadow: "0 0 20px rgba(132,204,22,0.8)" }} initial={{ x: "-100%" }} animate={{ x: "200%" }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} />
                     </div>
                 </div>
@@ -182,11 +182,11 @@ export default function ReportPage() {
 
     if (error || !report) {
         return (
-            <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-6 text-white">
+            <div className="min-h-screen bg-gray-50 dark:bg-[#050505] flex flex-col items-center justify-center p-6 text-gray-900 dark:text-white">
                 <div className="w-20 h-20 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-6"><AlertTriangle className="w-10 h-10 text-rose-400" /></div>
                 <h2 className="text-3xl font-light mb-3">Analysis Interrupted</h2>
-                <p className="text-white/40 mb-10 max-w-md text-center font-light">{error}</p>
-                <Link href="/dashboard"><Button className="h-12 px-8 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all">Return to Dashboard</Button></Link>
+                <p className="text-gray-600 dark:text-white/40 mb-10 max-w-md text-center font-light">{error}</p>
+                <Link href="/dashboard"><Button className="h-12 px-8 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-gray-900 dark:text-white hover:bg-black/5 dark:bg-white/10 transition-all">Return to Dashboard</Button></Link>
             </div>
         );
     }
@@ -203,7 +203,7 @@ export default function ReportPage() {
     const overall = getTier(averageScore);
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white relative overflow-hidden print:bg-white print:text-black">
+        <div className="min-h-screen bg-gray-50 dark:bg-[#050505] text-gray-900 dark:text-white relative overflow-hidden print:bg-white print:text-black">
             {/* Ambient BG */}
             <div className="fixed inset-0 pointer-events-none print:hidden">
                 <div className="absolute top-[-30%] right-[-10%] w-[70vw] h-[70vw] rounded-full opacity-40" style={{ background: `radial-gradient(circle, ${overall.ringGlow} 0%, transparent 70%)`, filter: "blur(80px)" }} />
@@ -217,21 +217,21 @@ export default function ReportPage() {
                 <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="flex items-center justify-between mb-16 print:mb-8">
                     <div className="flex items-center gap-5">
                         <Link href="/dashboard" className="print:hidden">
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-11 h-11 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-all">
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-11 h-11 rounded-2xl bg-black/5 dark:bg-white/[0.04] border border-black/10 dark:border-white/[0.08] flex items-center justify-center text-gray-600 dark:text-white/50 hover:text-gray-900 dark:text-white hover:bg-black/5 dark:bg-white/[0.08] transition-all">
                                 <ArrowLeft className="w-5 h-5" />
                             </motion.button>
                         </Link>
                         <div>
-                            <h1 className="text-2xl sm:text-3xl font-extralight tracking-tight text-white print:text-black">Performance Analysis <span className="font-semibold">Report</span></h1>
+                            <h1 className="text-2xl sm:text-3xl font-extralight tracking-tight text-gray-900 dark:text-white print:text-black">Performance Analysis <span className="font-semibold">Report</span></h1>
                             <div className="flex items-center gap-2 mt-1">
                                 <div className="w-1.5 h-1.5 rounded-full bg-[#84cc16] shadow-[0_0_6px_rgba(132,204,22,0.8)]" />
                                 <p className="text-[11px] text-[#84cc16]/70 uppercase tracking-[0.25em] font-medium">ZEDX AI Assessment</p>
                             </div>
                         </div>
                     </div>
-                    <div className="hidden sm:flex items-center gap-2 bg-white/[0.03] border border-white/[0.07] rounded-2xl px-4 py-2.5 print:hidden">
+                    <div className="hidden sm:flex items-center gap-2 bg-black/5 dark:bg-white/[0.03] border border-black/10 dark:border-white/[0.07] rounded-2xl px-4 py-2.5 print:hidden">
                         <div className="w-2 h-2 rounded-full bg-[#84cc16] animate-pulse shadow-[0_0_8px_rgba(132,204,22,0.8)]" />
-                        <span className="text-xs text-white/40 tracking-wider">{report.length} Questions Analyzed</span>
+                        <span className="text-xs text-gray-600 dark:text-white/40 tracking-wider">{report.length} Questions Analyzed</span>
                     </div>
                 </motion.div>
 
@@ -239,7 +239,7 @@ export default function ReportPage() {
                 <motion.div
                     initial={{ opacity: 0, y: 40, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                    className={cn("relative rounded-[2rem] p-8 sm:p-14 mb-12 overflow-hidden border border-white/[0.08] backdrop-blur-3xl print:border print:border-gray-200", overall.glow)}
+                    className={cn("relative rounded-[2rem] p-8 sm:p-14 mb-12 overflow-hidden border border-black/10 dark:border-white/[0.08] backdrop-blur-3xl print:border print:border-gray-200", overall.glow)}
                     style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)" }}
                 >
                     <div className="absolute inset-0 rounded-[2rem] pointer-events-none" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 50%)" }} />
@@ -252,14 +252,14 @@ export default function ReportPage() {
                                 <div className="w-1.5 h-1.5 rounded-full shadow-[0_0_6px_currentColor]" style={{ background: overall.ringColor }} />
                                 {overall.label} Performance
                             </motion.div>
-                            <p className="text-white/50 text-base sm:text-xl leading-relaxed max-w-xl font-light print:text-gray-700">
-                                You completed <strong className="text-white font-medium">{report.length} questions</strong>. Your technical articulation and response structures have been mapped against ideal industry benchmarks.
+                            <p className="text-gray-600 dark:text-white/50 text-base sm:text-xl leading-relaxed max-w-xl font-light print:text-gray-700">
+                                You completed <strong className="text-gray-900 dark:text-white font-medium">{report.length} questions</strong>. Your technical articulation and response structures have been mapped against ideal industry benchmarks.
                             </p>
                             <div className="flex flex-wrap gap-8 mt-8 justify-center sm:justify-start">
                                 {[{ label: "Avg Score", value: `${averageScore}/10` }, { label: "Top Score", value: `${Math.max(...report.map(r => r.score))}/10` }, { label: "Questions", value: report.length }].map((s, i) => (
                                     <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.6 + i * 0.1 }} className="flex flex-col items-center sm:items-start">
-                                        <span className="text-2xl font-light text-white">{s.value}</span>
-                                        <span className="text-[10px] uppercase tracking-[0.2em] text-white/30 mt-0.5">{s.label}</span>
+                                        <span className="text-2xl font-light text-gray-900 dark:text-white">{s.value}</span>
+                                        <span className="text-[10px] uppercase tracking-[0.2em] text-gray-600 dark:text-white/30 mt-0.5">{s.label}</span>
                                     </motion.div>
                                 ))}
                             </div>
@@ -269,7 +269,7 @@ export default function ReportPage() {
 
                 {/* Section Label */}
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="flex items-center gap-4 mb-8">
-                    <span className="text-[11px] uppercase tracking-[0.3em] text-white/20 font-medium">Detailed Breakdown</span>
+                    <span className="text-[11px] uppercase tracking-[0.3em] text-gray-600 dark:text-white/20 font-medium">Detailed Breakdown</span>
                     <div className="flex-1 h-[1px] bg-gradient-to-r from-white/[0.08] to-transparent" />
                 </motion.div>
 
@@ -283,30 +283,30 @@ export default function ReportPage() {
                                 initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-40px" }}
                                 transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: index * 0.07 }}
-                                className={cn("relative rounded-3xl border transition-all duration-500 overflow-hidden group print:border-gray-200 print:break-inside-avoid border-white/10", tier.glow)}
+                                className={cn("relative rounded-3xl border transition-all duration-500 overflow-hidden group print:border-gray-200 print:break-inside-avoid border-black/10 dark:border-white/10", tier.glow)}
                                 style={{ background: "rgba(255,255,255,0.03)" }}
                             >
                                 <div className="absolute top-0 left-0 right-0 h-[1px] opacity-100" style={{ background: `linear-gradient(90deg, transparent, ${tier.ringColor}80, transparent)` }} />
-                                <div className="p-6 sm:p-7 border-b border-white/[0.04]">
+                                <div className="p-6 sm:p-7 border-b border-black/10 dark:border-white/[0.04]">
                                     <div className="flex items-center gap-4 mb-4">
                                         <ScoreMiniRing score={item.score} />
                                         <div className="flex items-center gap-3">
-                                            <span className="text-[10px] font-semibold text-white/30 tracking-[0.25em] uppercase bg-white/[0.04] px-3 py-1.5 rounded-full border border-white/[0.06]">Q{index + 1}</span>
+                                            <span className="text-[10px] font-semibold text-gray-600 dark:text-white/30 tracking-[0.25em] uppercase bg-black/5 dark:bg-white/[0.04] px-3 py-1.5 rounded-full border border-black/10 dark:border-white/[0.06]">Q{index + 1}</span>
                                             <span className={cn("text-[10px] font-semibold tracking-[0.2em] uppercase px-3 py-1.5 rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md", tier.bg, tier.color)}>{tier.label}</span>
                                         </div>
                                     </div>
-                                    <h3 className="text-white/90 text-base sm:text-lg font-light leading-snug print:text-black">{item.question}</h3>
+                                    <h3 className="text-gray-600 dark:text-white/90 text-base sm:text-lg font-light leading-snug print:text-black">{item.question}</h3>
                                 </div>
                                 <div className="px-6 sm:px-7 py-7 space-y-6">
-                                                <div className="relative rounded-2xl overflow-hidden" style={{ background: "rgba(0,0,0,0.3)" }}>
+                                                <div className="relative rounded-2xl overflow-hidden bg-black/5 dark:bg-black/30">
                                                     <div className="absolute left-0 top-0 bottom-0 w-0.5 rounded-r-full" style={{ background: `linear-gradient(to bottom, ${tier.ringColor}80, transparent)` }} />
                                                     <div className="p-5 pl-6">
                                                         <div className="flex items-center gap-2 mb-3">
-                                                            <MessageSquareQuote className="w-3.5 h-3.5 text-white/25" />
-                                                            <span className="text-[10px] font-bold text-white/25 uppercase tracking-[0.25em]">Your Answer</span>
+                                                            <MessageSquareQuote className="w-3.5 h-3.5 text-gray-600 dark:text-white/25" />
+                                                            <span className="text-[10px] font-bold text-gray-600 dark:text-white/25 uppercase tracking-[0.25em]">Your Answer</span>
                                                         </div>
-                                                        <p className="text-white/60 font-light text-sm sm:text-base leading-relaxed italic print:text-gray-700">
-                                                            {item.answer ? `"${item.answer}"` : <span className="text-white/20 not-italic">(No audio was captured)</span>}
+                                                        <p className="text-gray-600 dark:text-white/60 font-light text-sm sm:text-base leading-relaxed italic print:text-gray-700">
+                                                            {item.answer ? `"${item.answer}"` : <span className="text-gray-600 dark:text-white/20 not-italic">(No audio was captured)</span>}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -316,14 +316,14 @@ export default function ReportPage() {
                                                             <div className="w-7 h-7 rounded-xl bg-[#84cc16]/10 border border-[#84cc16]/20 flex items-center justify-center"><BarChart2 className="w-3.5 h-3.5 text-[#84cc16]" /></div>
                                                             <span className="text-[10px] font-bold text-[#84cc16] uppercase tracking-[0.25em]">ZEDX Analysis</span>
                                                         </div>
-                                                        <p className="text-white/55 font-light text-sm leading-relaxed print:text-gray-700">{item.feedback}</p>
+                                                        <p className="text-gray-600 dark:text-white/55 font-light text-sm leading-relaxed print:text-gray-700">{item.feedback}</p>
                                                     </div>
                                                     <div className="rounded-2xl p-5 bg-blue-500/[0.04] border border-blue-500/[0.1]">
                                                         <div className="flex items-center gap-2.5 mb-4">
                                                             <div className="w-7 h-7 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shadow-[0_0_12px_rgba(59,130,246,0.2)]"><Award className="w-3.5 h-3.5 text-blue-400" /></div>
                                                             <span className="text-[10px] font-bold text-blue-400/80 uppercase tracking-[0.25em]">Ideal Benchmark</span>
                                                         </div>
-                                                        <p className="text-white/55 font-light text-sm leading-relaxed print:text-gray-700">{item.ideal_answer}</p>
+                                                        <p className="text-gray-600 dark:text-white/55 font-light text-sm leading-relaxed print:text-gray-700">{item.ideal_answer}</p>
                                                     </div>
                                                 </div>
                                 </div>
@@ -334,11 +334,11 @@ export default function ReportPage() {
 
                 {/* Action Buttons */}
                 <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mt-16 mb-24 flex flex-col sm:flex-row justify-center items-center gap-4 print:hidden">
-                    <motion.button whileHover={{ scale: 1.02, boxShadow: "0 0 50px rgba(132,204,22,0.4)" }} whileTap={{ scale: 0.98 }} onClick={() => window.print()} className="h-14 px-10 text-base font-medium tracking-wide rounded-2xl text-white dark:text-gray-900 transition-all" style={{ background: "linear-gradient(135deg, #65a30d, #84cc16)", boxShadow: "0 0 30px rgba(132,204,22,0.25), inset 0 1px 0 rgba(255,255,255,0.15)" }}>
+                    <motion.button whileHover={{ scale: 1.02, boxShadow: "0 0 50px rgba(132,204,22,0.4)" }} whileTap={{ scale: 0.98 }} onClick={() => window.print()} className="h-14 px-10 text-base font-medium tracking-wide rounded-2xl text-gray-900 dark:text-white dark:text-gray-900 transition-all" style={{ background: "linear-gradient(135deg, #65a30d, #84cc16)", boxShadow: "0 0 30px rgba(132,204,22,0.25), inset 0 1px 0 rgba(255,255,255,0.15)" }}>
                         Export PDF Report
                     </motion.button>
                     <Link href="/dashboard">
-                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="h-14 px-10 text-base font-medium tracking-wide rounded-2xl bg-white/[0.04] border border-white/[0.1] text-white hover:bg-white/[0.08] transition-all flex items-center gap-3">
+                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="h-14 px-10 text-base font-medium tracking-wide rounded-2xl bg-black/5 dark:bg-white/[0.04] border border-black/10 dark:border-white/[0.1] text-gray-900 dark:text-white hover:bg-black/5 dark:bg-white/[0.08] transition-all flex items-center gap-3">
                             Return to Dashboard <ChevronRight className="w-4 h-4 opacity-50" />
                         </motion.button>
                     </Link>

@@ -44,9 +44,9 @@
 
 html, body {
   overflow-x: hidden;
-  /* Firefox */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+  /* Hide scrollbar for Firefox and modern browsers */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 body {
@@ -57,47 +57,18 @@ body {
 
 /* Global Webkit Scrollbar - Target ALL elements including the window itself */
 *, html, body {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 ::-webkit-scrollbar,
+*::-webkit-scrollbar,
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track,
-html::-webkit-scrollbar-track,
-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb,
-html::-webkit-scrollbar-thumb,
-body::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.3);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover,
-html::-webkit-scrollbar-thumb:hover,
-body::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.8);
-}
-
-/* Dark mode scrollbar */
-.dark ::-webkit-scrollbar-thumb,
-.dark html::-webkit-scrollbar-thumb,
-.dark body::-webkit-scrollbar-thumb {
-  background: rgba(161, 161, 170, 0.2);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover,
-.dark html::-webkit-scrollbar-thumb:hover,
-.dark body::-webkit-scrollbar-thumb:hover {
-  background: rgba(161, 161, 170, 0.5);
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
 }
 
 /* Utility classes for Tailwind */

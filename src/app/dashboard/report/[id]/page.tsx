@@ -80,7 +80,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
 
             const response = await fetch("/api/generate-report", {
                 method: "POST",
-                headers: { 
+                headers: {
                     "Content-Type": "application/json",
                     ...(token ? { "Authorization": `Bearer ${token}` } : {})
                 },
@@ -141,7 +141,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
                         We couldn't generate the scorecard due to a network or server issue. Your meeting data is saved safely. Please try again.
                     </p>
                     <div className="flex flex-col gap-3">
-                        <Button 
+                        <Button
                             onClick={() => {
                                 setGenerationError(false);
                                 if (interview) generateScorecard(interview);
@@ -220,7 +220,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
         <div className="min-h-screen bg-zinc-50 dark:bg-[#0a0a0a] p-4 sm:p-8 pt-24 font-sans relative overflow-hidden">
             {/* Ambient Background Glow */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10"></div>
-            
+
             <div className="max-w-6xl mx-auto space-y-8 relative z-10">
 
                 {/* Header */}

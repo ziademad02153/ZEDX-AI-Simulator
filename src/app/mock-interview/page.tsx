@@ -576,20 +576,26 @@ Resume Context: ${resume}`;
     return (
         <div className="min-h-screen bg-black text-white relative overflow-hidden flex flex-col">
             {/* Top Bar */}
-            <div className="w-full p-6 flex justify-between items-center z-20">
-                <div className="flex items-center gap-1 -ml-4">
+            <div className="w-full p-4 sm:p-6 flex justify-between items-center z-20">
+                <div className="flex items-center gap-1 sm:gap-2 -ml-1 sm:-ml-4">
                     <Image
-                        src="/ZEDX-NEW LOGO-2.png"
+                        src="/zedx-logo.png"
                         alt="ZEDX-AI Logo"
-                        width={180}
-                        height={50}
-                        className="object-contain"
+                        width={140}
+                        height={45}
+                        className="object-contain object-left w-28 sm:w-[140px]"
                     />
-                    <div className="h-8 w-[1px] bg-white/20 mx-2"></div>
-                    <p className="text-[#84cc16] text-sm font-semibold whitespace-nowrap mt-1">Question {currentQuestionIndex + 1} of {questionCount}</p>
+                    <div className="h-5 sm:h-8 w-[1px] bg-white/20 mx-1 sm:mx-2"></div>
+                    <p className="text-[#84cc16] text-xs sm:text-sm font-semibold whitespace-nowrap mt-0.5 sm:mt-1">
+                        <span className="hidden sm:inline">Question </span>
+                        <span className="sm:hidden">Q</span>
+                        {currentQuestionIndex + 1} / {questionCount}
+                    </p>
                 </div>
-                <Button onClick={endInterview} variant="ghost" className="text-red-400 hover:text-red-300 hover:bg-red-500/10">
-                    <X className="mr-2 w-4 h-4" /> End Interview
+                <Button onClick={endInterview} variant="ghost" size="sm" className="text-red-400 hover:text-red-300 hover:bg-red-500/10 px-2 sm:px-4 shrink-0">
+                    <X className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">End Interview</span>
+                    <span className="sm:hidden text-xs ml-1">End</span>
                 </Button>
             </div>
 

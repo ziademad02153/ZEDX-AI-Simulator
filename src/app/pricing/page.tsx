@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -97,49 +99,62 @@ export default function PricingPage() {
                     </p>
                 </div>
 
-                <div className="flex flex-col lg:flex-row flex-wrap justify-center gap-5 lg:gap-6 w-full mx-auto items-stretch relative z-10 px-2 lg:px-4">
+                <div className="flex flex-col lg:flex-row flex-wrap justify-center gap-4 lg:gap-5 w-full mx-auto items-stretch relative z-10 px-2 lg:px-4">
                     {/* Free Plan */}
-                    <div className="w-full lg:w-[330px] shrink-0 bg-gray-100 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/[0.06] hover:border-gray-300 dark:hover:border-white/20 transition-all duration-500 rounded-[2.5rem] p-6 md:p-10 flex flex-col relative shadow-sm dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.15),0_8px_32px_rgba(0,0,0,0.4)]">
+                    <div className="w-full lg:w-[270px] xl:w-[290px] shrink-0 bg-gray-100 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/[0.06] hover:border-gray-300 dark:hover:border-white/20 transition-all duration-500 rounded-[2rem] p-5 md:p-7 flex flex-col relative shadow-sm dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.15),0_8px_32px_rgba(0,0,0,0.4)]">
                         <div className="mb-6">
                             <h3 className="text-[20px] md:text-[22px] font-semibold mb-1 text-gray-900 dark:text-white">Free</h3>
-                            <p className="text-gray-500 dark:text-zinc-500 text-[12px] font-medium">Explore ZEDX.</p>
+                            <p className="text-gray-500 dark:text-zinc-500 text-[12px] font-medium">Try ZEDX, no card required.</p>
                             <div className="mt-5 flex items-baseline gap-1">
                                 <span className="text-[36px] font-bold text-gray-900 dark:text-white leading-none">$0</span>
+                                <span className="text-[13px] text-gray-400 dark:text-zinc-500 font-medium ml-1">/ forever</span>
                             </div>
                         </div>
 
-                        <div className="space-y-5 mb-8 flex-1 pt-6">
-                            <div className="flex items-start gap-3 text-gray-700 dark:text-zinc-300 min-h-[36px] items-center">
-                                <Check className="w-[18px] h-[18px] text-emerald-500 shrink-0" strokeWidth={2.5} />
-                                <span className="text-[14px] font-medium">Voice-to-Voice AI (4 questions)</span>
-                            </div>
-                            <div className="flex items-start gap-3 text-gray-700 dark:text-zinc-300 min-h-[36px] items-center">
-                                <Check className="w-[18px] h-[18px] text-emerald-500 shrink-0" strokeWidth={2.5} />
-                                <span className="text-[14px] font-medium">English interviews</span>
-                            </div>
-                            <div className="flex items-start gap-3 text-gray-700 dark:text-zinc-300 min-h-[36px] items-center">
-                                <Check className="w-[18px] h-[18px] text-emerald-500 shrink-0" strokeWidth={2.5} />
-                                <span className="text-[14px] font-medium">Gemini 3.8 Flash AI model</span>
+                        <div className="space-y-4 mb-8 flex-1 border-t border-gray-200 dark:border-white/5 pt-6">
+
+                            {/* What you get */}
+                            <div className="flex items-start gap-3 text-gray-700 dark:text-zinc-300">
+                                <Check className="w-[17px] h-[17px] text-emerald-500 shrink-0 mt-0.5" strokeWidth={2.5} />
+                                <div>
+                                    <span className="text-[14px] font-semibold">4 AI Voice Interviews</span>
+                                    <span className="text-[12px] text-gray-400 dark:text-zinc-500 font-normal ml-1.5">/ month</span>
+                                </div>
                             </div>
 
-                            {/* Locked Pro Features */}
-                            <div className="pt-3 space-y-5">
-                                <div className="flex items-start gap-3 text-gray-400 dark:text-zinc-600 min-h-[36px] items-center">
-                                    <div className="w-[18px] h-[18px] shrink-0 flex items-center justify-center font-bold text-lg">×</div>
-                                    <span className="text-[14px] font-medium">Unlimited Sessions & Questions</span>
+                            <div className="flex items-start gap-3 text-gray-700 dark:text-zinc-300">
+                                <Check className="w-[17px] h-[17px] text-emerald-500 shrink-0 mt-0.5" strokeWidth={2.5} />
+                                <div>
+                                    <span className="text-[14px] font-semibold">4 PDF Performance Reports</span>
+                                    <span className="text-[12px] text-gray-400 dark:text-zinc-500 font-normal ml-1.5">/ month</span>
                                 </div>
-                                <div className="flex items-start gap-3 text-gray-400 dark:text-zinc-600 min-h-[36px] items-center">
-                                    <div className="w-[18px] h-[18px] shrink-0 flex items-center justify-center font-bold text-lg">×</div>
-                                    <span className="text-[14px] font-medium">30+ Languages</span>
+                            </div>
+
+                            <div className="flex items-start gap-3 text-gray-700 dark:text-zinc-300">
+                                <Check className="w-[17px] h-[17px] text-emerald-500 shrink-0 mt-0.5" strokeWidth={2.5} />
+                                <div className="flex items-center gap-2">
+                                    <div className="w-5 h-5 rounded-md bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                        <Image src="/icons8-gemini-48.png" alt="Gemini" width={14} height={14} className="object-contain" />
+                                    </div>
+                                    <span className="text-[14px] font-semibold">Gemini 3.8 Flash</span>
                                 </div>
-                                <div className="flex items-start gap-3 text-gray-400 dark:text-zinc-600 min-h-[36px] items-center">
-                                    <div className="w-[18px] h-[18px] shrink-0 flex items-center justify-center font-bold text-lg">×</div>
-                                    <span className="text-[14px] font-medium">3 Premium AI Models</span>
-                                </div>
-                                <div className="flex items-start gap-3 text-gray-400 dark:text-zinc-600 min-h-[36px] items-center">
-                                    <div className="w-[18px] h-[18px] shrink-0 flex items-center justify-center font-bold text-lg">×</div>
-                                    <span className="text-[14px] font-medium">Real-Time Evaluation</span>
-                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-3 text-gray-700 dark:text-zinc-300">
+                                <Check className="w-[17px] h-[17px] text-emerald-500 shrink-0 mt-0.5" strokeWidth={2.5} />
+                                <span className="text-[14px] font-semibold">English interviews</span>
+                            </div>
+
+                            <div className="flex items-start gap-3 text-gray-700 dark:text-zinc-300">
+                                <Check className="w-[17px] h-[17px] text-emerald-500 shrink-0 mt-0.5" strokeWidth={2.5} />
+                                <span className="text-[14px] font-semibold">Training History</span>
+                            </div>
+
+                            {/* Upgrade nudge — subtle, not aggressive */}
+                            <div className="mt-2 pt-4 border-t border-gray-200 dark:border-white/5">
+                                <p className="text-[12px] text-gray-400 dark:text-zinc-600 font-medium leading-relaxed">
+                                    ↑ Upgrade for unlimited sessions, 29 languages & premium AI models
+                                </p>
                             </div>
                         </div>
 
@@ -152,7 +167,7 @@ export default function PricingPage() {
                     </div>
 
                     {/* Pro Plan */}
-                    <div className="w-full lg:w-[400px] shrink-0 bg-white dark:bg-white/[0.04] border-0 rounded-[2.5rem] p-6 md:p-10 flex flex-col relative shadow-[0_8px_40px_rgba(163,230,53,0.18),0_2px_12px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_8px_40px_rgba(163,230,53,0.2),0_20px_60px_rgba(0,0,0,0.4)] transition-all duration-500 hover:shadow-[0_12px_60px_rgba(163,230,53,0.28),0_4px_20px_rgba(0,0,0,0.12)] dark:hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_16px_80px_rgba(163,230,53,0.3),0_30px_80px_rgba(0,0,0,0.5)] overflow-hidden">
+                    <div className="w-full lg:w-[290px] xl:w-[310px] shrink-0 bg-white dark:bg-white/[0.04] border-0 rounded-[2rem] p-5 md:p-8 flex flex-col relative shadow-[0_8px_40px_rgba(163,230,53,0.18),0_2px_12px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_8px_40px_rgba(163,230,53,0.2),0_20px_60px_rgba(0,0,0,0.4)] transition-all duration-500 hover:shadow-[0_12px_60px_rgba(163,230,53,0.28),0_4px_20px_rgba(0,0,0,0.12)] dark:hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_16px_80px_rgba(163,230,53,0.3),0_30px_80px_rgba(0,0,0,0.5)] overflow-hidden">
 
                         {/* Soft Top Glow inside card */}
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-[#a3e635]/20 blur-[60px] pointer-events-none" />
@@ -164,78 +179,48 @@ export default function PricingPage() {
                             </div>
                             <p className="text-gray-500 dark:text-zinc-400 text-[12px] font-medium mb-5">Master the interview.</p>
 
-                            <div className="flex items-baseline gap-2">
+                            <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1.5">
                                 <span className="text-[16px] text-gray-400 dark:text-zinc-500 font-medium line-through">$20</span>
-                                <span className="text-[40px] font-bold text-gray-900 dark:text-white leading-none tracking-tight">$10</span>
-                                <span className="text-[13px] text-gray-400 dark:text-zinc-500 font-medium">/ month</span>
-                                <span className="ml-1 bg-emerald-100 dark:bg-[#a3e635]/10 text-emerald-700 dark:text-[#a3e635] text-[11px] font-bold px-2 py-0.5 rounded-md">SAVE 50%</span>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-[40px] font-bold text-gray-900 dark:text-white leading-none tracking-tight">$10</span>
+                                    <span className="text-[13px] text-gray-400 dark:text-zinc-500 font-medium">/ month</span>
+                                </div>
+                                <span className="bg-emerald-100 dark:bg-[#a3e635]/10 text-emerald-700 dark:text-[#a3e635] text-[11px] font-bold px-2 py-0.5 rounded-md">SAVE 50%</span>
                             </div>
 
-                            <div className="mt-2 flex items-center">
-                                <span className="text-[12px] text-gray-500 dark:text-zinc-400 font-medium"> Egypt: <strong className="text-emerald-600 dark:text-[#a3e635] font-semibold">300 EGP</strong> / month</span>
-                                <span className="text-[11px] text-gray-400 dark:text-zinc-500 line-through ml-2">1000 EGP</span>
-                                <span className="ml-2 bg-emerald-100 dark:bg-[#a3e635]/10 text-emerald-700 dark:text-[#a3e635] text-[10px] font-bold px-1.5 py-0.5 rounded-md">SAVE 70%</span>
+                            <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2">
+                                <span className="text-[12px] text-gray-500 dark:text-zinc-400 font-medium"> Egypt: <strong className="text-emerald-600 dark:text-[#a3e635] font-semibold">300 EGP</strong> <span className="text-[11px]">/ month</span></span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[11px] text-gray-400 dark:text-zinc-500 line-through">1000 EGP</span>
+                                    <span className="bg-emerald-100 dark:bg-[#a3e635]/10 text-emerald-700 dark:text-[#a3e635] text-[10px] font-bold px-1.5 py-0.5 rounded-md">SAVE 70%</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="space-y-4 mb-8 flex-1 relative z-10 border-t border-gray-200 dark:border-white/5 pt-6">
+                        <div className="space-y-3.5 mb-8 flex-1 relative z-10 border-t border-gray-200 dark:border-white/5 pt-6">
 
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 shrink-0 flex items-center justify-center relative z-20 mix-blend-screen opacity-90 mt-0.5">
-                                    <AnimatedOrb />
+                            {[
+                                { label: "Voice-to-Voice AI Interviewer", sub: "Natural, real-time conversations" },
+                                { label: "20 Languages", sub: "Multilingual voice interviews" },
+                                { label: "Technical & Behavioral", sub: "Tailored interview scenarios" },
+                                { label: "Real-Time Evaluation", sub: "Granular feedback & PDF reports" },
+                                { label: "Unlimited Sessions & Questions", sub: "Practice without any limits" },
+                                { label: "Training History", sub: "Track and review past interviews" },
+                            ].map((f) => (
+                                <div key={f.label} className="flex items-start gap-3">
+                                    <Check className="w-[17px] h-[17px] text-emerald-500 shrink-0 mt-1" strokeWidth={2.5} />
+                                    <div>
+                                        <div className="text-[14px] font-semibold text-gray-900 dark:text-white leading-tight">{f.label}</div>
+                                        <div className="text-[12px] text-gray-500 dark:text-zinc-500 font-normal leading-snug">{f.sub}</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div className="text-[15px] font-semibold text-gray-900 dark:text-white tracking-tight leading-tight mb-0.5">Voice-to-Voice AI Interviewer</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">Practice with natural, real-time conversations</div>
-                                </div>
-                            </div>
+                            ))}
 
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5">
-                                    <Image src="/Multi-Language.png" alt="Languages" width={32} height={32} className="object-contain opacity-90" />
-                                </div>
-                                <div>
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">20 Languages</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">Multilingual voice interviews</div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5">
-                                    <Image src="/Interview-Logo.png" alt="Scenarios" width={26} height={26} className="object-contain dark:invert opacity-80" />
-                                </div>
-                                <div>
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">Technical & Behavioral</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">Tailored interview scenarios</div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5">
-                                    <Image src="/Granular Scorecards.png" alt="Analytics" width={32} height={32} className="object-contain opacity-90" />
-                                </div>
-                                <div>
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">Real-Time Evaluation</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">Granular feedback & PDF reports</div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5">
-                                    <Image src="/question.png" alt="Unlimited" width={26} height={26} className="object-contain opacity-80" />
-                                </div>
-                                <div>
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">Unlimited Sessions & Questions</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">Practice without any limits</div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 rounded-[10px] overflow-hidden shrink-0 flex items-center justify-center mt-0.5 bg-gray-800 dark:bg-black border border-gray-600 dark:border-white/10">
-                                    <Image src="/AI.jpg" alt="AI Engine" width={36} height={36} className="w-full h-full object-cover scale-110 opacity-90" />
-                                </div>
+                            {/* AI Models — keep logos for brand trust */}
+                            <div className="flex items-start gap-3 pt-1">
+                                <Check className="w-[17px] h-[17px] text-emerald-500 shrink-0 mt-1" strokeWidth={2.5} />
                                 <div className="flex-1">
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-2">2 Premium Models</div>
+                                    <div className="text-[14px] font-semibold text-gray-900 dark:text-white leading-tight mb-1.5">2 Premium AI Models</div>
                                     <div className="space-y-1.5">
                                         <div className="flex items-center gap-2">
                                             <div className="w-5 h-5 rounded-md bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0">
@@ -324,7 +309,7 @@ export default function PricingPage() {
                     </div>
 
                     {/* Ultra Plan */}
-                    <div className="w-full lg:w-[440px] shrink-0 bg-white dark:bg-white/[0.04] border-0 rounded-[2.5rem] p-6 md:p-10 flex flex-col relative shadow-[0_8px_40px_rgba(245,158,11,0.18),0_2px_12px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_8px_40px_rgba(245,158,11,0.2),0_20px_60px_rgba(0,0,0,0.4)] transition-all duration-500 hover:shadow-[0_12px_60px_rgba(245,158,11,0.28),0_4px_20px_rgba(0,0,0,0.12)] dark:hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_16px_80px_rgba(245,158,11,0.3),0_30px_80px_rgba(0,0,0,0.5)] overflow-hidden">
+                    <div className="w-full lg:w-[290px] xl:w-[310px] shrink-0 bg-white dark:bg-white/[0.04] border-0 rounded-[2rem] p-5 md:p-8 flex flex-col relative shadow-[0_8px_40px_rgba(245,158,11,0.18),0_2px_12px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_8px_40px_rgba(245,158,11,0.2),0_20px_60px_rgba(0,0,0,0.4)] transition-all duration-500 hover:shadow-[0_12px_60px_rgba(245,158,11,0.28),0_4px_20px_rgba(0,0,0,0.12)] dark:hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_16px_80px_rgba(245,158,11,0.3),0_30px_80px_rgba(0,0,0,0.5)] overflow-hidden">
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-amber-500/20 blur-[60px] pointer-events-none" />
 
                         <div className="mb-6 relative z-10">
@@ -334,88 +319,50 @@ export default function PricingPage() {
                             </div>
                             <p className="text-gray-500 dark:text-zinc-400 text-[12px] font-medium mb-5">3 Months of unlimited power.</p>
 
-                            <div className="flex items-baseline gap-2">
+                            <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1.5">
                                 <span className="text-[16px] text-gray-400 dark:text-zinc-500 font-medium line-through">$60</span>
-                                <span className="text-[40px] font-bold text-gray-900 dark:text-white leading-none tracking-tight">$25</span>
-                                <span className="text-[13px] text-gray-400 dark:text-zinc-500 font-medium">/ 3 months</span>
-                                <span className="ml-1 bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[11px] font-bold px-2 py-0.5 rounded-md">SAVE 58%</span>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-[40px] font-bold text-gray-900 dark:text-white leading-none tracking-tight">$25</span>
+                                    <span className="text-[13px] text-gray-400 dark:text-zinc-500 font-medium">/ 3 months</span>
+                                </div>
+                                <span className="bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[11px] font-bold px-2 py-0.5 rounded-md">SAVE 58%</span>
                             </div>
 
-                            <div className="mt-2 flex items-center">
-                                <span className="text-[12px] text-gray-500 dark:text-zinc-400 font-medium"> Egypt: <strong className="text-amber-600 dark:text-amber-400 font-semibold">600 EGP</strong> / 3 months</span>
-                                <span className="text-[11px] text-gray-400 dark:text-zinc-500 line-through ml-2">3000 EGP</span>
-                                <span className="ml-2 bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold px-1.5 py-0.5 rounded-md">SAVE 80%</span>
+                            <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2">
+                                <span className="text-[12px] text-gray-500 dark:text-zinc-400 font-medium"> Egypt: <strong className="text-amber-600 dark:text-amber-400 font-semibold">600 EGP</strong> <span className="text-[11px]">/ 3 months</span></span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[11px] text-gray-400 dark:text-zinc-500 line-through">3000 EGP</span>
+                                    <span className="bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold px-1.5 py-0.5 rounded-md">SAVE 80%</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="space-y-4 mb-8 flex-1 relative z-10 border-t border-gray-200 dark:border-white/5 pt-6">
+                        <div className="space-y-3.5 mb-8 flex-1 relative z-10 border-t border-gray-200 dark:border-white/5 pt-6">
 
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5">
-                                    <AnimatedOrb />
+                            {[
+                                { label: "Advanced Voice-to-Voice AI", sub: "Zero latency, natural flowing conversations" },
+                                { label: "All 29 Languages Unlocked", sub: "Full global language access without limits" },
+                                { label: "Technical & Behavioral", sub: "Complete tailored interview scenarios" },
+                                { label: "Real-Time Evaluation", sub: "Granular feedback & PDF reports" },
+                                { label: "Expert Difficulty Level", sub: "The ultimate FAANG-level challenge" },
+                                { label: "Truly Unlimited Sessions", sub: "Practice without any caps or restrictions" },
+                                { label: "Training History", sub: "Track and review all past interviews" },
+                                { label: "Priority VIP Support", sub: "Direct email assistance & feature requests" },
+                            ].map((f) => (
+                                <div key={f.label} className="flex items-start gap-3">
+                                    <Check className="w-[17px] h-[17px] text-amber-400 shrink-0 mt-1" strokeWidth={2.5} />
+                                    <div>
+                                        <div className="text-[14px] font-semibold text-gray-900 dark:text-white leading-tight">{f.label}</div>
+                                        <div className="text-[12px] text-gray-500 dark:text-zinc-500 font-normal leading-snug">{f.sub}</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">Advanced Voice-to-Voice AI</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">Zero latency, natural flowing conversations</div>
-                                </div>
-                            </div>
+                            ))}
 
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5">
-                                    <Image src="/Multi-Language.png" alt="Languages" width={32} height={32} className="object-contain opacity-90 sepia-[.3] hue-rotate-[-30deg] saturate-[2]" />
-                                </div>
-                                <div>
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">All 29 Lnguages Unlocked</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">Full global language access without limits</div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5">
-                                    <Image src="/Interview-Logo.png" alt="Scenarios" width={26} height={26} className="object-contain dark:invert opacity-80" />
-                                </div>
-                                <div>
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">Technical & Behavioral</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">Complete tailored interview scenarios</div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5">
-                                    <Image src="/Granular Scorecards.png" alt="Analytics" width={32} height={32} className="object-contain opacity-90 sepia-[.5] hue-rotate-[-20deg]" />
-                                </div>
-                                <div>
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">Real-Time Evaluation</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">Granular feedback & PDF reports</div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5">
-                                    <Image src="/expert.png" alt="Expert" width={32} height={32} className="object-contain opacity-90 invert sepia-[.3] hue-rotate-[-20deg]" />
-                                </div>
-                                <div>
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">Expert Difficulty Level</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">The ultimate FAANG-level challenge</div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5">
-                                    <Image src="/question.png" alt="Unlimited" width={26} height={26} className="object-contain opacity-80 sepia-[.3] hue-rotate-[-30deg]" />
-                                </div>
-                                <div>
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">Truly Unlimited Sessions</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">Practice without any caps or restrictions</div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5 rounded-[10px] bg-gray-800 dark:bg-black border border-gray-600 dark:border-white/10 overflow-hidden">
-                                    <Image src="/AI.jpg" alt="AI Models" width={36} height={36} className="w-full h-full object-cover scale-110 opacity-90 sepia-[.2] hue-rotate-[20deg]" />
-                                </div>
+                            {/* AI Models — keep logos for brand trust */}
+                            <div className="flex items-start gap-3 pt-1">
+                                <Check className="w-[17px] h-[17px] text-amber-400 shrink-0 mt-1" strokeWidth={2.5} />
                                 <div className="flex-1">
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-2">3 Premium Models</div>
+                                    <div className="text-[14px] font-semibold text-gray-900 dark:text-white leading-tight mb-1.5">3 Premium AI Models</div>
                                     <div className="space-y-1.5">
                                         <div className="flex items-center gap-2">
                                             <div className="w-5 h-5 rounded-md bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0">
@@ -438,29 +385,19 @@ export default function PricingPage() {
                                     </div>
                                 </div>
                             </div>
-
-                            <div className="flex items-start gap-4">
-                                <div className="w-9 h-9 shrink-0 flex items-center justify-center mt-0.5">
-                                    <Image src="/Priority VIP Support.png" alt="VIP Support" width={32} height={32} className="object-contain opacity-90" />
-                                </div>
-                                <div>
-                                    <div className="text-[15px] font-semibold text-zinc-900 dark:text-white tracking-tight leading-tight mb-0.5">Priority VIP Support</div>
-                                    <div className="text-[13px] text-gray-500 dark:text-zinc-400 font-normal leading-snug">Direct email assistance and feature requests</div>
-                                </div>
-                            </div>
                         </div>
 
                         <div className="space-y-3">
                             {userTier === 'ultra' ? (
                                 <motion.div
                                     whileHover={{ scale: 1.01 }}
-                                    className="w-full relative overflow-hidden flex flex-col items-center justify-center gap-1.5 rounded-full py-[14px] bg-[#0a0a0a] backdrop-blur-2xl border border-white/5 shadow-lg cursor-default"
+                                    className="w-full relative overflow-hidden flex flex-col items-center justify-center gap-1.5 rounded-full py-[14px] bg-white dark:bg-[#0a0a0a] backdrop-blur-2xl border border-black/5 dark:border-white/5 shadow-lg cursor-default"
                                 >
                                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-16 bg-amber-500/15 blur-[25px] rounded-full pointer-events-none"></div>
                                     
                                     <div className="flex items-center justify-center z-10">
                                         <Image src="/zedx-logo.png" alt="ZEDX" width={85} height={24} className="object-contain opacity-90 -mr-1.5" priority />
-                                        <span className="text-white font-bold text-[16px] tracking-tight font-sans leading-none mt-0.5">Ultra Active</span>
+                                        <span className="text-black dark:text-white font-bold text-[16px] tracking-tight font-sans leading-none mt-0.5">Ultra Active</span>
                                     </div>
                                     
                                     <span className="text-[9px] text-zinc-500 font-bold z-10 tracking-[0.25em] uppercase leading-none">Ultimate access unlocked</span>
@@ -511,7 +448,81 @@ export default function PricingPage() {
                         </div>
                     </div>
 
+                    {/* Enterprise / Institution Plan - 3D Titanium */}
+                    <div className="w-full lg:w-[290px] xl:w-[310px] shrink-0 bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-900 dark:via-[#0b0f19] dark:to-black border border-slate-300 dark:border-slate-700 rounded-[2rem] p-5 md:p-8 flex flex-col relative shadow-[0_10px_40px_rgba(100,116,139,0.25),inset_0_2px_10px_rgba(255,255,255,0.8)] dark:shadow-[inset_0_1px_3px_rgba(255,255,255,0.15),inset_0_-1px_4px_rgba(0,0,0,0.8),0_10px_50px_rgba(71,85,105,0.25)] transition-all duration-500 hover:shadow-[0_15px_60px_rgba(100,116,139,0.35),inset_0_2px_10px_rgba(255,255,255,0.9)] dark:hover:shadow-[inset_0_1px_3px_rgba(255,255,255,0.2),inset_0_-1px_4px_rgba(0,0,0,0.9),0_15px_60px_rgba(71,85,105,0.4)] overflow-hidden">
+
+                        {/* Titanium Core Glow */}
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90%] h-32 bg-slate-400/40 dark:bg-slate-300/10 blur-[60px] pointer-events-none" />
+
+                        <div className="mb-5 relative z-10">
+                            <div className="flex items-center justify-between mb-1">
+                                <h3 className="text-[20px] md:text-[22px] font-semibold text-slate-900 dark:text-slate-100 tracking-tight">Enterprise</h3>
+                            </div>
+                            <p className="text-slate-600 dark:text-slate-400 text-[12px] font-medium leading-relaxed">
+                                For universities & companies. Custom pricing.
+                            </p>
+                        </div>
+
+                        <div className="space-y-4 mb-6 flex-1 border-t border-slate-300 dark:border-slate-800 pt-5 relative z-10">
+
+                            {/* Universities Section */}
+                            <div>
+                                <p className="text-[10px] font-bold text-slate-700 dark:text-slate-400 uppercase tracking-[0.18em] mb-2.5">For Universities</p>
+                                <div className="space-y-2.5">
+                                    {[
+                                        { label: "Graduation Benchmark", sub: "Set a target ZEDX score as a graduation prerequisite" },
+                                        { label: "CV-Based Prep", sub: "AI generates questions tailored to each student's major & resume" },
+                                        { label: "Build Confidence", sub: "Help students overcome interview anxiety before the real thing" },
+                                        { label: "Performance Analytics", sub: "Real-time scoring pushes students to expert-level readiness" },
+                                    ].map((f) => (
+                                        <div key={f.label} className="flex items-start gap-2.5">
+                                            <Check className="w-[15px] h-[15px] text-slate-700 dark:text-slate-300 shrink-0 mt-0.5" strokeWidth={2.5} />
+                                            <div>
+                                                <div className="text-[13px] font-semibold text-slate-900 dark:text-slate-200 leading-tight">{f.label}</div>
+                                                <div className="text-[11px] text-slate-600 dark:text-slate-400 font-normal leading-snug">{f.sub}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="border-t border-slate-300 dark:border-slate-800" />
+
+                            {/* Companies Section */}
+                            <div>
+                                <p className="text-[10px] font-bold text-slate-700 dark:text-slate-400 uppercase tracking-[0.18em] mb-2.5">For Companies</p>
+                                <div className="space-y-2.5">
+                                    {[
+                                        { label: "AI Candidate Screening", sub: "ZEDX acts as your interviewer — filter applicants at scale" },
+                                        { label: "White-Label Branding", sub: "Your company logo replaces ZEDX in the interface" },
+                                        { label: "Role-Specific Interviews", sub: "Tailor AI questions for any job title or department" },
+                                        { label: "Ranked Applicant Reports", sub: "Scored PDF reports to easily compare candidates" },
+                                        { label: "Enterprise Customization", sub: "Custom features and integrations built to your specs" },
+                                    ].map((f) => (
+                                        <div key={f.label} className="flex items-start gap-2.5">
+                                            <Check className="w-[15px] h-[15px] text-slate-700 dark:text-slate-300 shrink-0 mt-0.5" strokeWidth={2.5} />
+                                            <div>
+                                                <div className="text-[13px] font-semibold text-slate-900 dark:text-slate-200 leading-tight">{f.label}</div>
+                                                <div className="text-[11px] text-slate-600 dark:text-slate-400 font-normal leading-snug">{f.sub}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <Button
+                            className="w-full rounded-full py-6 bg-gradient-to-b from-slate-600 to-slate-800 dark:from-slate-200 dark:to-slate-400 text-white dark:text-slate-900 hover:opacity-90 font-bold text-[15px] transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_4px_15px_rgba(71,85,105,0.4)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.8),0_4px_15px_rgba(255,255,255,0.15)] border border-slate-900 dark:border-slate-100 flex items-center justify-center relative z-10"
+                            onClick={() => router.push('/contact-sales')}
+                        >
+                            Contact Sales
+                        </Button>
+                    </div>
+
+
                     {/* Global Payment Methods Banner */}
+
                     <div className="mt-16 pt-8 flex flex-col items-center justify-center relative z-10 w-full mb-8">
                         <p className="text-zinc-500 dark:text-zinc-400 text-[15px] md:text-[16px] font-medium mb-8 text-center" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
                             Secured & Supported Payments
@@ -545,7 +556,169 @@ export default function PricingPage() {
                 </div>
             </div>
 
+            {/* Feature Comparison Table - Grok Style */}
+            <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 pb-24 relative z-10 w-full">
+                <div className="text-center mb-12">
+                    <h2 className="text-[28px] md:text-[36px] font-bold text-gray-900 dark:text-white mb-3 tracking-tight">Compare features across plans</h2>
+                </div>
+
+                {/* Sticky Plan Headers */}
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[600px]">
+                        <thead>
+                            <tr>
+                                <th className="text-left pb-4 pl-4 w-[30%]"></th>
+                                {[
+                                    { name: "Free", tier: "free" },
+                                    { name: "ZEDX Pro", tier: "pro" },
+                                    { name: "ZEDX Ultra", tier: "ultra" },
+                                ].map((plan) => {
+                                    const tierRank: Record<string, number> = { free: 0, pro: 1, ultra: 2 };
+                                    const isCurrentOrHigher = tierRank[userTier] >= tierRank[plan.tier];
+                                    const isExact = userTier === plan.tier;
+                                    return (
+                                        <th key={plan.tier} className="pb-4 text-center w-[17%]">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <span className="text-[13px] font-medium text-zinc-500 dark:text-zinc-400">{plan.name}</span>
+                                                <button
+                                                    disabled={isCurrentOrHigher}
+                                                    onClick={() => {
+                                                        if (!isAuthenticated) {
+                                                            window.location.href = '/login';
+                                                        } else if (plan.tier === 'pro') {
+                                                            window.open('https://ziademad5.gumroad.com/l/hkfdfv', '_blank');
+                                                        } else if (plan.tier === 'ultra') {
+                                                            window.open('https://ziademad5.gumroad.com/l/molojy', '_blank');
+                                                        }
+                                                    }}
+                                                    className={`px-4 py-1.5 rounded-full text-[12px] font-semibold border transition-all ${
+                                                        isExact
+                                                            ? "bg-zinc-900 dark:bg-white text-white dark:text-black border-transparent cursor-default"
+                                                            : isCurrentOrHigher
+                                                            ? "bg-black/5 dark:bg-white/10 text-zinc-500 border-zinc-200 dark:border-zinc-800 cursor-default"
+                                                            : "bg-transparent text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700 hover:border-zinc-500 dark:hover:border-zinc-400 hover:text-black dark:hover:text-white cursor-pointer"
+                                                    }`}
+                                                >
+                                                    {isExact
+                                                        ? (plan.tier === 'free' ? 'Current' : 'Active')
+                                                        : isCurrentOrHigher
+                                                        ? 'Included'
+                                                        : (plan.tier === 'free' ? 'Get started' : plan.tier === 'pro' ? 'Get Pro' : 'Get Ultra')
+                                                    }
+                                                </button>
+                                            </div>
+                                        </th>
+                                    );
+                                })}
+                                {/* Enterprise Column Header */}
+                                <th className="pb-4 text-center w-[19%]">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <span className="text-[13px] font-medium text-zinc-500 dark:text-zinc-400">Enterprise</span>
+                                        <button
+                                            onClick={() => window.open('mailto:zedx.ai.support@gmail.com?subject=Enterprise%20Inquiry', '_blank')}
+                                            className="px-4 py-1.5 rounded-full text-[12px] font-semibold border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-black hover:text-black dark:hover:border-white dark:hover:text-white transition-all cursor-pointer bg-transparent"
+                                        >
+                                            Contact Sales
+                                        </button>
+                                    </div>
+                                </th>
+
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-black/5 dark:divide-zinc-800/60">
+                            {[
+                                {
+                                    category: "Core Features",
+                                    rows: [
+                                        { label: "Voice-to-Voice AI Interviews", free: true, pro: true, ultra: true, ent: true },
+                                        { label: "AI-generated questions from your CV", free: true, pro: true, ultra: true, ent: true },
+                                        { label: "PDF Performance Report", free: true, pro: true, ultra: true, ent: true },
+                                        { label: "Unlimited Sessions & Questions", free: false, pro: true, ultra: true, ent: true },
+                                        { label: "Training History", free: true, pro: true, ultra: true, ent: true },
+                                    ],
+                                },
+                                {
+                                    category: "Language & Customization",
+                                    rows: [
+                                        { label: "20 Languages", free: false, pro: true, ultra: true, ent: true },
+                                        { label: "All 29 Languages", free: false, pro: false, ultra: true, ent: true },
+                                        { label: "Custom difficulty level", free: false, pro: true, ultra: true, ent: true },
+                                        { label: "Expert (FAANG) difficulty", free: false, pro: false, ultra: true, ent: true },
+                                        { label: "Custom interview length", free: false, pro: true, ultra: true, ent: true },
+                                    ],
+                                },
+                                {
+                                    category: "AI Models",
+                                    rows: [
+                                        { label: "Gemini 3.8 Flash", free: true, pro: true, ultra: true, ent: true },
+                                        { label: "Claude Fable 5.1", free: false, pro: true, ultra: true, ent: true },
+                                        { label: "GPT-6 Astra", free: false, pro: false, ultra: true, ent: true },
+                                        { label: "Custom AI model fine-tuning", free: false, pro: false, ultra: false, ent: true },
+                                    ],
+                                },
+                                {
+                                    category: "Analytics & Reports",
+                                    rows: [
+                                        { label: "Real-time feedback during interview", free: false, pro: true, ultra: true, ent: true },
+                                        { label: "Granular scorecard breakdown", free: false, pro: true, ultra: true, ent: true },
+                                        { label: "Advanced performance analytics", free: false, pro: false, ultra: true, ent: true },
+                                        { label: "Admin analytics dashboard", free: false, pro: false, ultra: false, ent: true },
+                                        { label: "Ranked applicant reports", free: false, pro: false, ultra: false, ent: true },
+                                    ],
+                                },
+                                {
+                                    category: "Enterprise",
+                                    rows: [
+                                        { label: "Bulk seat management (50–500+ users)", free: false, pro: false, ultra: false, ent: true },
+                                        { label: "Custom question banks", free: false, pro: false, ultra: false, ent: true },
+                                        { label: "White-label branding", free: false, pro: false, ultra: false, ent: true },
+                                        { label: "AI candidate screening for hiring", free: false, pro: false, ultra: false, ent: true },
+                                        { label: "Custom role-based filters", free: false, pro: false, ultra: false, ent: true },
+                                        { label: "Graduation requirement integration", free: false, pro: false, ultra: false, ent: true },
+                                        { label: "Dedicated onboarding & SLA support", free: false, pro: false, ultra: false, ent: true },
+                                    ],
+                                },
+                                {
+                                    category: "Support",
+                                    rows: [
+                                        { label: "Community support", free: true, pro: true, ultra: true, ent: true },
+                                        { label: "Priority email support", free: false, pro: true, ultra: true, ent: true },
+                                        { label: "VIP direct support & feature requests", free: false, pro: false, ultra: true, ent: true },
+                                        { label: "Dedicated account manager", free: false, pro: false, ultra: false, ent: true },
+                                    ],
+                                },
+                            ].map((section) => (
+                                <React.Fragment key={section.category}>
+                                    <tr className="border-t border-black/5 dark:border-zinc-800/60">
+                                        <td colSpan={5} className="pt-6 pb-2 pl-4">
+                                            <span className="text-[13px] font-semibold text-zinc-500 uppercase tracking-wider">{section.category}</span>
+                                        </td>
+                                    </tr>
+                                    {section.rows.map((row) => (
+                                        <tr key={row.label} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
+                                            <td className="py-3 pl-4 pr-4">
+                                                <span className="text-[13px] text-zinc-700 dark:text-zinc-300">{row.label}</span>
+                                            </td>
+                                            {[row.free, row.pro, row.ultra, row.ent].map((has, i) => (
+                                                <td key={i} className="py-3 text-center">
+                                                    {has
+                                                        ? <span className={`text-[15px] ${i === 3 ? 'text-black dark:text-white' : 'text-zinc-600 dark:text-zinc-200'}`}>✓</span>
+                                                        : <span className="text-zinc-300 dark:text-zinc-700 text-[17px]">—</span>
+                                                    }
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </React.Fragment>
+                            ))}
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             {/* Instapay Modal - Apple/MacBook Style */}
+
             <Dialog open={isInstapayModalOpen} onOpenChange={setIsInstapayModalOpen}>
                 <DialogContent className="sm:max-w-[420px] bg-zinc-950/70 backdrop-blur-3xl border border-white/10 text-white rounded-[2.5rem] shadow-[0_24px_80px_rgba(0,0,0,0.6)] overflow-hidden p-6 sm:p-8">
                     <DialogHeader className="mb-4">

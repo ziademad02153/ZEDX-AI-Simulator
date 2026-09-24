@@ -131,7 +131,7 @@ export function ModelChat({ modelId, modelName, modelLogo }: ModelChatProps) {
     );
 
     return (
-        <div className="flex flex-col h-full min-h-[400px] border border-gray-200 dark:border-white/10 rounded-2xl bg-white dark:bg-black/40 backdrop-blur-xl overflow-hidden shadow-xl dark:shadow-2xl">
+        <div className="flex flex-col h-full min-h-[250px] border border-gray-200 dark:border-white/10 rounded-2xl bg-white dark:bg-black/40 backdrop-blur-xl overflow-hidden shadow-xl dark:shadow-2xl">
             {paywallDialog}
             {/* Header */}
             <div className="p-4 border-b border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/5 flex items-center justify-between">
