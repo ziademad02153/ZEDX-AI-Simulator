@@ -34,11 +34,11 @@ export const metadata: Metadata = {
       { url: '/apple-touch-icon.png?v=3', sizes: '180x180', type: 'image/png' },
     ],
   },
-  description: "ZEDX AI Interview Simulator is a real-time AI coach that dynamically adapts to your CV and Job Description. Master your next interview in any profession: Software Engineering, Medicine, Sales, Finance, HR, and more.",
+  description: "ZEDX AI Interview Simulator is a real-time AI coach powered by GPT-6 Astra, Claude Fable 5.1, and Gemini 3.8 Flash. Master your next interview with sub-second latency, anti-cheat proctoring, and dynamic CV adaptation.",
   keywords: [
     "ZEDX", "ZEDX AI", "ZEDX AI Simulator", "Mock Interview Coach", "Real-Time Transcription",
-    "Interview Simulation", "Software Engineer Interview Simulator", "Medical Mock Interview", "Sales Interview Coach",
-    "Accounting AI Interview", "HR Interview Prep", "Job Seeker Coach", "Universal Interview Prep",
+    "Interview Simulation", "Software Engineer Interview Simulator", "GPT-6 Astra", "Claude Fable 5.1",
+    "Gemini 3.8 Flash", "Anti-Cheat Interview", "AI Proctoring", "Sub-second Latency Voice AI",
     "interview simulator", "real-time transcription", "interview training", "artificial intelligence", "personal coach",
     "زياد عماد", "Ziad Emad", "محاكي انترفيو", "انترفيو مهندسين", "انترفيو دكاترة", "انترفيو مبيعات",
     "AI Interviewer", "AI Mock Interviewer", "Best AI Interview Prep", "ZEDX Interview"
@@ -273,7 +273,7 @@ export default async function RootLayout({
                   "name": "What is ZEDX AI?",
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "ZEDX AI is a real-time Voice-to-Voice AI Interview Simulator and the best AI Interviewer. It acts as an artificial intelligence personal coach that conducts mock interviews, provides real-time transcription, and gives instant granular feedback to help job seekers prepare for actual interviews."
+                    "text": "ZEDX AI is a real-time Voice-to-Voice AI Interview Simulator powered by GPT-6 Astra, Claude Fable 5.1, and Gemini 3.8 Flash. It features strict anti-cheat proctoring (screen sharing & tab focus tracking) making it the ideal AI Interviewer for universities and enterprises."
                   }
                 },
                 {
@@ -281,7 +281,7 @@ export default async function RootLayout({
                   "name": "How does the ZEDX AI Interview Simulator work?",
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Users can start a session where the ZEDX AI Interviewer asks them technical or behavioral interview questions verbally. The user answers using their microphone, and the AI evaluates the response in real-time with zero latency across multiple languages."
+                    "text": "Users upload their CV and Job Description. The ZEDX AI Interviewer asks technical or behavioral questions verbally with sub-second latency. The system enforces strict proctoring to prevent cheating, and evaluates responses in real-time across multiple languages."
                   }
                 },
                 {
@@ -289,7 +289,7 @@ export default async function RootLayout({
                   "name": "ما هو موقع زيدكس ZEDX AI؟",
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "زيدكس (ZEDX AI) هو محاكي مقابلات عمل يعمل بالذكاء الاصطناعي الصوتي وأفضل محاور ذكاء اصطناعي (AI Interviewer). يقوم بإجراء مقابلات وهمية (Mock Interviews) مع المستخدم ويقيم إجاباته بشكل فوري لتدريبه على المقابلات الحقيقية."
+                    "text": "زيدكس (ZEDX AI) هو محاكي مقابلات عمل يعمل بأحدث نماذج الذكاء الاصطناعي (GPT-6 Astra, Claude Fable 5.1, Gemini 3.8 Flash). يقوم بإجراء مقابلات وهمية (Mock Interviews) مع تقنية منع الغش (Anti-Cheat Proctoring) ويقيم الإجابات بشكل فوري."
                   }
                 }
               ]

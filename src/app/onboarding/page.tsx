@@ -139,18 +139,20 @@ export default function OnboardingPage() {
         const check = async () => {
             const { data } = await supabase.auth.getSession();
             if (!data.session) {
-                router.push("/login");
-                return;
+                // router.push("/login");
+                // return;
             }
-            const { data: profile } = await supabase
-                .from("profiles")
-                .select("profession, country")
-                .eq("id", data.session.user.id)
-                .single();
+            if (data.session) {
+                const { data: profile } = await supabase
+                    .from("profiles")
+                    .select("profession, country")
+                    .eq("id", data.session.user.id)
+                    .single();
 
-            if (profile?.profession && profile?.country) {
-                router.push("/dashboard");
-                return;
+                if (profile?.profession && profile?.country) {
+                    router.push("/dashboard");
+                    return;
+                }
             }
             setIsChecking(false);
         };
@@ -221,13 +223,18 @@ export default function OnboardingPage() {
 
                 <div className="p-8">
                     <div className="text-center mb-8">
+                        <div className="flex items-center justify-center gap-5 mb-6 bg-white py-4 px-8 rounded-2xl border border-gray-200 shadow-sm mx-auto w-fit">
+                            <span className="text-[24px] font-black tracking-tighter" style={{ background: 'linear-gradient(to right, #047857, #10b981, #bef264)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ZEDX</span>
+                            <span className="text-gray-300 font-light text-xl">✕</span>
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/e/e0/AUC_English_Logo_2021.png" alt="AUC Logo" className="h-[42px] object-contain" />
+                        </div>
                         <h1 className="text-[26px] font-bold tracking-tight mb-2">
-                            <span style={{ background: 'linear-gradient(to right, #10b981, #bef264)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                                Welcome to ZEDX
+                            <span className="text-white">
+                                Welcome AUC Students
                             </span>
                         </h1>
                         <p className="text-[13px] text-gray-500 leading-relaxed">
-                            Tell us a bit about yourself to personalize your interview experience.
+                            Tell us a bit about yourself to personalize your AUC career experience.
                         </p>
                     </div>
 

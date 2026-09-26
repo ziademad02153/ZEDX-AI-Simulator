@@ -209,9 +209,9 @@ export default function LoginPage() {
                     <Image 
                         src="/zedx-logo.png" 
                         alt="ZEDX AI" 
-                        width={160} 
-                        height={52} 
-                        className="object-contain dark:brightness-[10] transition-all" 
+                        width={200} 
+                        height={60} 
+                        className="object-contain transition-all" 
                     />
                 </Link>
             </motion.div>
