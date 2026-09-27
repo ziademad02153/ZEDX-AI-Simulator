@@ -33,13 +33,13 @@ const PROFESSIONS = [
     "Nurse", "Lawyer", "Student", "Other"
 ];
 
-const CustomSelect = ({ value, onChange, options, placeholder, label }: any) => {
+const CustomSelect = ({ value, onChange, options, placeholder, label }: { value: string; onChange: (val: string) => void; options: string[]; placeholder: string; label: string }) => {
     const [open, setOpen] = useState(false);
-    
+
     return (
         <div className="relative">
             <label className="block text-[13px] font-medium text-gray-500 dark:text-gray-400 mb-2 ml-1 tracking-wide">{label}</label>
-            <div 
+            <div
                 onClick={() => setOpen(!open)}
                 className={`flex items-center justify-between w-full h-[56px] px-5 bg-gray-100 dark:bg-[#1a1a1c] hover:dark:bg-[#202022] ${open ? 'ring-2 ring-emerald-500/50' : ''} !rounded-[20px] cursor-pointer transition-all duration-300 !border-none`}
             >
@@ -48,12 +48,12 @@ const CustomSelect = ({ value, onChange, options, placeholder, label }: any) => 
                 </span>
                 <ChevronDown className={`w-5 h-5 text-gray-400 dark:text-zinc-500 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
             </div>
-            
+
             <AnimatePresence>
                 {open && (
                     <>
                         <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, y: 5, scale: 0.98 }}
                             animate={{ opacity: 1, y: 10, scale: 1 }}
                             exit={{ opacity: 0, y: 5, scale: 0.98 }}
@@ -61,7 +61,7 @@ const CustomSelect = ({ value, onChange, options, placeholder, label }: any) => 
                             className="absolute z-50 w-full bg-white dark:bg-[#1c1c1e] !border-none !rounded-[24px] shadow-2xl max-h-[260px] overflow-y-auto py-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-black/10 dark:[&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full"
                         >
                             {options.map((opt: string) => (
-                                <div 
+                                <div
                                     key={opt}
                                     onClick={() => { onChange(opt); setOpen(false); }}
                                     className={`flex items-center justify-between px-5 py-3.5 mx-2 !rounded-[16px] cursor-pointer text-[15px] transition-colors ${value === opt ? 'bg-emerald-500/10 text-emerald-500 font-bold' : 'text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5'}`}
@@ -83,7 +83,7 @@ export function OnboardingModal() {
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    
+
     const [profession, setProfession] = useState<string>("");
     const [country, setCountry] = useState<string>("");
 
@@ -96,7 +96,7 @@ export function OnboardingModal() {
                     .select('profession, country')
                     .eq('id', user.id)
                     .single();
-                
+
                 if (error) throw error;
 
                 if (!data?.profession || !data?.country) {
@@ -135,9 +135,9 @@ export function OnboardingModal() {
     if (isLoading || !isOpen) return null;
 
     return (
-        <Dialog open={isOpen} onOpenChange={() => {}}>
-            <DialogContent 
-                className="sm:max-w-[460px] !p-0 overflow-visible bg-white dark:bg-[#0c0c0e] !border-none shadow-[0_30px_100px_-15px_rgba(0,0,0,0.7)] !rounded-[36px]" 
+        <Dialog open={isOpen} onOpenChange={() => { }}>
+            <DialogContent
+                className="sm:max-w-[460px] !p-0 overflow-visible bg-white dark:bg-[#0c0c0e] !border-none shadow-[0_30px_100px_-15px_rgba(0,0,0,0.7)] !rounded-[36px]"
                 hideCloseButton
             >
                 <div className="p-8 sm:p-10 relative z-10">
@@ -145,6 +145,7 @@ export function OnboardingModal() {
                         <div className="flex items-center justify-center gap-5 mb-6 bg-white py-4 px-8 rounded-2xl border border-gray-200 shadow-sm">
                             <span className="text-[24px] font-black tracking-tighter" style={{ background: 'linear-gradient(to right, #047857, #10b981, #bef264)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ZEDX</span>
                             <span className="text-gray-300 font-light text-xl">✕</span>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src="https://upload.wikimedia.org/wikipedia/commons/e/e0/AUC_English_Logo_2021.png" alt="AUC Logo" className="h-[42px] object-contain" />
                         </div>
                         <DialogTitle className="text-[28px] font-bold tracking-tight mb-3 w-full !text-center">
@@ -154,16 +155,16 @@ export function OnboardingModal() {
                             To craft your personalized AUC career experience, we need to know a little bit about you.
                         </DialogDescription>
                     </DialogHeader>
-                    
+
                     <div className="space-y-6 mb-12">
-                        <CustomSelect 
+                        <CustomSelect
                             label="Your Profession"
                             placeholder="Select your profession"
                             value={profession}
                             onChange={setProfession}
                             options={PROFESSIONS}
                         />
-                        <CustomSelect 
+                        <CustomSelect
                             label="Your Country"
                             placeholder="Select your country"
                             value={country}
@@ -171,11 +172,11 @@ export function OnboardingModal() {
                             options={COUNTRIES}
                         />
                     </div>
-                    
+
                     <DialogFooter>
-                        <button 
-                            onClick={handleSave} 
-                            disabled={isSaving || !profession || !country} 
+                        <button
+                            onClick={handleSave}
+                            disabled={isSaving || !profession || !country}
                             className="w-full h-[56px] bg-fusion-gradient relative overflow-hidden text-white dark:text-black font-bold !rounded-[20px] text-[17px] transition-all duration-300 disabled:opacity-40 flex items-center justify-center !border-none shadow-xl shadow-emerald-500/20 outline-none"
                             style={{ background: 'linear-gradient(to right, #047857, #10b981, #bef264)' }}
                         >

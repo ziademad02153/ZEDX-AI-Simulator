@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -62,10 +62,10 @@ export function CustomSelect({
                 const rect = containerRef.current.getBoundingClientRect();
                 const spaceBelow = window.innerHeight - rect.bottom;
                 const spaceAbove = rect.top;
-                
+
                 const requiredHeight = Math.min(options.length * 44 + 16, 256);
                 const shouldDropUp = spaceBelow < requiredHeight && spaceAbove > spaceBelow;
-                
+
                 setDropUp(shouldDropUp);
                 setCoords({
                     top: rect.bottom,
@@ -77,11 +77,11 @@ export function CustomSelect({
         };
 
         updatePosition();
-        
+
         // Use capture phase to catch scroll events from any scrollable container
         window.addEventListener("scroll", updatePosition, true);
         window.addEventListener("resize", updatePosition);
-        
+
         return () => {
             window.removeEventListener("scroll", updatePosition, true);
             window.removeEventListener("resize", updatePosition);
@@ -140,7 +140,7 @@ export function CustomSelect({
                                 left: coords.left,
                                 width: coords.width,
                                 // If dropUp, pin bottom of panel just above the trigger
-                                ...(dropUp 
+                                ...(dropUp
                                     ? { bottom: window.innerHeight - coords.triggerTop + 4 }
                                     : { top: coords.top + 4 }
                                 )

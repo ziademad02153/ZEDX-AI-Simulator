@@ -158,7 +158,7 @@ export default function Home() {
             <div 
               className="relative w-full max-w-[100vw] mx-auto flex items-center overflow-hidden py-6 md:py-10 [mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)] md:[mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]"
             >
-              <div className="flex w-max animate-marquee will-change-transform gap-6 md:gap-10 hover:[animation-play-state:paused]" style={{ animationDuration: '60s' }}>
+              <div className="flex w-max animate-marquee will-change-transform gap-6 md:gap-10 hover:[animation-play-state:paused]" style={{ animationDuration: '40s' }}>
                 {[...Array(2)].map((_, setIdx) => (
                   <div key={setIdx} className="flex gap-6 md:gap-10 px-2 md:px-4">
                     {PROMPT_CARDS.map((card, idx) => (

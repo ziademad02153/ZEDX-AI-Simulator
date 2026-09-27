@@ -463,7 +463,7 @@ export default function NewInterviewPage() {
                                 </label>
                                 <CustomSelect
                                     options={[
-                                        { label: "4 Questions (Free)", value: "4" },
+                                        { label: "4 Questions", value: "4" },
                                         { label: `10 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "10" },
                                         { label: `15 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "15" },
                                         { label: `20 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "20" },

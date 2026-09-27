@@ -12,6 +12,65 @@ import { supabase } from "@/lib/supabase";
 import { interviewService } from "@/lib/interview-service";
 import { useInterviewStore } from "@/lib/store";
 
+const PHONETIC_EGYPTIAN_NAMES: Record<string, string> = {
+    // Male Names
+    "ziad": "Zee-yad", "zeyad": "Zee-yad", "ahmed": "Ah-med", "mohamed": "Mo-ham-ed", 
+    "mohammed": "Mo-ham-ed", "mahmoud": "Mah-mood", "mostafa": "Moos-tafa", "mustafa": "Moos-tafa", 
+    "amr": "Ummr", "omar": "O-mar", "kareem": "Ka-reem", "karim": "Ka-reem", "khaled": "Kha-led", 
+    "tareq": "Taa-rek", "tarek": "Taa-rek", "youssef": "Yoo-sef", "yousef": "Yoo-sef", "ali": "Ah-lee", 
+    "hussein": "Hoo-sane", "hassan": "Hass-an", "ibrahim": "Ee-bra-heem", "alaa": "A-laa", 
+    "islam": "Is-laam", "eslam": "Is-laam", "abdullah": "Ab-dool-ah", "abdelrahman": "Ab-del-rah-man",
+    "basem": "Baa-sem", "bassem": "Baa-sem", "hazem": "Haa-zem", "mina": "Mee-na", "bishoy": "Bee-shoy", 
+    "kirollos": "Kee-ro-los", "abanoub": "A-ba-noob", "fady": "Faa-dee", "hany": "Haa-nee", 
+    "ramy": "Raa-mee", "nader": "Naa-der", "magdy": "Mag-dee", "maged": "Maa-ged", "emad": "Eh-maad", 
+    "ehab": "Ee-haab", "ihab": "Ee-haab", "tamer": "Taa-mer", "wael": "Waa-el", "yasser": "Yass-er", 
+    "ayman": "Eye-man", "ashraf": "Ash-raf", "sherif": "She-reef", "adel": "Aa-del", "essam": "Es-saam", 
+    "hesham": "He-shaam", "bahaa": "Ba-haa", "diaa": "Dee-yaa", "gamal": "Ga-maal", "kamal": "Ka-maal", 
+    "nabil": "Na-beel", "sameh": "Saa-meh", "safwat": "Saf-wat", "raouf": "Ra-oof", "farid": "Fa-reed", 
+    "yassin": "Yass-een", "hamza": "Ham-za", "seif": "Safe", "eyad": "Ee-yaad", "marwan": "Mar-waan", 
+    "mazen": "Maa-zen", "moaz": "Mo-aaz", "yahya": "Yah-ya", "anas": "A-nas", "malek": "Maa-lek", 
+    "younis": "Yoo-nis", "asser": "As-ser", "ismail": "Is-ma-eel", "said": "Sa-eed", "sayed": "Say-yed", 
+    "taha": "Ta-ha", "zakaria": "Za-ka-ree-ya",
+
+    // Female Names
+    "mai": "My", "aya": "A-ya", "nada": "Na-da", "nour": "Noor", "noura": "Noo-ra", "salma": "Sal-ma", 
+    "sara": "Sah-ra", "sarah": "Sah-ra", "menna": "Men-na", "mariam": "Mar-yam", "maryam": "Mar-yam", 
+    "fatma": "Fat-ma", "hala": "Haa-la", "shahd": "Shahd", "habiba": "Ha-bee-ba", "farida": "Fa-ree-da", 
+    "yassmine": "Yas-meen", "yasmin": "Yas-meen", "hoda": "Ho-da", "dina": "Dee-na", "heba": "He-ba",
+    "marina": "Ma-ree-na", "nermine": "Ner-meen", "nermin": "Ner-meen", "sherine": "She-reen", 
+    "sherin": "She-reen", "christine": "Chris-teen", "neven": "Ne-veen", "neveen": "Ne-veen", 
+    "engy": "En-gee", "inas": "Ee-naas", "rania": "Raan-ya", "reem": "Reem", "maha": "Ma-ha", 
+    "mona": "Mo-na", "manal": "Ma-naal", "amal": "A-maal", "asmaa": "As-maa", "shaimaa": "Shy-maa", 
+    "esraa": "Es-raa", "omnia": "Om-nee-ya", "radwa": "Rad-wa", "marwa": "Mar-wa", "amira": "A-mee-ra", 
+    "samira": "Sa-mee-ra", "safaa": "Sa-faa", "noha": "No-ha", "yumna": "Yoom-na", "basma": "Bas-ma", 
+    "dalia": "Daal-ya", "ghada": "Ghaa-da", "hadeer": "Ha-deer", "hend": "Hend", "kholoud": "Kho-lood", 
+    "laila": "Lay-la", "merna": "Mer-na", "mirna": "Mer-na", "nadin": "Na-deen", "nadine": "Na-deen", 
+    "nora": "Noo-ra", "reham": "Re-haam", "rawan": "Ra-waan", "samar": "Sa-mar", "soha": "So-ha", 
+    "yara": "Yaa-ra", "zeinab": "Zay-nab", "khadija": "Kha-dee-ja", "aisha": "Eye-sha"
+};
+
+const getPhoneticText = (text: string) => {
+    // 1. Strip markdown and symbols that cause TTS to stutter
+    let spokenText = text
+        .replace(/\*\*/g, '') // Remove bold
+        .replace(/\*/g, '')   // Remove italic
+        .replace(/#/g, '')    // Remove hashtags
+        .replace(/-/g, ' ')   // Replace dashes with spaces
+        .replace(/`/g, '')    // Remove backticks
+        .replace(/\[|\]/g, '') // Remove brackets
+        .replace(/\(|\)/g, ''); // Remove parentheses
+
+    // 2. Replace ZEDX phonetic
+    spokenText = spokenText.replace(/ZEDX/gi, 'Zeddex');
+    
+    // 3. Replace phonetic Egyptian names
+    Object.keys(PHONETIC_EGYPTIAN_NAMES).forEach(name => {
+        const regex = new RegExp(`\\b${name}\\b`, 'gi');
+        spokenText = spokenText.replace(regex, PHONETIC_EGYPTIAN_NAMES[name]);
+    });
+    return spokenText;
+};
+
 export default function MockInterviewPage() {
     const router = useRouter();
     const [isSetup, setIsSetup] = useState(false);
@@ -39,6 +98,11 @@ export default function MockInterviewPage() {
     const [isSpeaking, setIsSpeaking] = useState(false); // Is ZEDX speaking?
     const [isListening, setIsListening] = useState(false); // Are we listening to user?
     const [audioLevel, setAudioLevel] = useState(0);
+    const [isMobile, setIsMobile] = useState(false);
+    
+    useEffect(() => {
+        setIsMobile(/Mobi|Android|iPhone/i.test(navigator.userAgent) || window.innerWidth < 768);
+    }, []);
     
     const videoRef = useRef<HTMLVideoElement>(null);
     const recognitionRef = useRef<any>(null);
@@ -227,7 +291,8 @@ export default function MockInterviewPage() {
             };
             recognition.onend = () => {
                 // If we are still supposed to be listening, restart it (avoiding stale closure)
-                if (stateRef.current.isListening && !fatalError) {
+                // BUT ONLY IF NOT MOBILE! Mobile blocks auto-restarts and throws a beep loop
+                if (stateRef.current.isListening && !fatalError && !/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
                     try { recognition.start(); } catch (e) {}
                 }
             };
@@ -329,37 +394,23 @@ export default function MockInterviewPage() {
         let nextQuestionText = "";
 
         if (index === 0) {
-            const prompt = `You are ZEDX. Write your name in a way that forces the text-to-speech engine to pronounce it as a single continuous word "Zedex" in the target language (e.g. write "زيدكس" in Arabic, or "Zedex" in English and other Latin languages). DO NOT write it in all caps like ZEDX or Z-E-D-X as it will be spelled out letter by letter.
-This is the very first opening question of the mock interview.
-Your task is to:
-1. Extract the candidate's first name from the Resume context below.
-2. Greet the candidate by their name.
-3. Introduce yourself as ZEDX and state that you will be conducting their mock interview today.
-4. Ask them to introduce themselves and tell you a little bit about their background and experience.
-5. You MUST generate this response STRICTLY in ${langObj.name}.
-
-Do not ask any other technical questions yet. Keep it warm, welcoming, and concise.
-Resume Context: ${resume}`;
-            
+            // ZERO-LATENCY GREETING: Bypass AI generation for the very first greeting
+            let candidateName = "";
             try {
                 const { data: { session } } = await supabase.auth.getSession();
-                const token = session?.access_token;
-                const res = await fetch("/api/generate", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", ...(token ? { "Authorization": `Bearer ${token}` } : {}) },
-                    body: JSON.stringify({ model: (typeof window !== "undefined" ? localStorage.getItem("selected_ai_model") : null) || model, promptType: 'mock_interview', promptContext: { interviewType, difficulty, language }, prompt })
-                });
-                const data = await res.json().catch(() => ({}));
-                if (!isMounted.current) return;
-                if (!res.ok) throw new Error(data.error?.message || "API request failed");
-                nextQuestionText = data.content;
-            } catch (err) {
-                console.error("AI Generation Failed for Intro:", err);
-                // Fallback to hardcoded if AI fails
-                nextQuestionText = langObj.code.startsWith('ar') 
-                    ? "أهلاً بيك، أنا زيدكس. هعمل معاك الانترفيو التجريبي النهاردة. ممكن تكلمني شوية عن نفسك وخبرتك؟"
-                    : "Welcome, I am Zedex. I will be conducting your mock interview today. Could you please tell me a little bit about yourself?";
-            }
+                if (session?.user?.user_metadata?.full_name) {
+                    candidateName = session.user.user_metadata.full_name.split(' ')[0];
+                } else if (session?.user?.user_metadata?.name) {
+                    candidateName = session.user.user_metadata.name.split(' ')[0];
+                }
+            } catch (e) {}
+
+            const nameEn = candidateName ? ` ${candidateName}` : "";
+            const nameAr = candidateName ? ` يا ${candidateName}` : "";
+
+            nextQuestionText = langObj.code.startsWith('ar') 
+                ? `أهلاً بك${nameAr}، أنا زيدكس، وسأكون مسؤولاً عن الانترفيو الخاص بك اليوم. هل يمكن أن تبدأ بتعريف نفسك والتحدث قليلاً عن خبراتك؟`
+                : `Welcome${nameEn}, I am ZEDX. I will be conducting your mock interview today. Could you please start by introducing yourself and telling me a little bit about your background?`;
         } else {
             const previousQ = history[index - 1].q;
             const previousA = history[index - 1].a;
@@ -425,16 +476,21 @@ Resume Context: ${resume}`;
             audioRef.current.src = "";
         }
         if (typeof window !== 'undefined' && window.speechSynthesis) {
+            if (utteranceRef.current) {
+                utteranceRef.current.onend = null;
+                utteranceRef.current.onerror = null;
+            }
             window.speechSynthesis.cancel();
         }
 
         setIsSpeaking(true);
+        setIsListening(false); // Fix: Ensure we are NOT listening while ZEDX starts speaking
         // We set text empty until audio starts playing for perfect sync
         setZedxText(""); 
 
         const fallbackTTS = () => {
             setZedxText(text);
-            const utterance = new SpeechSynthesisUtterance(text);
+            const utterance = new SpeechSynthesisUtterance(getPhoneticText(text));
             utteranceRef.current = utterance; // Prevent garbage collection
             utterance.lang = language;
             
@@ -447,7 +503,9 @@ Resume Context: ${resume}`;
                 setIsListening(true);
                 setUserTranscript("");
                 if (recognitionRef.current) {
-                    try { recognitionRef.current.start(); } catch (e) {}
+                    if (!/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
+                        try { recognitionRef.current.start(); } catch (e) {}
+                    }
                 }
             };
             
@@ -484,12 +542,12 @@ Resume Context: ${resume}`;
                 // This does NOT use WebSockets, so the red WebSocket error is impossible here.
                 const playPremiumNativeTTS = () => {
                     setZedxText(text);
-                    const utterance = new SpeechSynthesisUtterance(text);
+                    const utterance = new SpeechSynthesisUtterance(getPhoneticText(text));
                     utteranceRef.current = utterance;
                     utterance.lang = language;
                     
                     // Apply speed and liveliness improvements
-                    utterance.rate = 1.15; // 15% faster
+                    utterance.rate = 1.05; // Reverted to slightly normal speed because 1.35 was too fast on mobile
                     utterance.pitch = 1.1; // Slightly higher pitch for energy
                     
                     const voices = window.speechSynthesis.getVoices();
@@ -508,21 +566,24 @@ Resume Context: ${resume}`;
                         setIsListening(true);
                         setUserTranscript("");
                         if (recognitionRef.current) {
-                            try { recognitionRef.current.start(); } catch (e) {}
+                            if (!/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
+                                try { recognitionRef.current.start(); } catch (e) {}
+                            }
                         }
                     };
                     
                     utterance.onend = onEndOrError;
                     utterance.onerror = onEndOrError;
                     
-                    // Cancel any ongoing speech before starting
-                    window.speechSynthesis.cancel();
                     window.speechSynthesis.speak(utterance);
                 };
 
                 // Browsers load voices asynchronously, we must ensure they are loaded before speaking
                 if (window.speechSynthesis.getVoices().length === 0) {
-                    window.speechSynthesis.onvoiceschanged = playPremiumNativeTTS;
+                    window.speechSynthesis.onvoiceschanged = () => {
+                        playPremiumNativeTTS();
+                        window.speechSynthesis.onvoiceschanged = null; // Fix: Prevent multiple firings which causes premature onend
+                    };
                 } else {
                     playPremiumNativeTTS();
                 }
@@ -546,7 +607,9 @@ Resume Context: ${resume}`;
                 setIsListening(true);
                 setUserTranscript("");
                 if (recognitionRef.current) {
-                    try { recognitionRef.current.start(); } catch (e) {}
+                    if (!/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
+                        try { recognitionRef.current.start(); } catch (e) {}
+                    }
                 }
             };
 
@@ -651,12 +714,12 @@ Resume Context: ${resume}`;
             </div>
 
             {/* Bottom Section: Webcam & User Speech */}
-            <div className="w-full p-6 flex items-end justify-between z-20 gap-6">
+            <div className="w-full p-4 sm:p-6 flex flex-col md:flex-row items-center md:items-end justify-between z-20 gap-4 sm:gap-6">
                 
                 {/* Hardware Controls & Webcam Box */}
-                <div className="flex gap-4 items-center">
+                <div className="flex flex-col sm:flex-row gap-4 items-center w-full md:w-auto">
                     {/* Webcam Box */}
-                    <div className="relative w-48 sm:w-64 rounded-2xl overflow-hidden border border-white/10 bg-gray-900 shadow-xl flex-shrink-0 aspect-[4/3] flex items-center justify-center">
+                    <div className="relative w-full max-w-[12rem] sm:max-w-none sm:w-64 rounded-2xl overflow-hidden border border-white/10 bg-gray-900 shadow-xl flex-shrink-0 aspect-[4/3] flex items-center justify-center">
                         {!isCameraEnabled && (
                             <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black flex items-center justify-center flex-col gap-2 opacity-70">
                                 <CameraOff className="w-8 h-8 text-white/20" />
@@ -665,10 +728,27 @@ Resume Context: ${resume}`;
                         )}
                         <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover transform -scale-x-100" />
                     </div>{/* end webcam box */}
+
+                    {/* Mobile Tap-to-Speak Button */}
+                    {isMobile && isListening && (
+                        <div className="flex flex-col gap-2 w-full sm:w-auto">
+                            <Button 
+                                onClick={() => {
+                                    if (recognitionRef.current) {
+                                        try { recognitionRef.current.start(); } catch (e) {}
+                                    }
+                                }}
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl py-6 px-4 shadow-[0_0_15px_rgba(5,150,105,0.4)] animate-pulse border border-emerald-400/50 w-full"
+                            >
+                                <Mic className="w-6 h-6 mr-2" />
+                                <span className="font-bold">Tap to Answer</span>
+                            </Button>
+                        </div>
+                    )}
                 </div>{/* end hardware controls wrapper */}
 
                 {/* User Transcript Bubble (Only shows when listening & speaking) */}
-                <div className="flex-1 max-w-2xl justify-self-end">
+                <div className="flex-1 w-full max-w-2xl md:justify-self-end mt-4 md:mt-0">
                     <AnimatePresence>
                         {isListening && userTranscript && (
                             <motion.div 

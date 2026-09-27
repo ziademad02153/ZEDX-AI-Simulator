@@ -18,6 +18,7 @@ export function StartButton({ variant, className }: StartButtonProps) {
     // Check if user has started an interview before
     const hasStarted = localStorage.getItem("has_started_interview");
     if (!hasStarted) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowDot(true);
     }
   }, []);

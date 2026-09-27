@@ -1279,7 +1279,7 @@ export default function InterviewPage() {
                     language: interviewContext.lang,
                     ai_responses: allQAPairs.map(qa => qa.answer),
                     duration_minutes: durationMinutes,
-                    questions: allQAPairs.map(qa => qa.question)
+                    questions: allQAPairs.map(qa => ({ q: qa.question, a: qa.answer }))
                 }
             );
 

@@ -30,11 +30,11 @@ export function Navbar() {
     const [isDesktop, setIsDesktop] = useState(false);
 
     useEffect(() => {
-        if (typeof window !== "undefined" && (window as any).electronAPI?.isElectron) {
+        if (typeof window !== "undefined" && (window as unknown as { electronAPI?: { isElectron?: boolean } }).electronAPI?.isElectron) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setIsDesktop(true);
         }
     }, []);
-    const router = useRouter();
 
     useEffect(() => {
         const handleScroll = () => {
@@ -133,7 +133,6 @@ function AuthButtons({ isMobile, scrolled, onSheetClose }: { isMobile?: boolean,
     const [userEmail, setUserEmail] = useState<string | null>(null);
     const [userAvatar, setUserAvatar] = useState<string | null>(null);
     const [userTier, setUserTier] = useState<string>('free');
-    const router = useRouter();
 
     useEffect(() => {
         const checkAuth = async () => {

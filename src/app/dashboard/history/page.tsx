@@ -16,7 +16,7 @@ interface QAPair {
 }
 
 // Helper function to parse transcript into Q&A pairs
-function parseTranscriptToQA(transcript: string | null, aiResponses: string[] | undefined, storedQuestions?: string[]): QAPair[] {
+function parseTranscriptToQA(transcript: string | null, aiResponses: string[] | undefined, storedQuestions?: string[] | Record<string, unknown>[]): QAPair[] {
     if (!transcript && (!aiResponses || aiResponses.length === 0)) return [];
 
     const pairs: QAPair[] = [];
@@ -25,8 +25,14 @@ function parseTranscriptToQA(transcript: string | null, aiResponses: string[] | 
     if (storedQuestions && storedQuestions.length > 0 && aiResponses && aiResponses.length > 0) {
         storedQuestions.forEach((question, idx) => {
             if (aiResponses[idx]) {
+                const qText = typeof question === 'string' 
+                    ? question 
+                    : typeof question?.question === 'string' 
+                        ? question.question 
+                        : JSON.stringify(question);
+                        
                 pairs.push({
-                    question: question,
+                    question: qText,
                     answer: aiResponses[idx]
                 });
             }
