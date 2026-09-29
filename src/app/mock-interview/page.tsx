@@ -637,7 +637,7 @@ Resume Context: ${resume}`;
     if (!isSetup) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-emerald-500 w-12 h-12" /></div>;
 
     return (
-        <div className="min-h-screen bg-black text-white relative overflow-hidden flex flex-col">
+        <div className="h-[100dvh] w-full bg-black text-white relative overflow-hidden flex flex-col">
             {/* Top Bar */}
             <div className="w-full p-4 sm:p-6 flex justify-between items-center z-20">
                 <div className="flex items-center gap-1 sm:gap-2 -ml-1 sm:-ml-4">
@@ -732,17 +732,26 @@ Resume Context: ${resume}`;
                     {/* Mobile Tap-to-Speak Button */}
                     {isMobile && isListening && (
                         <div className="flex flex-col gap-2 w-full sm:w-auto">
-                            <Button 
-                                onClick={() => {
-                                    if (recognitionRef.current) {
-                                        try { recognitionRef.current.start(); } catch (e) {}
-                                    }
-                                }}
-                                className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl py-6 px-4 shadow-[0_0_15px_rgba(5,150,105,0.4)] animate-pulse border border-emerald-400/50 w-full"
-                            >
-                                <Mic className="w-6 h-6 mr-2" />
-                                <span className="font-bold">Tap to Answer</span>
-                            </Button>
+                            {userTranscript.length > 0 ? (
+                                <Button 
+                                    onClick={() => handleUserFinishedSpeaking(userTranscript)}
+                                    className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-6 px-4 shadow-lg border border-blue-500/50 w-full"
+                                >
+                                    <span className="font-bold text-lg">Send Answer</span>
+                                </Button>
+                            ) : (
+                                <Button 
+                                    onClick={() => {
+                                        if (recognitionRef.current) {
+                                            try { recognitionRef.current.start(); } catch (e) {}
+                                        }
+                                    }}
+                                    className="bg-[#84cc16] hover:bg-[#65a30d] text-white rounded-xl py-6 px-4 shadow-[0_0_15px_rgba(132,204,22,0.4)] border border-[#84cc16]/50 w-full"
+                                >
+                                    <Mic className="w-6 h-6 mr-2" />
+                                    <span className="font-bold text-lg">Start Speaking</span>
+                                </Button>
+                            )}
                         </div>
                     )}
                 </div>{/* end hardware controls wrapper */}

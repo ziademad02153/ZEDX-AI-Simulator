@@ -73,7 +73,7 @@ export default function Home() {
 
       <main className="flex-grow pt-24 relative">
         {/* Global Background Fusion */}
-        <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="fixed inset-0 pointer-events-none z-0 hidden md:block">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-green-100/40 rounded-full blur-[100px]"></div>
           <div className="absolute top-[20%] right-[-10%] w-[40%] h-[60%] bg-teal-50/40 rounded-full blur-[120px]"></div>
         </div>
@@ -143,7 +143,7 @@ export default function Home() {
                 </div>
               </div>
               {/* Massive Atmosphere Glow - Softened and Static */}
-              <div className="absolute -inset-32 bg-gradient-to-r from-green-500/20 via-[#1fa34c]/20 to-emerald-500/20 blur-[120px] -z-10 rounded-[4rem] opacity-70 pointer-events-none"></div>
+              <div className="absolute -inset-32 bg-gradient-to-r from-green-500/20 via-[#1fa34c]/20 to-emerald-500/20 blur-[120px] -z-10 rounded-[4rem] opacity-70 pointer-events-none hidden md:block"></div>
             </div>
 
           </div>
@@ -222,7 +222,7 @@ export default function Home() {
             </div>
             
             {/* Massive Atmosphere Glow */}
-            <div className="absolute -inset-x-48 top-20 bottom-20 bg-gradient-to-br from-green-600/30 via-[#1fa34c]/20 to-emerald-600/30 dark:from-green-600/20 dark:via-[#1fa34c]/10 dark:to-emerald-600/20 blur-[150px] -z-10 rounded-[5rem] opacity-70 pointer-events-none"></div>
+            <div className="absolute -inset-x-48 top-20 bottom-20 bg-gradient-to-br from-green-600/30 via-[#1fa34c]/20 to-emerald-600/30 dark:from-green-600/20 dark:via-[#1fa34c]/10 dark:to-emerald-600/20 blur-[150px] -z-10 rounded-[5rem] opacity-70 pointer-events-none hidden md:block"></div>
           </div>
         </section>
 
@@ -297,7 +297,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
 
               {/* Feature 1: Context Upload */}
-              <div className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl rounded-[2.5rem] p-8 border border-zinc-200/50 dark:border-white/10 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] hover:-translate-y-2 transition-all duration-300 flex flex-col h-full group">
+              <div className="bg-white/90 md:bg-white/70 dark:bg-zinc-900/90 md:dark:bg-zinc-900/60 md:backdrop-blur-xl rounded-[2.5rem] p-8 border border-zinc-200/50 dark:border-white/10 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] hover:-translate-y-2 transition-all duration-300 flex flex-col h-full group">
                 <div className="mb-6">
                   <span className="inline-block px-4 py-1.5 rounded-full bg-[#d9f99d] text-green-950 text-[10px] font-extrabold tracking-widest uppercase shadow-sm">
                     Context
@@ -328,7 +328,7 @@ export default function Home() {
               </div>
 
               {/* Feature 2: Real-Time Accessibility */}
-              <div className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl rounded-[2.5rem] p-8 border border-zinc-200/50 dark:border-white/10 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] hover:-translate-y-2 transition-all duration-300 flex flex-col h-full group">
+              <div className="bg-white/90 md:bg-white/70 dark:bg-zinc-900/90 md:dark:bg-zinc-900/60 md:backdrop-blur-xl rounded-[2.5rem] p-8 border border-zinc-200/50 dark:border-white/10 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] hover:-translate-y-2 transition-all duration-300 flex flex-col h-full group">
                 <div className="mb-6">
                   <span className="inline-block px-4 py-1.5 rounded-full bg-[#d9f99d] text-green-950 text-[10px] font-extrabold tracking-widest uppercase shadow-sm">
                     Instant Verification
@@ -366,7 +366,7 @@ export default function Home() {
               </div>
 
               {/* Feature 3: Multilingual */}
-              <div className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl rounded-[2.5rem] p-8 border border-zinc-200/50 dark:border-white/10 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] hover:-translate-y-2 transition-all duration-300 flex flex-col h-full group">
+              <div className="bg-white/90 md:bg-white/70 dark:bg-zinc-900/90 md:dark:bg-zinc-900/60 md:backdrop-blur-xl rounded-[2.5rem] p-8 border border-zinc-200/50 dark:border-white/10 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] hover:-translate-y-2 transition-all duration-300 flex flex-col h-full group">
                 <div className="mb-6">
                   <span className="inline-block px-4 py-1.5 rounded-full bg-[#d9f99d] text-green-950 text-[10px] font-extrabold tracking-widest uppercase shadow-sm">
                     Multilingual
@@ -440,7 +440,7 @@ export default function Home() {
               </div>
 
               {/* Feature 4: AI Analysis */}
-              <div className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl rounded-[2.5rem] p-8 border border-zinc-200/50 dark:border-white/10 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] hover:-translate-y-2 transition-all duration-300 flex flex-col h-full group">
+              <div className="bg-white/90 md:bg-white/70 dark:bg-zinc-900/90 md:dark:bg-zinc-900/60 md:backdrop-blur-xl rounded-[2.5rem] p-8 border border-zinc-200/50 dark:border-white/10 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] hover:-translate-y-2 transition-all duration-300 flex flex-col h-full group">
                 <div className="mb-6">
                   <span className="inline-block px-4 py-1.5 rounded-full bg-[#d9f99d] text-green-950 text-[10px] font-extrabold tracking-widest uppercase shadow-sm">
                     Analysis

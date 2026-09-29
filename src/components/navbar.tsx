@@ -51,7 +51,7 @@ export function Navbar() {
         <nav className={cn(
             "fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out print:hidden",
             scrolled
-                ? "bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-black/5 dark:border-white/10 shadow-sm"
+                ? "bg-white/95 dark:bg-[#0a0a0a]/95 md:bg-white/80 md:dark:bg-[#0a0a0a]/80 md:backdrop-blur-xl border-b border-black/5 dark:border-white/10 shadow-sm"
                 : "bg-transparent border-b border-transparent"
         )}>
             <div className="w-full">
