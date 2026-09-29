@@ -548,7 +548,7 @@ Resume Context: ${resume}`;
                     
                     // Apply speed and liveliness improvements
                     const isMobileTTS = /Mobi|Android|iPhone/i.test(navigator.userAgent);
-                    utterance.rate = isMobileTTS ? 1.05 : 1.18; // 1.18 is the sweet spot for a sharp, realistic interviewer on Laptop
+                    utterance.rate = isMobileTTS ? 1.05 : 1.10; // Reduced from 1.18 to 1.10 for a more relaxed, natural pacing
                     utterance.pitch = 1.1; // Slightly higher pitch for energy
                     
                     const voices = window.speechSynthesis.getVoices();
@@ -563,8 +563,9 @@ Resume Context: ${resume}`;
                     if (!bestMaleVoice) {
                         bestMaleVoice = voices.find(v => 
                             v.lang.startsWith(langPrefix) && 
-                            (v.name.includes("Google UK English Male") || v.name.includes("Daniel") || v.name.includes("Alex") || v.name.includes("David") || v.name.includes("Male"))
-                        ) || voices.find(v => v.lang.startsWith(langPrefix));
+                            !v.name.includes("David") &&
+                            (v.name.includes("Google UK English Male") || v.name.includes("Daniel") || v.name.includes("Alex") || v.name.includes("Male"))
+                        ) || voices.find(v => v.lang.startsWith(langPrefix) && !v.name.includes("David")) || voices.find(v => v.lang.startsWith(langPrefix));
                     }
                     
                     if (bestMaleVoice) utterance.voice = bestMaleVoice;
