@@ -1,0 +1,1 @@
+Sample input for 09-ambiguous-request

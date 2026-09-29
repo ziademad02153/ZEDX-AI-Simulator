@@ -161,8 +161,9 @@ export default function OnboardingPage() {
 
     const handleSave = async () => {
         if (!profession || !country) return;
-        setIsSaving(true);
+        setIsSaving(true); // Show spinner for a microsecond just for visual feedback
         setError("");
+        
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
@@ -170,30 +171,22 @@ export default function OnboardingPage() {
                 return;
             }
 
-            const { error: updateError } = await supabase
+            // Optimistic UI Update: Instantly redirect to dashboard (0 lag)
+            router.push("/dashboard");
+
+            // Fire and forget the database update in the background
+            supabase
                 .from("profiles")
                 .update({ profession, country })
-                .eq("id", session.user.id);
-
-            // Log full error details for debugging
-            if (updateError) {
-                console.error("Update error details:", JSON.stringify(updateError, null, 2));
-            }
-
-            // Only block redirect if there's a real error with a message or code
-            // Empty {} error objects are often false positives from Supabase
-            const hasRealError = updateError && (updateError.message || updateError.code);
-            if (hasRealError) {
-                setError(`Failed to save: ${updateError.message || updateError.code}`);
-                return;
-            }
-
-            // Success or empty error — redirect
-            router.push("/dashboard");
+                .eq("id", session.user.id)
+                .then(({ error: updateError }) => {
+                    if (updateError) {
+                        console.error("Update error details:", JSON.stringify(updateError, null, 2));
+                    }
+                });
         } catch (err) {
             console.error("Onboarding save failed:", err);
             setError("Unexpected error. Please try again.");
-        } finally {
             setIsSaving(false);
         }
     };
@@ -223,18 +216,13 @@ export default function OnboardingPage() {
 
                 <div className="p-8">
                     <div className="text-center mb-8">
-                        <div className="flex items-center justify-center gap-5 mb-6 bg-white py-4 px-8 rounded-2xl border border-gray-200 shadow-sm mx-auto w-fit">
-                            <span className="text-[24px] font-black tracking-tighter" style={{ background: 'linear-gradient(to right, #047857, #10b981, #bef264)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ZEDX</span>
-                            <span className="text-gray-300 font-light text-xl">✕</span>
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/e/e0/AUC_English_Logo_2021.png" alt="AUC Logo" className="h-[42px] object-contain" />
-                        </div>
                         <h1 className="text-[26px] font-bold tracking-tight mb-2">
                             <span className="text-white">
-                                Welcome AUC Students
+                                Welcome to ZEDX AI
                             </span>
                         </h1>
                         <p className="text-[13px] text-gray-500 leading-relaxed">
-                            Tell us a bit about yourself to personalize your AUC career experience.
+                            Tell us a bit about yourself to personalize your career experience.
                         </p>
                     </div>
 

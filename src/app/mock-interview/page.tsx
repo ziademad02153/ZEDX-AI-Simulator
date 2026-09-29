@@ -547,7 +547,8 @@ Resume Context: ${resume}`;
                     utterance.lang = language;
                     
                     // Apply speed and liveliness improvements
-                    utterance.rate = 1.05; // Reverted to slightly normal speed because 1.35 was too fast on mobile
+                    const isMobileTTS = /Mobi|Android|iPhone/i.test(navigator.userAgent);
+                    utterance.rate = isMobileTTS ? 1.05 : 1.18; // 1.18 is the sweet spot for a sharp, realistic interviewer on Laptop
                     utterance.pitch = 1.1; // Slightly higher pitch for energy
                     
                     const voices = window.speechSynthesis.getVoices();

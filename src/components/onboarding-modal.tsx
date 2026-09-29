@@ -112,24 +112,20 @@ export function OnboardingModal() {
         checkProfile();
     }, [user]);
 
-    const handleSave = async () => {
+    const handleSave = () => {
         if (!profession || !country || !user?.id) return;
-        setIsSaving(true);
-        try {
-            // Use update since the profile row is guaranteed to exist (created on signup)
-            await supabase
-                .from('profiles')
-                .update({ profession, country })
-                .eq('id', user.id);
+        
+        // Optimistic UI Update: Close the modal instantly (0 lag)
+        setIsOpen(false);
 
-            // Always close modal — don't block user even if DB write fails
-            setIsOpen(false);
-        } catch (error) {
-            console.error("Failed to save onboarding data:", error);
-            setIsOpen(false);
-        } finally {
-            setIsSaving(false);
-        }
+        // Fire and forget the database update in the background
+        supabase
+            .from('profiles')
+            .update({ profession, country })
+            .eq('id', user.id)
+            .then(({ error }) => {
+                if (error) console.error("Failed to save onboarding data:", error);
+            });
     };
 
     if (isLoading || !isOpen) return null;
@@ -142,17 +138,11 @@ export function OnboardingModal() {
             >
                 <div className="p-8 sm:p-10 relative z-10">
                     <DialogHeader className="mb-10 flex flex-col items-center !text-center">
-                        <div className="flex items-center justify-center gap-5 mb-6 bg-white py-4 px-8 rounded-2xl border border-gray-200 shadow-sm">
-                            <span className="text-[24px] font-black tracking-tighter" style={{ background: 'linear-gradient(to right, #047857, #10b981, #bef264)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ZEDX</span>
-                            <span className="text-gray-300 font-light text-xl">✕</span>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/e/e0/AUC_English_Logo_2021.png" alt="AUC Logo" className="h-[42px] object-contain" />
-                        </div>
                         <DialogTitle className="text-[28px] font-bold tracking-tight mb-3 w-full !text-center">
-                            <span className="text-gray-900 dark:text-white">Welcome AUC Students</span>
+                            <span className="text-gray-900 dark:text-white">Welcome to ZEDX AI</span>
                         </DialogTitle>
                         <DialogDescription className="text-[15px] leading-relaxed text-gray-500 dark:text-gray-400 max-w-[320px] mx-auto !text-center">
-                            To craft your personalized AUC career experience, we need to know a little bit about you.
+                            To craft your personalized career experience, we need to know a little bit about you.
                         </DialogDescription>
                     </DialogHeader>
 
