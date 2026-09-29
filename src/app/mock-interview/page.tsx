@@ -555,10 +555,17 @@ Resume Context: ${resume}`;
                     const langPrefix = language.split('-')[0]; // e.g. 'en', 'es', 'fr'
                     
                     // Prioritize premium MALE voices built into the user's OS/Browser for the specific language
-                    const bestMaleVoice = voices.find(v => 
+                    let bestMaleVoice = voices.find(v => 
                         v.lang.startsWith(langPrefix) && 
-                        (v.name.includes("Google UK English Male") || v.name.includes("Daniel") || v.name.includes("Alex") || v.name.includes("David") || v.name.includes("Male"))
-                    ) || voices.find(v => v.lang.startsWith(langPrefix));
+                        (v.name.includes("Natural") || v.name.includes("Online"))
+                    );
+
+                    if (!bestMaleVoice) {
+                        bestMaleVoice = voices.find(v => 
+                            v.lang.startsWith(langPrefix) && 
+                            (v.name.includes("Google UK English Male") || v.name.includes("Daniel") || v.name.includes("Alex") || v.name.includes("David") || v.name.includes("Male"))
+                        ) || voices.find(v => v.lang.startsWith(langPrefix));
+                    }
                     
                     if (bestMaleVoice) utterance.voice = bestMaleVoice;
 
