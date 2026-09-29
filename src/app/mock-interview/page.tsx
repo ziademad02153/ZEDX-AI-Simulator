@@ -405,12 +405,14 @@ export default function MockInterviewPage() {
                 }
             } catch (e) {}
 
-            const nameEn = candidateName ? ` ${candidateName}` : "";
+            const nameEn = candidateName ? ` ya ${candidateName}` : "";
             const nameAr = candidateName ? ` يا ${candidateName}` : "";
 
-            nextQuestionText = langObj.code.startsWith('ar') 
+            nextQuestionText = langObj.code === 'ar-EG'
+                ? `أهلاً بك${nameAr}، أنا زيدكس، وهعمل معاك الانترفيو النهارده. ياريت تبدأ وتعرفني بنفسك وتكلمني شوية عن خبراتك؟`
+                : langObj.code.startsWith('ar') 
                 ? `أهلاً بك${nameAr}، أنا زيدكس، وسأكون مسؤولاً عن الانترفيو الخاص بك اليوم. هل يمكن أن تبدأ بتعريف نفسك والتحدث قليلاً عن خبراتك؟`
-                : `Welcome${nameEn}, I am ZEDX. I will be conducting your mock interview today. Could you please start by introducing yourself and telling me a little bit about your background?`;
+                : `Welcome${nameEn}, I am ZEDX. I will be conducting your interview today. Could you please start by introducing yourself and telling me a little bit about your background?`;
         } else {
             const previousQ = history[index - 1].q;
             const previousA = history[index - 1].a;
