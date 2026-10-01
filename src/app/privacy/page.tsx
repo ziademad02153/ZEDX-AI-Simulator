@@ -87,7 +87,7 @@ export default function PrivacyPolicyPage() {
                     <section id="section3" className="mb-10">
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">3. When and with whom do we share your information?</h2>
                         <ul className="list-disc ml-6 space-y-2 text-gray-600 dark:text-gray-300">
-                            <li><strong>AI Service Providers:</strong> Your input (Context Files, interview transcripts) is processed by enterprise AI providers (like Groq/OpenAI) strictly to generate coaching responses.</li>
+                            <li><strong>AI Service Providers:</strong> Your input (Context Files, interview transcripts) is processed by enterprise AI infrastructure strictly to generate coaching responses.</li>
                             <li><strong>Infrastructure Providers:</strong> We use Supabase for secure database storage and authentication.</li>
                             <li><strong>Payment Processors:</strong> Billing information is shared securely with processors like Stripe or Gumroad.</li>
                         </ul>

@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Upload, AlertCircle, Sparkles, Loader2, Target, Gauge, Mic, Camera, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Upload, AlertCircle, Sparkles, Loader2, Target, Gauge, Mic, Camera, CheckCircle2, Lock } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { SUPPORTED_LANGUAGES } from "@/lib/languages";
 import { resumeService, Resume } from "@/lib/resume-service";
 import { ModelChat } from "@/components/dashboard/model-chat";
+import { PaywallModal } from "@/components/paywall-modal";
 import { motion } from "framer-motion";
 import { AnimatedOrb } from '@/components/animated-orb-wrapper';
 import { supabase } from "@/lib/supabase";
@@ -97,6 +98,7 @@ export default function NewInterviewPage() {
     const [isDesktop, setIsDesktop] = useState(false);
     const [isPro, setIsPro] = useState(false);
     const [userTier, setUserTier] = useState<"free" | "pro" | "ultra">("free");
+    const [showPaywall, setShowPaywall] = useState(false);
 
     // Prevent accidental reload if the user has entered some data
     useEffect(() => {
@@ -175,7 +177,7 @@ export default function NewInterviewPage() {
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
-            
+
             const res = await fetch("/api/parse-resume", {
                 method: "POST",
                 headers: token ? { "Authorization": `Bearer ${token}` } : undefined,
@@ -188,7 +190,7 @@ export default function NewInterviewPage() {
             setResume(data.text);
             setError(null);
             setSuccessMessage(`Resume "${file.name}" uploaded successfully!`);
-            
+
             posthog.capture('cv_uploaded', { file_type: file.type });
 
             try {
@@ -226,8 +228,14 @@ export default function NewInterviewPage() {
                         .eq('user_id', session.user.id)
                         .gte('created_at', startOfMonth.toISOString());
 
-                    if (count !== null && count >= 4) {
-                        setError("You have reached the Free tier limit of 4 interviews this month. Please upgrade to Pro for unlimited interviews.");
+                    const { data: profileData } = await supabase
+                        .from('profiles')
+                        .select('questions_asked')
+                        .eq('id', session.user.id)
+                        .single();
+
+                    if ((count !== null && count >= 4) || (profileData && profileData.questions_asked >= 16)) {
+                        setShowPaywall(true);
                         setIsLoading(false);
                         return;
                     }
@@ -244,7 +252,7 @@ export default function NewInterviewPage() {
             questions: questionCount,
             model: selectedModel
         });
-        
+
         try {
             useInterviewStore.getState().setInterviewContext({
                 interviewType,
@@ -266,10 +274,9 @@ export default function NewInterviewPage() {
 
     const currentModelData = AI_MODELS.find(m => m.id === selectedModel) || AI_MODELS[0];
 
-
-
     return (
         <div className="min-h-screen bg-white dark:bg-black text-foreground selection:bg-emerald-500/30 overflow-x-hidden">
+            <PaywallModal open={showPaywall} onOpenChange={setShowPaywall} />
             <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
                 <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-[150px]"></div>
                 <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-[150px]"></div>
@@ -409,7 +416,7 @@ export default function NewInterviewPage() {
                                 <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
                                     <div className="text-emerald-600 dark:text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
                                         <Image src="/Multi-Language.png" alt="Language Globe" width={28} height={28} className="object-contain" />
-                                    </div> 
+                                    </div>
                                     Language
                                 </label>
                                 <CustomSelect
@@ -434,51 +441,51 @@ export default function NewInterviewPage() {
                             </div>
                             {!isDesktop && (
                                 <>
-                                <div className="relative z-[40] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-4 sm:p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
-                                    <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
-                                        <div className="drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
-                                            <Image src="/Granular Scorecards.png" alt="Difficulty Scorecard" width={28} height={28} className="object-contain" />
-                                        </div> 
-                                    Difficulty
-                                </label>
-                                <CustomSelect
-                                    options={[
-                                        { label: "Beginner", value: "Beginner" },
-                                        { label: "Intermediate", value: "Intermediate" },
-                                        { label: `Expert${userTier !== 'ultra' && !isDesktop ? ' 🔒 ULTRA' : ''}`, value: "Expert" },
-                                    ]}
-                                    value={difficulty}
-                                    onChange={(val) => {
-                                        if (val === "Expert" && userTier !== 'ultra' && !isDesktop) { router.push("/pricing"); return; }
-                                        setDifficulty(val);
-                                    }}
-                                />
-                            </div>
-                            <div className="relative z-[30] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-4 sm:p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
-                                <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
-                                    <div className="drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
-                                        <Image src="/question.png" alt="Questions" width={36} height={36} className="object-contain scale-110" />
-                                    </div> 
-                                    Questions
-                                </label>
-                                <CustomSelect
-                                    options={[
-                                        { label: "4 Questions", value: "4" },
-                                        { label: `10 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "10" },
-                                        { label: `15 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "15" },
-                                        { label: `20 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "20" },
-                                        { label: `25 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "25" },
-                                        { label: `30 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "30" },
-                                        { label: `35 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "35" },
-                                        { label: `40 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "40" },
-                                    ]}
-                                    value={questionCount}
-                                    onChange={(val) => {
-                                        if (parseInt(val) > 4 && !isPro && !isDesktop) { router.push("/pricing"); return; }
-                                        setQuestionCount(val);
-                                    }}
-                                />
-                            </div>
+                                    <div className="relative z-[40] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-4 sm:p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
+                                        <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
+                                            <div className="drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
+                                                <Image src="/Granular Scorecards.png" alt="Difficulty Scorecard" width={28} height={28} className="object-contain" />
+                                            </div>
+                                            Difficulty
+                                        </label>
+                                        <CustomSelect
+                                            options={[
+                                                { label: "Beginner", value: "Beginner" },
+                                                { label: "Intermediate", value: "Intermediate" },
+                                                { label: `Expert${userTier !== 'ultra' && !isDesktop ? ' 🔒 ULTRA' : ''}`, value: "Expert" },
+                                            ]}
+                                            value={difficulty}
+                                            onChange={(val) => {
+                                                if (val === "Expert" && userTier !== 'ultra' && !isDesktop) { router.push("/pricing"); return; }
+                                                setDifficulty(val);
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="relative z-[30] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-4 sm:p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
+                                        <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
+                                            <div className="drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
+                                                <Image src="/question.png" alt="Questions" width={36} height={36} className="object-contain scale-110" />
+                                            </div>
+                                            Questions
+                                        </label>
+                                        <CustomSelect
+                                            options={[
+                                                { label: "4 Questions", value: "4" },
+                                                { label: `10 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "10" },
+                                                { label: `15 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "15" },
+                                                { label: `20 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "20" },
+                                                { label: `25 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "25" },
+                                                { label: `30 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "30" },
+                                                { label: `35 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "35" },
+                                                { label: `40 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "40" },
+                                            ]}
+                                            value={questionCount}
+                                            onChange={(val) => {
+                                                if (parseInt(val) > 4 && !isPro && !isDesktop) { router.push("/pricing"); return; }
+                                                setQuestionCount(val);
+                                            }}
+                                        />
+                                    </div>
                                 </>
                             )}
                         </motion.div>
@@ -510,60 +517,61 @@ export default function NewInterviewPage() {
                             {/* Models List */}
                             <div className="space-y-3 sm:space-y-4 mb-8">
                                 {AI_MODELS.map((model) => {
-                                    const isLocked = (model.tier === 'ultra' && userTier !== 'ultra' && !isDesktop) || 
-                                                     (model.tier === 'pro' && userTier === 'free' && !isDesktop);
-                                    
+                                    const isLocked = (model.tier === 'ultra' && userTier !== 'ultra' && !isDesktop) ||
+                                        (model.tier === 'pro' && userTier === 'free' && !isDesktop);
+
                                     return (
-                                    <div
-                                        key={model.id}
-                                        onClick={() => {
-                                            if (isLocked) {
-                                                router.push("/pricing");
-                                                return;
-                                            }
-                                            setSelectedModel(model.id);
-                                        }}
-                                        className={cn(
-                                            "relative p-3.5 sm:p-5 rounded-2xl border-2 transition-all flex items-center gap-4 sm:gap-5 group/item overflow-hidden",
-                                            selectedModel === model.id
-                                                ? "bg-white dark:bg-white/5 border-[#84cc16] shadow-sm"
-                                                : "bg-gray-50 dark:bg-black/20 border-transparent hover:bg-gray-100 dark:hover:bg-white/5",
-                                            isLocked ? "cursor-pointer" : "cursor-pointer"
-                                        )}
-                                    >
-                                        {isLocked && (
-                                            <div className="absolute inset-0 z-10 flex items-center justify-end pr-5 backdrop-blur-[2.5px] bg-white/5 dark:bg-black/20">
-                                                <div className={cn(
-                                                    "px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider shadow-lg flex items-center gap-1.5",
-                                                    model.tier === 'ultra' ? "bg-amber-500/20 text-amber-500 border border-amber-500/30" : "bg-emerald-500/20 text-emerald-500 border border-emerald-500/30"
-                                                )}>
-                                                    {model.tier === 'ultra' ? 'ULTRA' : 'PRO'}
+                                        <div
+                                            key={model.id}
+                                            onClick={() => {
+                                                if (isLocked) {
+                                                    router.push("/pricing");
+                                                    return;
+                                                }
+                                                setSelectedModel(model.id);
+                                            }}
+                                            className={cn(
+                                                "relative p-3.5 sm:p-5 rounded-2xl border-2 transition-all flex items-center gap-4 sm:gap-5 group/item overflow-hidden",
+                                                selectedModel === model.id
+                                                    ? "bg-white dark:bg-white/5 border-[#84cc16] shadow-sm"
+                                                    : "bg-gray-50 dark:bg-black/20 border-transparent hover:bg-gray-100 dark:hover:bg-white/5",
+                                                isLocked ? "cursor-pointer" : "cursor-pointer"
+                                            )}
+                                        >
+                                            {isLocked && (
+                                                <div className="absolute inset-0 z-10 flex items-center justify-end pr-5 backdrop-blur-[2.5px] bg-white/5 dark:bg-black/20">
+                                                    <div className={cn(
+                                                        "px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider shadow-lg flex items-center gap-1.5",
+                                                        model.tier === 'ultra' ? "bg-amber-500/20 text-amber-500 border border-amber-500/30" : "bg-emerald-500/20 text-emerald-500 border border-emerald-500/30"
+                                                    )}>
+                                                        {model.tier === 'ultra' ? 'ULTRA' : 'PRO'}
+                                                    </div>
                                                 </div>
+                                            )}
+
+                                            <div className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white dark:bg-black p-1.5 sm:p-2 shadow-sm border border-gray-100 dark:border-white/10 flex items-center justify-center relative z-0", isLocked && "opacity-50 blur-[1px]")}>
+                                                <Image
+                                                    src={model.logo}
+                                                    alt={model.name}
+                                                    width={40}
+                                                    height={40}
+                                                    className={cn("w-full h-full object-contain", model.logo.includes('openai') && "dark:invert")}
+                                                />
                                             </div>
-                                        )}
-                                        
-                                        <div className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white dark:bg-black p-1.5 sm:p-2 shadow-sm border border-gray-100 dark:border-white/10 flex items-center justify-center relative z-0", isLocked && "opacity-50 blur-[1px]")}>
-                                            <Image
-                                                src={model.logo}
-                                                alt={model.name}
-                                                width={40}
-                                                height={40}
-                                                className={cn("w-full h-full object-contain", model.logo.includes('openai') && "dark:invert")}
-                                            />
-                                        </div>
-                                        <div className={cn("flex-1 relative z-0", isLocked && "opacity-60 blur-[1px]")}>
-                                            <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-                                                <h4 className={cn("font-bold text-sm sm:text-base flex items-center gap-2", selectedModel === model.id ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400")}>
-                                                    {model.name}
-                                                </h4>
-                                                {selectedModel === model.id && !isLocked && (
-                                                    <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#84cc16] shadow-[0_0_12px_rgba(132,204,22,0.5)]"></div>
-                                                )}
+                                            <div className={cn("flex-1 relative z-0", isLocked && "opacity-60 blur-[1px]")}>
+                                                <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                                                    <h4 className={cn("font-bold text-sm sm:text-base flex items-center gap-2", selectedModel === model.id ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400")}>
+                                                        {model.name}
+                                                    </h4>
+                                                    {selectedModel === model.id && !isLocked && (
+                                                        <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#84cc16] shadow-[0_0_12px_rgba(132,204,22,0.5)]"></div>
+                                                    )}
+                                                </div>
+                                                <p className="text-[10px] sm:text-sm text-gray-400 dark:text-gray-500">{model.description}</p>
                                             </div>
-                                            <p className="text-[10px] sm:text-sm text-gray-400 dark:text-gray-500">{model.description}</p>
                                         </div>
-                                    </div>
-                                )})}
+                                    )
+                                })}
                             </div>
 
                             {/* Chat Preview */}

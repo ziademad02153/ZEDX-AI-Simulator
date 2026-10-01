@@ -113,7 +113,18 @@ export async function POST(request: Request) {
         // 5. Teaser Mode Limit Check & Early Lock (Fix TOCTOU Race Condition)
         let isQuestionLocked = false;
         if (currentTier === 'free' && promptType !== 'report_evaluator') {
-            if (profile.questions_asked >= 4) {
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0, 0, 0, 0);
+
+            const { count } = await supabaseAdmin
+                .from('interviews')
+                .select('id', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .gte('created_at', startOfMonth.toISOString());
+
+            // Block if they have 4 completed interviews OR have spammed the API with more than 16 questions
+            if ((count !== null && count >= 4) || profile.questions_asked >= 16) {
                 return NextResponse.json({ error: { message: "PAYWALL_LIMIT_REACHED", code: "PAYWALL_LIMIT_REACHED" } }, { status: 403 });
             }
             // Lock the question slot BEFORE making the slow Groq API call
@@ -278,11 +289,11 @@ export async function POST(request: Request) {
                 }
 
                 // If some failed, we can at least return the ones that succeeded
-                return NextResponse.json({ parsedReport: allParsedReports, provider: "groq", partial: allParsedReports.length < history.length });
+                return NextResponse.json({ parsedReport: allParsedReports, partial: allParsedReports.length < history.length });
             } else {
                 // Standard single prompt execution
                 const res = await callGroqWithFallback(prompt, messages);
-                return NextResponse.json({ content: res.content, modelUsed: res.modelUsed, provider: "groq" });
+                return NextResponse.json({ content: res.content });
             }
         } catch (error: any) {
             // Refund the question if generation failed

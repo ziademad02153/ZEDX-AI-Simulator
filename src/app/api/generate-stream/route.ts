@@ -73,8 +73,20 @@ export async function POST(request: NextRequest) {
         const { model, messages, promptType, promptContext } = body;
 
         // 5. Paywall check for free users
-        if (currentTier === 'free' && promptType !== 'report_evaluator' && profile.questions_asked >= 4) {
-            return new Response(JSON.stringify({ error: "PAYWALL_LIMIT_REACHED", code: "PAYWALL_LIMIT_REACHED" }), { status: 403 });
+        if (currentTier === 'free' && promptType !== 'report_evaluator') {
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0, 0, 0, 0);
+
+            const { count } = await supabaseAdmin
+                .from('interviews')
+                .select('id', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .gte('created_at', startOfMonth.toISOString());
+
+            if ((count !== null && count >= 4) || profile.questions_asked >= 16) {
+                return new Response(JSON.stringify({ error: "PAYWALL_LIMIT_REACHED", code: "PAYWALL_LIMIT_REACHED" }), { status: 403 });
+            }
         }
 
         // 6. Increment question count BEFORE the AI call (atomic, prevent race conditions)

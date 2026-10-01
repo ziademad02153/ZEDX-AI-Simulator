@@ -102,7 +102,7 @@ export default function DownloadPage() {
                                 </li>
                                 <li className="flex gap-3 items-center">
                                     <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)] shrink-0"></div>
-                                    <span><strong>Groq™ LPU:</strong> Instant, zero-latency processing</span>
+                                    <span><strong>Custom AI Processors:</strong> Instant, zero-latency processing</span>
                                 </li>
                                 <li className="flex gap-3 items-center">
                                     <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)] shrink-0"></div>

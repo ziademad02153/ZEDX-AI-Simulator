@@ -11,8 +11,47 @@ import { SUPPORTED_LANGUAGES } from "@/lib/languages";
 import { supabase } from "@/lib/supabase";
 import { interviewService } from "@/lib/interview-service";
 import { useInterviewStore } from "@/lib/store";
+import { Lock } from "lucide-react";
+import { PaywallModal } from "@/components/paywall-modal";
 
-const PHONETIC_EGYPTIAN_NAMES: Record<string, string> = {
+const PHONETIC_EGYPTIAN_NAMES_AR: Record<string, string> = {
+    // Male Names
+    "ziad": "زِيَاد", "zeyad": "زِيَاد", "ahmed": "أَحْمَد", "mohamed": "مُحَمَّد", 
+    "mohammed": "مُحَمَّد", "mahmoud": "مَحْمُود", "mostafa": "مُصْطَفَى", "mustafa": "مُصْطَفَى", 
+    "amr": "عَمْرو", "omar": "عُمَر", "kareem": "كَرِيم", "karim": "كَرِيم", "khaled": "خَالِد", 
+    "tareq": "طَارِق", "tarek": "طَارِق", "youssef": "يُوسُف", "yousef": "يُوسُف", "ali": "عَلِي", 
+    "hussein": "حُسَيْن", "hassan": "حَسَن", "ibrahim": "إِبْرَاهِيم", "alaa": "عَلَاء", 
+    "islam": "إِسْلَام", "eslam": "إِسْلَام", "abdullah": "عَبْدُ اللَّه", "abdelrahman": "عَبْدُ الرَّحْمَن",
+    "basem": "بَاسِم", "bassem": "بَاسِم", "hazem": "حَازِم", "mina": "مِينَا", "bishoy": "بِيشُوي", 
+    "kirollos": "كِيرُلُّس", "abanoub": "أَبَانُوب", "fady": "فَادِي", "hany": "هَانِي", 
+    "ramy": "رَامِي", "nader": "نَادِر", "magdy": "مَجْدِي", "maged": "مَاجِد", "emad": "عِمَاد", 
+    "ehab": "إِيهَاب", "ihab": "إِيهَاب", "tamer": "تَامِر", "wael": "وَائِل", "yasser": "يَاسِر", 
+    "ayman": "أَيْمَن", "ashraf": "أَشْرَف", "sherif": "شَرِيف", "adel": "عَادِل", "essam": "عِصَام", 
+    "hesham": "هِشَام", "bahaa": "بَهَاء", "diaa": "ضِيَاء", "gamal": "جَمَال", "kamal": "كَمَال", 
+    "nabil": "نَبِيل", "sameh": "سَامِح", "safwat": "صَفْوَت", "raouf": "رَؤُوف", "farid": "فَرِيد", 
+    "yassin": "يَاسِين", "hamza": "حَمْزَة", "seif": "سَيْف", "eyad": "إِيَاد", "marwan": "مَرْوَان", 
+    "mazen": "مَازِن", "moaz": "مُعَاذ", "yahya": "يَحْيَى", "anas": "أَنَس", "malek": "مَالِك", 
+    "younis": "يُونُس", "asser": "آسِر", "ismail": "إِسْمَاعِيل", "said": "سَعِيد", "sayed": "سَيِّد", 
+    "taha": "طَهَ", "zakaria": "زَكَرِيَّا",
+
+    // Female Names
+    "mai": "مَي", "aya": "آيَة", "nada": "نَدَى", "nour": "نُور", "noura": "نُورَة", "salma": "سَلْمَى", 
+    "sara": "سَارَة", "sarah": "سَارَة", "menna": "مِنَّة", "mariam": "مَرْيَم", "maryam": "مَرْيَم", 
+    "fatma": "فَاطِمَة", "hala": "هَالَة", "shahd": "شَهْد", "habiba": "حَبِيبَة", "farida": "فَرِيدَة", 
+    "yassmine": "يَاسْمِين", "yasmin": "يَاسْمِين", "hoda": "هُدَى", "dina": "دِينَا", "heba": "هِبَة",
+    "marina": "مَارِينَا", "nermine": "نِيرْمِين", "nermin": "نِيرْمِين", "sherine": "شِيرِين", 
+    "sherin": "شِيرِين", "christine": "كْرِيسْتِين", "neven": "نِيفِين", "neveen": "نِيفِين", 
+    "engy": "إِنْجِي", "inas": "إِينَاس", "rania": "رَانْيَا", "reem": "رِيم", "maha": "مَهَا", 
+    "mona": "مُنَى", "manal": "مَنَال", "amal": "أَمَال", "asmaa": "أَسْمَاء", "shaimaa": "شَيْمَاء", 
+    "esraa": "إِسْرَاء", "omnia": "أُمْنِيَة", "radwa": "رَضْوَى", "marwa": "مَرْوَة", "amira": "أَمِيرَة", 
+    "samira": "سَمِيرَة", "safaa": "صَفَاء", "noha": "نُهَى", "yumna": "يُمْنَى", "basma": "بَسْمَة", 
+    "dalia": "دَالْيَا", "ghada": "غَادَة", "hadeer": "هَدِير", "hend": "هِنْد", "kholoud": "خُلُود", 
+    "laila": "لَيْلَى", "merna": "مِيرْنَا", "mirna": "مِيرْنَا", "nadin": "نَادِين", "nadine": "نَادِين", 
+    "nora": "نُورَة", "reham": "رِيهَام", "rawan": "رَوَان", "samar": "سَمَر", "soha": "سُهَى", 
+    "yara": "يَارَا", "zeinab": "زَيْنَب", "khadija": "خَدِيجَة", "aisha": "عَائِشَة"
+};
+
+const PHONETIC_EGYPTIAN_NAMES_EN: Record<string, string> = {
     // Male Names
     "ziad": "Zee-yad", "zeyad": "Zee-yad", "ahmed": "Ah-med", "mohamed": "Mo-ham-ed", 
     "mohammed": "Mo-ham-ed", "mahmoud": "Mah-mood", "mostafa": "Moos-tafa", "mustafa": "Moos-tafa", 
@@ -49,7 +88,7 @@ const PHONETIC_EGYPTIAN_NAMES: Record<string, string> = {
     "yara": "Yaa-ra", "zeinab": "Zay-nab", "khadija": "Kha-dee-ja", "aisha": "Eye-sha"
 };
 
-const getPhoneticText = (text: string) => {
+const getPhoneticText = (text: string, lang: string = 'en-US') => {
     // 1. Strip markdown and symbols that cause TTS to stutter
     let spokenText = text
         .replace(/\*\*/g, '') // Remove bold
@@ -63,10 +102,11 @@ const getPhoneticText = (text: string) => {
     // 2. Replace ZEDX phonetic
     spokenText = spokenText.replace(/ZEDX/gi, 'Zeddex');
     
-    // 3. Replace phonetic Egyptian names
-    Object.keys(PHONETIC_EGYPTIAN_NAMES).forEach(name => {
+    // 3. Replace phonetic Egyptian names based on language
+    const dict = lang.startsWith('ar') ? PHONETIC_EGYPTIAN_NAMES_AR : PHONETIC_EGYPTIAN_NAMES_EN;
+    Object.keys(dict).forEach(name => {
         const regex = new RegExp(`\\b${name}\\b`, 'gi');
-        spokenText = spokenText.replace(regex, PHONETIC_EGYPTIAN_NAMES[name]);
+        spokenText = spokenText.replace(regex, dict[name]);
     });
     return spokenText;
 };
@@ -99,6 +139,7 @@ export default function MockInterviewPage() {
     const [isListening, setIsListening] = useState(false); // Are we listening to user?
     const [audioLevel, setAudioLevel] = useState(0);
     const [isMobile, setIsMobile] = useState(false);
+    const [showPaywall, setShowPaywall] = useState(false);
     
     useEffect(() => {
         setIsMobile(/Mobi|Android|iPhone/i.test(navigator.userAgent) || window.innerWidth < 768);
@@ -451,13 +492,19 @@ Resume Context: ${resume}`;
                 if (!isMounted.current) return;
                 
                 if (!res.ok) {
+                    if (data.error?.code === "PAYWALL_LIMIT_REACHED" || data.error?.message === "PAYWALL_LIMIT_REACHED") {
+                        setShowPaywall(true);
+                        setIsSpeaking(false);
+                        setZedxText("Free limit reached. Please upgrade to Pro.");
+                        return;
+                    }
                     throw new Error(data.error?.message || "API request failed");
                 }
                 
                 nextQuestionText = data.content;
             } catch (err) {
                 console.error("AI Generation Failed:", err);
-                nextQuestionText = "I apologize, but I have lost connection to my AI servers. Please check your Groq API key and rate limits.";
+                nextQuestionText = "I apologize, but I have lost connection to my AI servers. Please check your network connection and try again.";
                 // Optional: We could forcefully end the interview here
             }
         }
@@ -492,7 +539,7 @@ Resume Context: ${resume}`;
 
         const fallbackTTS = () => {
             setZedxText(text);
-            const utterance = new SpeechSynthesisUtterance(getPhoneticText(text));
+            const utterance = new SpeechSynthesisUtterance(getPhoneticText(text, language));
             utteranceRef.current = utterance; // Prevent garbage collection
             utterance.lang = language;
             
@@ -544,7 +591,7 @@ Resume Context: ${resume}`;
                 // This does NOT use WebSockets, so the red WebSocket error is impossible here.
                 const playPremiumNativeTTS = () => {
                     setZedxText(text);
-                    const utterance = new SpeechSynthesisUtterance(getPhoneticText(text));
+                    const utterance = new SpeechSynthesisUtterance(getPhoneticText(text, language));
                     utteranceRef.current = utterance;
                     utterance.lang = language;
                     
@@ -649,6 +696,12 @@ Resume Context: ${resume}`;
 
     return (
         <div className="h-[100dvh] w-full bg-black text-white relative overflow-hidden flex flex-col">
+            <PaywallModal 
+                open={showPaywall} 
+                onOpenChange={setShowPaywall}
+                title="Free Limit Reached"
+                description="You've reached your free limit. Upgrade to ZEDX Pro to continue this interview."
+            />
             {/* Top Bar */}
             <div className="w-full p-4 sm:p-6 flex justify-between items-center z-20">
                 <div className="flex items-center gap-1 sm:gap-2 -ml-1 sm:-ml-4">

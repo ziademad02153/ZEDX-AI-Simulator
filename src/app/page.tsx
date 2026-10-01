@@ -96,23 +96,6 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row items-center gap-6 md:gap-8 w-full justify-center mb-16 px-4 relative z-50">
               <StartButton variant="landing" />
-              
-              <div className="flex items-center gap-4">
-                <div className="flex -space-x-3">
-                  <img src="https://cdn.21st.dev/assets/localized/59a2b5a0dfc1531e2d1ea42d71ae8615f37582e1f8a17e4a1b1aff9afc7ef878.jpg" alt="Client 1" className="w-10 h-10 rounded-full border-[2px] border-white dark:border-black object-cover shrink-0" />
-                  <img src="https://cdn.21st.dev/assets/localized/c7097eeb66ad097b6e5f9dbb95ae857cd6b55c0ad398c1ea84f3ab90a02c631e.jpg" alt="Client 2" className="w-10 h-10 rounded-full border-[2px] border-white dark:border-black object-cover shrink-0" />
-                  <img src="https://cdn.21st.dev/assets/localized/c70d48e47d3a2d79ad07d16bff3aa3cff686580be031b6102cad73a15b47d8fd.jpg" alt="Client 3" className="w-10 h-10 rounded-full border-[2px] border-white dark:border-black object-cover shrink-0" />
-                  <img src="https://cdn.21st.dev/assets/localized/51c9ed392f6e7fce7fd85a78648e3e06bfdcd91999ab5fa48485888231589abf.jpg" alt="Client 4" className="w-10 h-10 rounded-full border-[2px] border-white dark:border-black object-cover shrink-0" />
-                </div>
-                <div className="flex flex-col items-start gap-1 text-left">
-                  <div className="flex items-center gap-0.5">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-[18px] h-[18px] fill-[#ff9933] text-[#ff9933]" />
-                    ))}
-                  </div>
-                  <span className="text-[13px] md:text-[14px] font-medium text-gray-600 dark:text-gray-300">Trusted by 1000+ clients</span>
-                </div>
-              </div>
             </div>
 
             {/* Hero Visual: Video Player */}
@@ -389,7 +372,7 @@ export default function Home() {
                         alt="Multi-Language Globe"
                         width={80}
                         height={80}
-                        className="rounded-full object-contain drop-shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse"
+                        className="rounded-full object-contain drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]"
                       />
                     </div>
 

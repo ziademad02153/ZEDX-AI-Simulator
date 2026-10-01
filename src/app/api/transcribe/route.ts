@@ -117,7 +117,7 @@ export async function POST(request: Request) {
 
         // If we reach here, ALL keys failed
         return NextResponse.json({
-            error: "All Groq keys failed or rate limited.",
+            error: "All transcription servers failed or rate limited.",
             details: lastError
         }, { status: 503 });
 

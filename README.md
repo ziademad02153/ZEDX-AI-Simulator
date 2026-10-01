@@ -17,9 +17,9 @@
 
 ## Executive Summary
 
-**ZEDX AI Interview Simulator** is the world's most advanced **Voice-to-Voice Universal AI Interviewer** and professional training platform. Designed to dynamically adapt to any profession—whether you're a Software Engineer, Medical Doctor, Sales Representative, or HR Specialist—ZEDX analyzes the candidate's CV and Job Description to conduct a rigorous, highly specialized mock interview.
+**ZEDX AI Interview Simulator** is a high-performance **Voice-to-Voice Universal AI Interviewer** and professional training platform. Designed to dynamically adapt to any profession—whether you're a Software Engineer, Medical Doctor, Sales Representative, or HR Specialist—ZEDX analyzes the candidate's CV and Job Description to conduct a rigorous, highly specialized mock interview.
 
-- **The Web Simulator (Rigorous Evaluation Mode):** A strict, autonomous AI Mock Interview Simulator that conducts structured, context-aware interviews across all professional domains in **29+ supported languages**. 
+- **The Web Simulator (Rigorous Evaluation Mode):** A strict, autonomous AI Mock Interview Simulator that conducts structured, context-aware interviews across all professional domains in **30 supported languages**. 
 - **The Desktop Sandbox (Assisted Learning Mode):** A Windows-native environment where the AI acts as a real-time copilot to accelerate skill acquisition and provide instant performance analytics.
 
 ---
@@ -46,9 +46,9 @@ graph TD
         IPC["IPC Secure Bridge"] --> API
     end
 
-    subgraph NeuralInferenceLayer ["Neural Inference Layer (Groq LPU Cluster)"]
+    subgraph NeuralInferenceLayer ["Neural Inference Layer (Multi-Model Pool)"]
         VAD -- "WebM Chunk Streaming" --> WHISPER["Whisper V3 Engine (Load Balanced x14)"]
-        WHISPER -- "Raw Parsed Transcripts" --> LLM["Qwen Engine (Load Balanced x14)"]
+        WHISPER -- "Raw Parsed Transcripts" --> LLM["LLM Engine (GPT-6 Astra / Claude 5.1 / Qwen) (Load Balanced x14)"]
         CONTEXT_SERVER -- "Full CV + JD Context" --> LLM
         LLM -- "Actionable SSE Stream" --> IPC
     end
@@ -181,7 +181,7 @@ graph LR
     end
 
     subgraph ExecutionResolution ["Execution & Resolution"]
-        LLM["Qwen Engine\n(14-key Load Balanced Pool)"]
+        LLM["LLM Engine (GPT-6 / Claude 5.1 / Qwen)\n(14-key Load Balanced Pool)"]
         UI["Secure React Practice Interface"]
         COMPILER -- "Full Contextual Semantic Prompt" --> LLM
         LLM -- "Server-Sent Events (SSE)" --> UI
@@ -267,14 +267,14 @@ graph TD
 sequenceDiagram
     participant USER as User (Microphone)
     participant STT as Groq Whisper V3 (x14 Key Pool)
-    participant LLM as Qwen Engine (x14 Key Pool)
+    participant LLM as LLM Engine (GPT-6 / Claude 5.1 / Qwen) (x14 Key Pool)
     participant ROUTER as TTS Language Router
     participant ELEVEN as ElevenLabs (x10 Key Pool, Arabic)
     participant EDGE as Edge TTS (Free, All Others)
     participant CTX as Browser AudioContext
     
     USER->>STT: Speaks (VAD Filtered Audio Chunks)
-    Note over STT: Sub-second Transcription\nRotated key selected via shuffle
+    Note over STT: Sub-second end-to-end latency\nRotated key selected via shuffle
     STT-->>LLM: Forward Transcribed Text
 
     Note over LLM: Full CV + JD Context Injected\nPronunciation directives applied
