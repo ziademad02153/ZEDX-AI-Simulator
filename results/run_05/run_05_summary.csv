@@ -1,0 +1,3 @@
+Provider,Metric,Median(ms),P95(ms),P99(ms)
+elevenlabs,TTFB,902,1214,1394
+piper,TTFB,919,1271,2441
