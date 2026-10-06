@@ -1,8 +1,0 @@
-{
-  "run": "03",
-  "previous_usage": 5506,
-  "current_usage": 6566,
-  "limit": 10000,
-  "consumed_this_run": 1060,
-  "remaining_reserve": 3434
-}
