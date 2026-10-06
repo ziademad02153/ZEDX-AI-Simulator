@@ -21,7 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { SUPPORTED_LANGUAGES } from "@/lib/languages";
 import { supabase } from "@/lib/supabase";
-import { interviewService } from "@/lib/interview-service";
+import { interviewService, SessionExchange } from "@/lib/interview-service";
 import { useInterviewStore } from "@/lib/store";
 import { Lock } from "lucide-react";
 import { PaywallModal } from "@/components/paywall-modal";
@@ -143,7 +143,8 @@ export default function MockInterviewPage() {
 
     // Interview State
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [questionsAsked, setQuestionsAsked] = useState<{ q: string, a: string }[]>([]);
+    const [currentQuestionType, setCurrentQuestionType] = useState<"main" | "followup">("main");
+    const [questionsAsked, setQuestionsAsked] = useState<({ q: string, a: string, type?: "main" | "followup", mainQuestionIndex?: number })[]>([]);
     const [zedxText, setZedxText] = useState("Initializing interview...");
     const [userTranscript, setUserTranscript] = useState("");
     
@@ -166,12 +167,21 @@ export default function MockInterviewPage() {
     const isMounted = useRef(true);
     const hasStartedRef = useRef(false);
     const dbInterviewIdRef = useRef<string | null>(null);
+    const sessionStartTimeRef = useRef<number>(Date.now());
+    const questionEndedAtRef = useRef<number | null>(null);
+    const speechStartedAtRef = useRef<number | null>(null);
+    const sessionExchangesRef = useRef<SessionExchange[]>([]);
+    const mainQuestionIndexRef = useRef<number>(0);
+    const currentQuestionTypeRef = useRef<"main" | "followup">("main");
+    const hasFollowedUpCurrentRef = useRef<boolean>(false);
 
     // Track latest state to avoid stale closures in event listeners and timeouts
     const stateRef = useRef({
         isListening,
         questionsAsked,
         currentQuestionIndex,
+        currentQuestionType,
+        hasFollowedUpCurrent: false,
         userTranscript
     });
 
@@ -180,9 +190,11 @@ export default function MockInterviewPage() {
             isListening,
             questionsAsked,
             currentQuestionIndex,
+            currentQuestionType,
+            hasFollowedUpCurrent: hasFollowedUpCurrentRef.current,
             userTranscript
         };
-    }, [isListening, questionsAsked, currentQuestionIndex, userTranscript]);
+    }, [isListening, questionsAsked, currentQuestionIndex, currentQuestionType, userTranscript]);
 
     // Initialize context from Zustand (and fallback to localStorage for backwards compatibility/hard reloads if any)
     useEffect(() => {
@@ -318,6 +330,11 @@ export default function MockInterviewPage() {
                 const currentText = finalTranscriptRef.current + interimTranscript;
                 setUserTranscript(currentText);
 
+                // Record candidate speech start time on first valid utterance
+                if (hasValidSpeech && speechStartedAtRef.current === null) {
+                    speechStartedAtRef.current = Date.now();
+                }
+
                 // Reset Silence Timer
                 if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
                 
@@ -390,64 +407,178 @@ export default function MockInterviewPage() {
         if (isSetup && isMicEnabled && isCameraEnabled && !hasStartedRef.current) {
             hasStartedRef.current = true;
             setIsInterviewStarted(true);
-            generateNextQuestion(0, []);
+            generateNextStep({ forceNextMain: false, targetMainIndex: 0, history: [] });
         }
     }, [isSetup, isMicEnabled, isCameraEnabled]);
 
+    const completeInterview = (finalHistory: any[]) => {
+        const completedAt = new Date().toISOString();
+        const totalDurationMinutes = Math.max(1, Math.round((Date.now() - sessionStartTimeRef.current) / 60000));
+
+        setZedxText("The interview is complete. Generating your report...");
+        speakText("The interview is complete. Generating your report...");
+
+        localStorage.setItem("interview_results", JSON.stringify(finalHistory));
+        localStorage.setItem("interview_completed_at", completedAt);
+        localStorage.setItem("session_exchanges", JSON.stringify(sessionExchangesRef.current));
+
+        if (dbInterviewIdRef.current) {
+            interviewService.updateInterview(dbInterviewIdRef.current, {
+                analysis: {
+                    job_description: jd,
+                    resume_name: resume ? resume.substring(0, 80).replace(/\n/g, ' ') : "Uploaded Resume",
+                    resume_text: resume || undefined,
+                    interview_type: interviewType,
+                    difficulty,
+                    language,
+                    model,
+                    question_count: questionCount,
+                    started_at: new Date(sessionStartTimeRef.current).toISOString(),
+                    completed_at: completedAt,
+                    duration_minutes: totalDurationMinutes,
+                    questions: finalHistory,
+                    session_exchanges: sessionExchangesRef.current
+                }
+            }).catch(console.error);
+        }
+
+        setTimeout(() => {
+            if (dbInterviewIdRef.current) {
+                router.push(`/dashboard/report/${dbInterviewIdRef.current}`);
+            } else {
+                router.push("/dashboard/report");
+            }
+        }, 4000);
+    };
+
     const handleUserFinishedSpeaking = async (transcript: string) => {
-        const { isListening: currentIsListening, questionsAsked: currentQuestions, currentQuestionIndex: currentIndex } = stateRef.current;
-        
+        const { isListening: currentIsListening, questionsAsked: currentQuestions } = stateRef.current;
+        const currentType = currentQuestionTypeRef.current;
+        const currentMainIndex = mainQuestionIndexRef.current;
+
         if (!currentIsListening) return;
         setIsListening(false);
         stateRef.current.isListening = false; // Synchronous block for trailing events
         if (recognitionRef.current) recognitionRef.current.stop();
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
 
+        // Calculate speech timing and word metrics
+        const speechEndedAt = Date.now();
+        const speechStartedAt = speechStartedAtRef.current || speechEndedAt;
+        const questionEndedAt = questionEndedAtRef.current;
+        const durationSeconds = Math.max(0, Math.round(((speechEndedAt - speechStartedAt) / 1000) * 10) / 10);
+        const latencySeconds = (questionEndedAt && speechStartedAt >= questionEndedAt)
+            ? Math.max(0, Math.round(((speechStartedAt - questionEndedAt) / 1000) * 10) / 10)
+            : null;
+        const wordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
+
+        const currentQText = currentQuestions.length > 0 ? currentQuestions[currentQuestions.length - 1].q : "";
+        const exchange: SessionExchange = {
+            index: sessionExchangesRef.current.length,
+            mainQuestionIndex: currentMainIndex,
+            type: currentType,
+            question: currentQText,
+            answer: transcript,
+            timing: {
+                questionEndedAt,
+                speechStartedAt,
+                speechEndedAt,
+                durationSeconds,
+                latencySeconds
+            },
+            wordCount
+        };
+        sessionExchangesRef.current.push(exchange);
+
         const newHistory = [...currentQuestions];
         if (newHistory.length > 0) {
-            newHistory[newHistory.length - 1].a = transcript;
+            newHistory[newHistory.length - 1] = {
+                ...newHistory[newHistory.length - 1],
+                a: transcript,
+                type: currentType,
+                mainQuestionIndex: currentMainIndex,
+                ...(exchange.timing ? { timing: exchange.timing } : {}),
+                wordCount
+            } as any;
         }
         setQuestionsAsked(newHistory);
         setUserTranscript(""); // Clear UI
         finalTranscriptRef.current = ""; // Reset stable transcript for next question
+        speechStartedAtRef.current = null;
+        questionEndedAtRef.current = null;
 
-        // Auto-save progress to DB in background
+        // Auto-save progress to DB in background with full session data
+        const sessionPayload = {
+            job_description: jd,
+            resume_name: resume ? resume.substring(0, 80).replace(/\n/g, ' ') : "Uploaded Resume",
+            resume_text: resume || undefined,
+            interview_type: interviewType,
+            difficulty,
+            language,
+            model,
+            question_count: questionCount,
+            started_at: new Date(sessionStartTimeRef.current).toISOString(),
+            questions: newHistory,
+            session_exchanges: sessionExchangesRef.current
+        };
+
         if (dbInterviewIdRef.current) {
-            interviewService.updateInterview(dbInterviewIdRef.current, { analysis: { questions: newHistory } }).catch(console.error);
+            interviewService.updateInterview(dbInterviewIdRef.current, { analysis: sessionPayload }).catch(console.error);
             localStorage.setItem("current_db_id", dbInterviewIdRef.current);
         } else {
-            interviewService.saveInterview("In-Progress Interview", "", { questions: newHistory }).then(saved => {
+            interviewService.saveInterview(`Interview - ${interviewType} (${difficulty})`, "", sessionPayload).then(saved => {
                 dbInterviewIdRef.current = saved.id;
                 localStorage.setItem("current_db_id", saved.id);
             }).catch(console.error);
         }
 
-        // Generate next question
-        await generateNextQuestion(currentIndex + 1, newHistory);
+        // Determine next transition step
+        if (currentType === "followup") {
+            // Candidate answered a follow-up probe!
+            // Max 1 follow-up for this topic is complete. Next step MUST be the next main question.
+            const nextMain = currentMainIndex + 1;
+            if (nextMain >= questionCount) {
+                completeInterview(newHistory);
+                return;
+            }
+            await generateNextStep({
+                forceNextMain: true,
+                targetMainIndex: nextMain,
+                history: newHistory
+            });
+        } else {
+            // Candidate answered a main question!
+            // Ask AI to evaluate if a contextual follow-up is warranted OR to advance to the next main topic.
+            await generateNextStep({
+                forceNextMain: false,
+                targetMainIndex: currentMainIndex,
+                history: newHistory
+            });
+        }
     };
 
-    const generateNextQuestion = async (index: number, history: any[]) => {
-        if (index >= questionCount) {
-            setZedxText("The interview is complete. Generating your report...");
-            speakText("The interview is complete. Generating your report...");
-            setTimeout(() => {
-                localStorage.setItem("interview_results", JSON.stringify(history));
-                router.push("/dashboard/report"); // We will build this later
-            }, 4000);
+    const generateNextStep = async (options: {
+        forceNextMain: boolean;
+        targetMainIndex: number;
+        history: any[];
+    }) => {
+        const { forceNextMain, targetMainIndex, history } = options;
+
+        if (targetMainIndex >= questionCount) {
+            completeInterview(history);
             return;
         }
 
         setZedxText("Thinking...");
         setIsSpeaking(true);
 
-        // Determine if this question should focus on JD or Resume (50/50)
-        const focusArea = index % 2 === 0 ? "Job Description" : "Resume";
-        
+        const focusArea = (targetMainIndex + 1) % 2 === 0 ? "Job Description" : "Resume";
         const langObj = SUPPORTED_LANGUAGES.find(l => l.code === language) || SUPPORTED_LANGUAGES[0];
         let nextQuestionText = "";
+        let isFollowUp = false;
 
-        if (index === 0) {
-            // ZERO-LATENCY GREETING: Bypass AI generation for the very first greeting
+        if (targetMainIndex === 0 && history.length === 0) {
+            // ZERO-LATENCY GREETING for Main Question 1
             let candidateName = "";
             try {
                 const { data: { session } } = await supabase.auth.getSession();
@@ -466,27 +597,52 @@ export default function MockInterviewPage() {
                 : langObj.code.startsWith('ar') 
                 ? `أهلاً بك${nameAr}، أنا زيدكس، وسأكون مسؤولاً عن الانترفيو الخاص بك اليوم. هل يمكن أن تبدأ بتعريف نفسك والتحدث قليلاً عن خبراتك؟`
                 : `Welcome${nameEn}, I am ZEDX. I will be conducting your interview today. Could you please start by introducing yourself and telling me a little bit about your background?`;
+
+            isFollowUp = false;
+            mainQuestionIndexRef.current = 0;
+            currentQuestionTypeRef.current = "main";
+            hasFollowedUpCurrentRef.current = false;
+            setCurrentQuestionIndex(0);
+            setCurrentQuestionType("main");
         } else {
-            const previousQ = history[index - 1].q;
-            const previousA = history[index - 1].a;
-            
+            const previousQ = history[history.length - 1].q;
+            const previousA = history[history.length - 1].a;
             const askedQuestions = history.map(h => h.q).join(" | ");
             const randomAngle = ["leadership skills", "problem solving", "technical depth", "past challenges", "teamwork and communication", "adaptability"][Math.floor(Math.random() * 6)];
 
-            const prompt = `The candidate just answered your previous question ("${previousQ}") with: "${previousA}".
-First, analyze their answer. Then, craft your next question.
-You are a highly intelligent, conversational interviewer. Do NOT just read off a script. 
-Either ask a smart follow-up question that probes deeper into what they just said, OR smoothly transition to a new topic focusing on their ${focusArea} (framed around ${randomAngle}).
-Keep it conversational and natural.
-CRITICAL RULE: DO NOT ask any of these previously asked questions again: [${askedQuestions}].
-IMPORTANT: DO NOT ask the candidate if they have any questions for you. Only ask questions that test the candidate's qualifications.
+            let prompt = "";
+            if (forceNextMain) {
+                prompt = `The candidate just answered your follow-up probe with: "${previousA}".
+You have finished probing this topic. You MUST now smoothly transition to Main Question ${targetMainIndex + 1} of ${questionCount}.
+Focus area: ${focusArea} (framed around ${randomAngle}).
+CRITICAL RULES:
+1. Start with a brief, natural 1-sentence reaction to their answer, then ask the new main question.
+2. Prefix your response strictly with "[NEXT_MAIN]: " followed by the spoken text.
+3. DO NOT ask a follow-up.
+4. DO NOT ask any previously asked questions: [${askedQuestions}].
+5. DO NOT ask the candidate if they have questions for you.
 Job Description Context: ${jd}
 Resume Context: ${resume}`;
+            } else {
+                prompt = `The candidate just answered your main question ("${previousQ}") with: "${previousA}".
+This was Main Question ${targetMainIndex + 1} of ${questionCount}. No follow-up probe has been asked for this topic yet.
+Analyze the candidate's answer carefully:
+- If the answer was INCOMPLETE, VAGUE, SURFACE-LEVEL, or lacks essential depth: Ask ONE concise, focused follow-up probe (1-2 sentences) to deepen the evidence on this same topic. Prefix your response strictly with "[FOLLOW_UP]: ".
+- If the answer was CLEAR, REASONABLY DETAILED, or SUFFICIENT: Acknowledge it with a brief reaction and smoothly transition to Main Question ${targetMainIndex + 2} of ${questionCount} focusing on ${focusArea} (${randomAngle}). Prefix your response strictly with "[NEXT_MAIN]: ".
+CRITICAL RULES:
+1. Maximum 1 follow-up allowed per main question.
+2. Reply strictly with the prefix ([FOLLOW_UP]: or [NEXT_MAIN]:) followed by the spoken text.
+3. Spoken text only. No markdown, no thinking tags.
+4. DO NOT ask any previously asked questions: [${askedQuestions}].
+5. DO NOT ask the candidate if they have questions for you.
+Job Description Context: ${jd}
+Resume Context: ${resume}`;
+            }
 
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 const token = session?.access_token;
-                
+
                 const res = await fetch("/api/generate", {
                     method: "POST",
                     headers: { 
@@ -502,7 +658,7 @@ Resume Context: ${resume}`;
                 });
                 const data = await res.json().catch(() => ({}));
                 if (!isMounted.current) return;
-                
+
                 if (!res.ok) {
                     if (data.error?.code === "PAYWALL_LIMIT_REACHED" || data.error?.message === "PAYWALL_LIMIT_REACHED") {
                         setShowPaywall(true);
@@ -512,20 +668,69 @@ Resume Context: ${resume}`;
                     }
                     throw new Error(data.error?.message || "API request failed");
                 }
-                
-                nextQuestionText = data.content;
+
+                const rawText = data.content || "";
+                let cleanQuestionText = rawText;
+
+                if (forceNextMain) {
+                    isFollowUp = false;
+                    cleanQuestionText = rawText.replace(/\[(NEXT_MAIN|FOLLOW_UP)\]:?\s*/gi, "").trim();
+                } else if (rawText.startsWith("[FOLLOW_UP]:") || rawText.includes("[FOLLOW_UP]")) {
+                    isFollowUp = true;
+                    cleanQuestionText = rawText.replace(/\[FOLLOW_UP\]:?\s*/gi, "").trim();
+                } else if (rawText.startsWith("[NEXT_MAIN]:") || rawText.includes("[NEXT_MAIN]")) {
+                    isFollowUp = false;
+                    cleanQuestionText = rawText.replace(/\[NEXT_MAIN\]:?\s*/gi, "").trim();
+                } else {
+                    isFollowUp = false;
+                    cleanQuestionText = rawText.trim();
+                }
+                nextQuestionText = cleanQuestionText;
             } catch (err) {
                 console.error("AI Generation Failed:", err);
                 nextQuestionText = "I apologize, but I have lost connection to my AI servers. Please check your network connection and try again.";
-                // Optional: We could forcefully end the interview here
+                isFollowUp = false;
+            }
+
+            // Apply state updates based on isFollowUp
+            if (isFollowUp) {
+                currentQuestionTypeRef.current = "followup";
+                hasFollowedUpCurrentRef.current = true;
+                setCurrentQuestionType("followup");
+            } else if (!forceNextMain) {
+                // AI transitioned from targetMainIndex to the next main question!
+                const nextMainIndex = targetMainIndex + 1;
+                if (nextMainIndex >= questionCount) {
+                    completeInterview(history);
+                    return;
+                }
+                mainQuestionIndexRef.current = nextMainIndex;
+                currentQuestionTypeRef.current = "main";
+                hasFollowedUpCurrentRef.current = false;
+                setCurrentQuestionIndex(nextMainIndex);
+                setCurrentQuestionType("main");
+            } else {
+                // forceNextMain was true (advancing to targetMainIndex)
+                mainQuestionIndexRef.current = targetMainIndex;
+                currentQuestionTypeRef.current = "main";
+                hasFollowedUpCurrentRef.current = false;
+                setCurrentQuestionIndex(targetMainIndex);
+                setCurrentQuestionType("main");
             }
         }
-        
+
         // Save to history
-        const newHistory = [...history, { q: nextQuestionText, a: "" }];
+        const newHistory = [
+            ...history, 
+            { 
+                q: nextQuestionText, 
+                a: "", 
+                type: currentQuestionTypeRef.current, 
+                mainQuestionIndex: mainQuestionIndexRef.current 
+            }
+        ];
         setQuestionsAsked(newHistory);
-        setCurrentQuestionIndex(index);
-        
+
         // Play TTS
         await speakText(nextQuestionText);
     };
@@ -563,6 +768,8 @@ Resume Context: ${resume}`;
                 setIsSpeaking(false);
                 setIsListening(true);
                 setUserTranscript("");
+                questionEndedAtRef.current = Date.now();
+                speechStartedAtRef.current = null;
                 if (recognitionRef.current) {
                     if (!/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
                         try { recognitionRef.current.start(); } catch (e) {}
@@ -635,6 +842,8 @@ Resume Context: ${resume}`;
                         setIsSpeaking(false);
                         setIsListening(true);
                         setUserTranscript("");
+                        questionEndedAtRef.current = Date.now();
+                        speechStartedAtRef.current = null;
                         if (recognitionRef.current) {
                             if (!/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
                                 try { recognitionRef.current.start(); } catch (e) {}
@@ -676,6 +885,8 @@ Resume Context: ${resume}`;
                 // Start listening to user
                 setIsListening(true);
                 setUserTranscript("");
+                questionEndedAtRef.current = Date.now();
+                speechStartedAtRef.current = null;
                 if (recognitionRef.current) {
                     if (!/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
                         try { recognitionRef.current.start(); } catch (e) {}
@@ -699,8 +910,11 @@ Resume Context: ${resume}`;
     const endInterview = () => {
         if (confirm("Are you sure you want to end the interview early? Your current progress will be saved.")) {
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-            localStorage.setItem("interview_results", JSON.stringify(stateRef.current.questionsAsked));
-            router.push("/dashboard/report");
+            if (dbInterviewIdRef.current) {
+                router.push(`/dashboard/report/${dbInterviewIdRef.current}`);
+            } else {
+                router.push("/dashboard/report");
+            }
         }
     };
 
@@ -725,10 +939,15 @@ Resume Context: ${resume}`;
                         className="object-contain object-left w-28 sm:w-[140px]"
                     />
                     <div className="h-5 sm:h-8 w-[1px] bg-white/20 mx-1 sm:mx-2"></div>
-                    <p className="text-[#84cc16] text-xs sm:text-sm font-semibold whitespace-nowrap mt-0.5 sm:mt-1">
+                    <p className="text-[#84cc16] text-xs sm:text-sm font-semibold whitespace-nowrap mt-0.5 sm:mt-1 flex items-center">
                         <span className="hidden sm:inline">Question </span>
                         <span className="sm:hidden">Q</span>
                         {currentQuestionIndex + 1} / {questionCount}
+                        {currentQuestionType === "followup" && (
+                            <span className="ml-2 text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                Follow-up
+                            </span>
+                        )}
                     </p>
                 </div>
                 <Button onClick={endInterview} variant="ghost" size="sm" className="text-red-400 hover:text-red-300 hover:bg-red-500/10 px-2 sm:px-4 shrink-0">

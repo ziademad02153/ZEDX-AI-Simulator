@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { Clock, Trash2, FileText, AlertCircle, ChevronDown, ChevronUp, Trash } from "lucide-react";
 import { interviewService, Interview } from "@/lib/interview-service";
 import { cn } from "@/lib/utils";
@@ -283,6 +284,15 @@ export default function InterviewHistoryPage() {
                                         </div>
                                     </div>
                                     <div className="flex gap-2 items-center">
+                                        <Link href={`/dashboard/report/${interview.id}`} onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-xs rounded-full border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 flex items-center gap-1.5"
+                                            >
+                                                <FileText size={14} /> Report
+                                            </Button>
+                                        </Link>
                                         <Button
                                             variant="ghost"
                                             size="sm"

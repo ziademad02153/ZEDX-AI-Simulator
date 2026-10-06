@@ -96,6 +96,16 @@ export default function DashboardLayout({
         return () => window.removeEventListener('openSettings', handleOpenSettings);
     }, [router, pathname]);
 
+    const isReportPage = pathname === '/dashboard/report' || pathname?.startsWith('/dashboard/report');
+
+    if (isReportPage) {
+        return (
+            <div suppressHydrationWarning className="min-h-screen bg-[#0b0f19]">
+                {children}
+            </div>
+        );
+    }
+
     return (
         <div suppressHydrationWarning className="min-h-screen bg-gray-50/50 dark:bg-black flex flex-col transition-colors duration-300 overflow-x-hidden">
             <Navbar />
@@ -103,8 +113,6 @@ export default function DashboardLayout({
 
             <div className="flex-1 flex flex-col pt-32 pb-12 mt-4 sm:mt-8">
                 <div className="flex flex-col w-full max-w-full md:max-w-[75vw] mx-auto px-6 sm:px-6 gap-6 sm:gap-8 items-stretch flex-1">
-
-
                     {/* Main Content */}
                     <main className="flex-1 flex flex-col py-4">
                         <PageTransition className="flex-1 flex flex-col">

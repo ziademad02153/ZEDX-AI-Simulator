@@ -2,48 +2,38 @@
 
 import React, { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { interviewService, Interview } from "@/lib/interview-service";
+import { interviewService, Interview, Rubric13Report, LegacyScorecard } from "@/lib/interview-service";
+import { enforceRubric13ReportSchema } from "@/lib/rubric-evaluator";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, Target, MessageSquare, Brain, CheckCircle, AlertTriangle } from "lucide-react";
-import ReactMarkdown from 'react-markdown';
+import { ArrowLeft, Loader2, Brain, AlertTriangle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-
-
-// Define the expected structure of our AI scorecard
-interface Scorecard {
-    overallScore: number;
-    technicalScore: number;
-    communicationScore: number;
-    strengths: string[];
-    improvements: string[];
-    detailedFeedback: string;
-}
+import { RubricReportView } from "@/components/report/rubric-report-view";
 
 export default function ReportPage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
-    // Unwrap the params Promise (Next.js 15 requirement)
     const unwrappedParams = use(params);
     const id = unwrappedParams.id;
 
     const [interview, setInterview] = useState<Interview | null>(null);
-    const [scorecard, setScorecard] = useState<Scorecard | null>(null);
+    const [rubricReport, setRubricReport] = useState<Rubric13Report | null>(null);
+    const [scorecard, setScorecard] = useState<LegacyScorecard | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [generationError, setGenerationError] = useState(false);
 
-    // Prevent accidental reload while generating the scorecard
+    // Prevent accidental reload while generating report
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (isGenerating && !scorecard) {
+            if (isGenerating && !rubricReport && !scorecard) {
                 e.preventDefault();
                 e.returnValue = '';
             }
         };
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [isGenerating, scorecard]);
+    }, [isGenerating, rubricReport, scorecard]);
 
     useEffect(() => {
         const fetchInterview = async () => {
@@ -51,29 +41,65 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
                 const data = await interviewService.getInterviewById(id);
                 setInterview(data);
 
-                if (data.analysis?.scorecard) {
-                    // Scorecard already exists!
-                    setScorecard(data.analysis.scorecard as unknown as Scorecard);
+                const forceRegenerate = typeof window !== "undefined" && window.location.search.includes("regenerate=rubric");
+
+                if (!forceRegenerate && data.analysis?.rubric_report && data.analysis.rubric_report.rubric_version === "1.3") {
+                    const rawReport = data.analysis.rubric_report;
+                    const exchanges = (data.analysis as any)?.session_exchanges || [];
+                    const sanitized = enforceRubric13ReportSchema(rawReport, {
+                        assessmentId: rawReport.assessment_id || `ZEDX-${id.slice(0, 8).toUpperCase()}`,
+                        assessmentDate: rawReport.assessment_date || data.created_at,
+                        candidateName: rawReport.candidate?.name || "Candidate",
+                        targetRole: data.title || rawReport.candidate?.target_role || "Software Developer",
+                        track: data.analysis?.interview_type || rawReport.candidate?.track || "Role-Specific",
+                        interviewType: data.analysis?.interview_type || rawReport.candidate?.interview_type || "Technical",
+                        difficulty: data.analysis?.difficulty || rawReport.candidate?.difficulty || "Intermediate",
+                        language: data.analysis?.language || rawReport.candidate?.language || "en-US",
+                        evaluatorModel: rawReport.candidate?.evaluator_model || "openai/gpt-oss-120b",
+                        sessionExchanges: exchanges,
+                        descriptiveMetrics: (rawReport as any).session_telemetry || rawReport.descriptive_session_metrics
+                    });
+
+                    setRubricReport(sanitized);
+                    setScorecard((data.analysis.scorecard as LegacyScorecard) || null);
+
+                    // Auto-heal DB record if it had stale flaws (1.1, Below Bar, etc.)
+                    const hadDefects = rawReport.overall_evaluation?.bars_score === 1.1 ||
+                        String(rawReport.overall_evaluation?.performance_level || "").toLowerCase().includes("below bar") ||
+                        (rawReport.overall_evaluation?.assessment_coverage_pct === 0 && rawReport.overall_evaluation?.bars_score !== null);
+                    
+                    if (hadDefects) {
+                        interviewService.updateInterview(id, {
+                            analysis: {
+                                ...data.analysis,
+                                rubric_report: sanitized
+                            }
+                        }).catch(() => {});
+                    }
+                } else if (!forceRegenerate && data.analysis?.scorecard) {
+                    // Pure legacy interview from before Rubric 1.3
+                    setScorecard(data.analysis.scorecard as LegacyScorecard);
                 } else {
-                    // Generate it!
-                    generateScorecard(data);
+                    // Generate new Rubric 1.3 report!
+                    generateReport(data);
                 }
             } catch (err: unknown) {
-                console.error(err);
+                console.error("Failed to load interview report:", err);
                 setError("Failed to load interview report.");
             } finally {
                 setIsLoading(false);
             }
         };
+
         fetchInterview();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
-    const generateScorecard = async (data: Interview) => {
+    const generateReport = async (data: Interview) => {
         setIsGenerating(true);
+        setGenerationError(false);
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s frontend timeout for backend processing
+            const timeoutId = setTimeout(() => controller.abort(), 65000);
 
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
@@ -92,14 +118,19 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
 
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.error?.message || "Failed to generate scorecard");
+                throw new Error(errData.error?.message || "Failed to generate report");
             }
 
             const resData = await response.json();
-            setScorecard(resData.scorecard);
+            if (resData.rubric_report) {
+                setRubricReport(resData.rubric_report);
+            }
+            if (resData.scorecard) {
+                setScorecard(resData.scorecard);
+            }
 
         } catch (err) {
-            console.error("Error generating scorecard:", err);
+            console.error("Error generating report:", err);
             setGenerationError(true);
         } finally {
             setIsGenerating(false);
@@ -108,10 +139,10 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
 
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-8 bg-gray-50 dark:bg-zinc-950">
-                <div className="flex flex-col items-center gap-4 text-gray-500">
+            <div className="min-h-screen flex items-center justify-center p-8 bg-slate-50 dark:bg-zinc-950">
+                <div className="flex flex-col items-center gap-4 text-slate-500">
                     <Loader2 className="w-12 h-12 animate-spin text-emerald-500" />
-                    <p className="animate-pulse">Loading meeting data...</p>
+                    <p className="animate-pulse text-sm font-medium">Loading executive assessment...</p>
                 </div>
             </div>
         );
@@ -119,7 +150,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
 
     if (error || !interview) {
         return (
-            <div className="min-h-screen p-8 bg-gray-50 dark:bg-zinc-950">
+            <div className="min-h-screen p-8 bg-slate-50 dark:bg-zinc-950">
                 <Link href="/dashboard">
                     <Button variant="ghost" className="mb-6"><ArrowLeft className="w-4 h-4 mr-2" /> Back to Dashboard</Button>
                 </Link>
@@ -132,26 +163,25 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
 
     if (generationError) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-[#0a0a0a]">
-                <div className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl p-10 rounded-[2.5rem] shadow-xl shadow-zinc-200/50 dark:shadow-none border border-red-200/50 dark:border-red-500/20 text-center max-w-md w-full relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-400 via-orange-500 to-red-400"></div>
+            <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-[#0a0a0a]">
+                <div className="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-xl p-10 rounded-[2.5rem] shadow-xl border border-red-200/50 dark:border-red-500/20 text-center max-w-md w-full relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-400 via-orange-500 to-red-400" />
                     <AlertTriangle className="w-16 h-16 mx-auto mb-6 text-red-500" />
-                    <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">Analysis Failed</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-8">
-                        We couldn't generate the scorecard due to a network or server issue. Your meeting data is saved safely. Please try again.
+                    <h2 className="text-2xl font-bold mb-2 text-slate-900 dark:text-white">Analysis Interrupted</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mb-8 text-sm leading-relaxed">
+                        The AI evaluation engine timed out or experienced high traffic. Your interview responses are saved safely. Please retry the assessment.
                     </p>
                     <div className="flex flex-col gap-3">
                         <Button
                             onClick={() => {
-                                setGenerationError(false);
-                                if (interview) generateScorecard(interview);
+                                if (interview) generateReport(interview);
                             }}
                             className="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl py-6"
                         >
-                            Retry Analysis
+                            Retry Evaluation
                         </Button>
                         <Link href="/dashboard" className="w-full">
-                            <Button variant="ghost" className="w-full rounded-xl py-6 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                            <Button variant="ghost" className="w-full rounded-xl py-6 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
                                 Back to Dashboard
                             </Button>
                         </Link>
@@ -161,176 +191,40 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
         );
     }
 
-    if (isGenerating && !scorecard) {
+    if (isGenerating && !rubricReport && !scorecard) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-[#0a0a0a]">
-                <div className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl p-10 rounded-[2.5rem] shadow-xl shadow-zinc-200/50 dark:shadow-none border border-zinc-200/50 dark:border-white/10 text-center max-w-md w-full relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 via-teal-500 to-emerald-400 animate-gradient-x"></div>
-                    <Brain className="w-16 h-16 mx-auto mb-6 text-emerald-500 animate-bounce" />
-                    <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">Analyzing Session...</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-8">ZEDX AI is processing your responses, evaluating technical accuracy, and calculating your final score.</p>
+            <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-[#070708]">
+                <div className="bg-white/80 dark:bg-zinc-900/60 backdrop-blur-xl p-10 rounded-[2.5rem] shadow-xl border border-slate-200/50 dark:border-white/10 text-center max-w-md w-full relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#9df400] via-lime-400 to-[#9df400] animate-pulse" />
+                    
+                    {/* Authentic ZEDX Brand Icon with subtle glow */}
+                    <div className="relative mx-auto mb-6 w-20 h-20 flex items-center justify-center">
+                        <div className="absolute inset-0 rounded-2xl bg-[#9df400]/20 blur-xl animate-pulse" />
+                        <div className="relative w-16 h-16 rounded-2xl bg-black border border-white/15 flex items-center justify-center shadow-2xl p-2.5 overflow-hidden">
+                            <img src="/apple-touch-icon.png" alt="ZEDX Logo" className="w-full h-full object-contain rounded-lg" />
+                        </div>
+                    </div>
+
+                    <h2 className="text-2xl font-bold mb-2 text-slate-900 dark:text-white">Generating Performance Analysis Report</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mb-8 text-sm leading-relaxed">
+                        ZEDX AI is analyzing your spoken responses, extracting verifiable evidence quotes, evaluating 5 universal competencies, and synthesizing your personalized action plan.
+                    </p>
                     <div className="flex justify-center">
-                        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+                        <Loader2 className="w-8 h-8 animate-spin text-[#9df400]" />
                     </div>
                 </div>
             </div>
         );
     }
 
-    // Helper for circular progress
-    const CircularProgress = ({ value, label, icon: Icon, colorClass, gradientId, fromColor, toColor, fromClass, toClass }: { value: number, label: string, icon: any, colorClass: string, gradientId: string, fromColor: string, toColor: string, fromClass: string, toClass: string }) => (
-        <div className="flex flex-col items-center p-8 bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl rounded-[2.5rem] shadow-xl shadow-zinc-200/50 dark:shadow-none border border-zinc-200/50 dark:border-white/10 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
-            <div className={`absolute -top-10 -right-10 w-40 h-40 opacity-10 dark:opacity-20 rounded-full blur-2xl bg-gradient-to-br ${fromClass} ${toClass}`}></div>
-            <div className="relative w-36 h-36 mb-6">
-                <svg className="w-full h-full transform -rotate-90 drop-shadow-xl" viewBox="0 0 36 36">
-                    <defs>
-                        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor={fromColor} />
-                            <stop offset="100%" stopColor={toColor} />
-                        </linearGradient>
-                    </defs>
-                    <path
-                        className="text-zinc-100 dark:text-white/5"
-                        strokeWidth="3.5"
-                        stroke="currentColor"
-                        fill="none"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                    <path
-                        className="transition-all duration-1000 ease-out drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"
-                        strokeWidth="3.5"
-                        strokeDasharray={`${value}, 100`}
-                        strokeLinecap="round"
-                        stroke={`url(#${gradientId})`}
-                        fill="none"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center flex-col">
-                    <span className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tighter">{value}<span className="text-xl text-gray-400">%</span></span>
-                </div>
-            </div>
-            <h3 className="text-gray-600 dark:text-gray-300 font-semibold tracking-wide flex items-center gap-2">
-                <Icon className={`w-5 h-5 ${colorClass}`} /> {label}
-            </h3>
-        </div>
-    );
+    const isLegacy = !rubricReport && !!scorecard;
 
     return (
-        <div className="min-h-screen bg-zinc-50 dark:bg-[#0a0a0a] p-4 sm:p-8 pt-24 font-sans relative overflow-hidden">
-            {/* Ambient Background Glow */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none -z-10"></div>
-
-            <div className="max-w-6xl mx-auto space-y-8 relative z-10">
-
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div>
-                        <Link href="/dashboard">
-                            <Button variant="ghost" size="sm" className="mb-2 text-gray-500 hover:text-gray-900 dark:hover:text-white">
-                                <ArrowLeft className="w-4 h-4 mr-2" /> Back to Dashboard
-                            </Button>
-                        </Link>
-                        <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-                            Performance Scorecard
-                        </h1>
-                        <p className="text-gray-500 dark:text-gray-400 mt-2">
-                            {interview.title} • {new Date(interview.created_at).toLocaleDateString()}
-                        </p>
-                    </div>
-                </div>
-
-                {scorecard && (
-                    <>
-                        {/* Scores Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <CircularProgress
-                                value={scorecard.overallScore}
-                                label="Overall Score"
-                                icon={Target}
-                                colorClass="text-emerald-500"
-                                gradientId="grad-overall"
-                                fromColor="#10b981"
-                                toColor="#14b8a6"
-                                fromClass="from-emerald-500"
-                                toClass="to-teal-500"
-                            />
-                            <CircularProgress
-                                value={scorecard.technicalScore}
-                                label="Technical Accuracy"
-                                icon={Brain}
-                                colorClass="text-blue-500"
-                                gradientId="grad-tech"
-                                fromColor="#3b82f6"
-                                toColor="#6366f1"
-                                fromClass="from-blue-500"
-                                toClass="to-indigo-500"
-                            />
-                            <CircularProgress
-                                value={scorecard.communicationScore}
-                                label="Communication"
-                                icon={MessageSquare}
-                                colorClass="text-purple-500"
-                                gradientId="grad-comm"
-                                fromColor="#a855f7"
-                                toColor="#ec4899"
-                                fromClass="from-purple-500"
-                                toClass="to-pink-500"
-                            />
-                        </div>
-
-                        {/* Analysis Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {/* Strengths */}
-                            <div className="bg-emerald-50/70 dark:bg-emerald-950/20 backdrop-blur-xl border border-emerald-200/50 dark:border-emerald-900/50 rounded-[2.5rem] p-8 sm:p-10 shadow-xl shadow-emerald-500/10 dark:shadow-none">
-                                <h3 className="text-xl font-bold text-emerald-800 dark:text-emerald-400 mb-6 flex items-center gap-3">
-                                    <CheckCircle className="w-6 h-6" /> Key Strengths
-                                </h3>
-                                <ul className="space-y-4">
-                                    {scorecard.strengths.map((s, i) => (
-                                        <li key={i} className="flex items-start gap-3 text-emerald-900 dark:text-emerald-100 font-medium">
-                                            <span className="mt-1.5 w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                            <span className="leading-relaxed">{s}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-
-                            {/* Improvements */}
-                            <div className="bg-amber-50/70 dark:bg-amber-950/20 backdrop-blur-xl border border-amber-200/50 dark:border-amber-900/50 rounded-[2.5rem] p-8 sm:p-10 shadow-xl shadow-amber-500/10 dark:shadow-none">
-                                <h3 className="text-xl font-bold text-amber-800 dark:text-amber-400 mb-6 flex items-center gap-3">
-                                    <AlertTriangle className="w-6 h-6" /> Areas for Improvement
-                                </h3>
-                                <ul className="space-y-4">
-                                    {scorecard.improvements.map((s, i) => (
-                                        <li key={i} className="flex items-start gap-3 text-amber-900 dark:text-amber-100 font-medium">
-                                            <span className="mt-1.5 w-2 h-2 rounded-full bg-amber-500 flex-shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
-                                            <span className="leading-relaxed">{s}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </div>
-
-                        {/* Detailed Feedback */}
-                        <div className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-8 sm:p-10 shadow-xl shadow-zinc-200/50 dark:shadow-none">
-                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Detailed Assessment</h3>
-                            <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
-                                <ReactMarkdown>{scorecard.detailedFeedback}</ReactMarkdown>
-                            </div>
-                        </div>
-                    </>
-                )}
-
-                {/* Transcript Archive */}
-                <div className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-8 sm:p-10 shadow-xl shadow-zinc-200/50 dark:shadow-none mt-8">
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">Session Transcript Archive</h3>
-                    <div className="bg-gray-100/50 dark:bg-black/40 rounded-3xl p-8 whitespace-pre-wrap font-mono text-sm text-gray-700 dark:text-gray-300 border border-gray-200/50 dark:border-white/5 max-h-96 overflow-y-auto leading-relaxed shadow-inner">
-                        {interview.transcript || "No transcript recorded for this session."}
-                    </div>
-                </div>
-
-            </div>
-        </div>
+        <RubricReportView 
+            interview={interview}
+            rubricReport={rubricReport}
+            legacyScorecard={scorecard}
+            isLegacy={isLegacy}
+        />
     );
 }
