@@ -467,8 +467,12 @@ export function enforceRubric13ReportSchema(
     const executiveSummary = (typeof raw?.overall_evaluation?.executive_summary === "string" && raw.overall_evaluation.executive_summary.trim().length > 0)
         ? cleanDisplayText(raw.overall_evaluation.executive_summary.trim())
         : (overallBars !== null 
-            ? `Candidate demonstrated solid engagement for the target role with an overall rating of ${overallBars}/5.0 (${performanceLevel}).`
-            : `Session did not yield sufficient verifiable evidence to assign an overall BARS rating. Performance is designated as Unrated.`);
+            ? (ctx.language?.startsWith('ar')
+                ? `أظهر المرشح تفاعلاً والتزاماً مناسباً للدور المستهدف بتقييم إجمالي ${overallBars}/5.0 (${performanceLevel}).`
+                : `Candidate demonstrated solid engagement for the target role with an overall rating of ${overallBars}/5.0 (${performanceLevel}).`)
+            : (ctx.language?.startsWith('ar')
+                ? `لم تسفر الجلسة عن أدلة لفظية كافية لتعيين تقييم BARS إجمالي. تم تصنيف الأداء على أنه غير مقيَّم.`
+                : `Session did not yield sufficient verifiable evidence to assign an overall BARS rating. Performance is designated as Unrated.`));
 
     const report: Rubric13Report = {
         rubric_version: "1.3",

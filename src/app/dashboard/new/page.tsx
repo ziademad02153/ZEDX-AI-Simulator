@@ -261,8 +261,13 @@ export default function NewInterviewPage() {
                 language,
                 difficulty,
             });
-            localStorage.setItem("selected_ai_model", selectedModel); // Keep model in localstorage since it's a preference
-            localStorage.setItem("interview_context_question_count", questionCount); // Question count is small
+            localStorage.setItem("interview_context_lang", language);
+            localStorage.setItem("interview_context_jd", jobDescription);
+            localStorage.setItem("interview_context_resume", resume);
+            localStorage.setItem("interview_context_difficulty", difficulty);
+            localStorage.setItem("interview_context_type", interviewType);
+            localStorage.setItem("selected_ai_model", selectedModel);
+            localStorage.setItem("interview_context_question_count", questionCount.toString());
         } catch (e) {
             console.warn(e);
         }

@@ -1,6 +1,8 @@
 // Secure System Prompts Repository
 // This prevents Prompt Injection attacks by keeping system instructions entirely on the server.
 
+import { SUPPORTED_LANGUAGES } from "@/lib/languages";
+
 export type PromptType =
   | 'chatbot'
   | 'mock_interview'
@@ -32,18 +34,23 @@ export function getSystemPrompt(type: PromptType, context?: PromptContext): stri
 
     case 'mock_interview':
       const { interviewType, difficulty, language } = context || {};
+      const ctxLangObj = SUPPORTED_LANGUAGES.find(l => l.code === language) || { name: language || 'English', native: language || 'English', code: language || 'en-US' };
       return `You are ZEDX, an expert AI interviewer. 
 You are conducting a highly interactive, human-like professional mock interview.
 Interview Type: ${interviewType || 'General'}.
 ${interviewType === "Project Deep Dive" ? "CRITICAL: Pick one specific project from the Resume Context and grill the candidate on technical decisions, architecture, and their specific role." : ""}
 Difficulty Level: ${difficulty || 'Medium'}.
-Language: ${language || 'en-US'}.
-${language === 'ar-EG' ? "CRITICAL LANGUAGE RULE: You MUST speak in 100% Egyptian Ammiya (العامية المصرية). Use everyday Egyptian words like 'طب', 'عشان', 'إيه', 'كده'. NEVER use formal Arabic (الفصحى) or ElevenLabs will sound robotic." : ""}
+Session Language: ${ctxLangObj.name} (${ctxLangObj.native}) [Code: "${ctxLangObj.code}"].
+
+CRITICAL LANGUAGE RULE (ABSOLUTE REQUIREMENT):
+You MUST speak, react, and formulate ALL questions ENTIRELY in ${ctxLangObj.name} (${ctxLangObj.native}) [${ctxLangObj.code}].
+You are STRICTLY FORBIDDEN from asking questions in English unless the session language is English ("en-US").
+${ctxLangObj.code === 'ar-EG' ? "CRITICAL ARABIC RULE: You MUST speak in 100% Egyptian Ammiya (العامية المصرية). Use everyday Egyptian words like 'طب', 'عشان', 'إيه', 'كده'. NEVER use formal Arabic (الفصحى) or ElevenLabs will sound robotic." : ""}
 
 CRITICAL BEHAVIORAL RULES:
-1. **BE HUMAN & CONVERSATIONAL:** Never just ask a list of questions blankly. Listen to the user's previous answer. Start your response by naturally reacting to what they just said (e.g., "That makes a lot of sense," "Interesting approach, but...", "I like how you handled that.").
+1. **BE HUMAN & CONVERSATIONAL:** Never just ask a list of questions blankly. Listen to the user's previous answer. Start your response by naturally reacting to what they just said in ${ctxLangObj.name} (${ctxLangObj.native}).
 2. **NATURAL FLOW:** After a brief reaction (1-2 sentences), seamlessly transition into your next question based on the context.
-3. **ONLY SPOKEN TEXT:** Reply ONLY with the exact text you want to speak aloud. No markdown, no thinking tags, no emojis, no asterisks like *smiles*. Keep it entirely conversational text.`;
+3. **ONLY SPOKEN TEXT:** Reply ONLY with the exact text you want to speak aloud in ${ctxLangObj.name}. No markdown, no thinking tags, no emojis, no asterisks like *smiles*. Keep it entirely conversational text.`;
 
     case 'candidate_answer':
       const { interviewContext } = context || {};
@@ -86,9 +93,11 @@ ${isArabic ? `
   * Keep technical terms in standard English (e.g., API, Docker, CI/CD, Cache, Microservices, State Management, Database Indexing).
   * STRICTLY FORBIDDEN: Do NOT use robotic Google Translate or stiff Classical Arabic (الفصحى الركيكة).
 ` : `
-- **LANGUAGE: PROFESSIONAL CORPORATE ENGLISH**:
-  * Crisp, modern, executive technical English.
+- **LANGUAGE: ${ctxLang}**:
+  * You MUST generate the spoken response entirely in the requested language: ${ctxLang}.
+  * Speak in crisp, modern, executive professional tone in this language.
   * Confident, polished, and persuasive.
+  * Technical terms may remain in standard English if appropriate for the industry.
 `}
 
 CONTEXT:
@@ -187,7 +196,7 @@ Return ONLY a valid JSON object matching this exact structure, with no markdown 
  * Enforces BARS 1.0–5.0, Dynamic Weights, Evidence Anchoring, Coverage calculation, and Voice-Only boundaries.
  */
 export function getRubric13EvaluatorSystemPrompt(language: string = "en-US"): string {
-  const isArabic = language.startsWith("ar");
+  const langObj = SUPPORTED_LANGUAGES.find(l => l.code === language) || { name: language, native: language, code: language };
   return `You are the Lead Executive Assessor & Talent Evaluation Engine for ZEDX.
 Your task is to conduct an authoritative, evidence-grounded performance evaluation of a candidate based on a completed voice mock interview, generating a Performance Analysis Report.
 
@@ -287,10 +296,12 @@ Your task is to conduct an authoritative, evidence-grounded performance evaluati
    - DO NOT concatenate raw strings awkwardly (e.g. avoid phrases like "expected for About Beno Technologies"). Frame outcomes naturally.
    - NEVER promise or guarantee a specific numeric score (e.g. NEVER write "achieves a BARS score of at least 3.0").
 
-10. LANGUAGE REQUIREMENT:
-   - ${isArabic
-      ? "All narrative content (executive_summary, weight_rationale, observable_behaviors, observed_gaps, strengths, gaps, evaluator_note, actions, expected_outcome) MUST be written in professional, polished Arabic (العربية الفصحى المهنية). Technical terms may remain in standard English."
-      : "All narrative content MUST be written in crisp, high-impact executive English."}
+10. LANGUAGE REQUIREMENT (CRITICAL & STRICTLY ENFORCED):
+   - TARGET REPORT LANGUAGE: ${langObj.name} (${langObj.native}) [Code: "${language}"].
+   - ALL narrative content across the entire report (including "executive_summary", "weight_rationale", "observable_behaviors", "observed_gaps", "strengths", "gaps", "evaluator_note", "actions", "expected_outcome", and "benchmark_model") MUST be written strictly in ${langObj.name} (${langObj.native}).
+   - If the interview language is Arabic (ar-EG or ar-SA), you MUST write all narrative evaluations, executive summaries, strengths, gaps, actionable advice, and ideal answers in professional Arabic (اللغة العربية).
+   - If the interview language is Spanish, French, German, Japanese, or any other of the 30 supported languages, the entire narrative analysis MUST be in that respective language.
+   - Do NOT produce English analysis for a non-English interview session. Technical terms, system names, or programming languages (e.g., Python, SQL, Docker, React, BARS) may remain in Latin script if customary in that technical discipline.
 
 11. INDIVIDUALIZED IDEAL ANSWERS & ANTI-HALLUCINATION:
    - For every question in questions_assessment, the "benchmark_model" MUST be a professional, 5.0-quality ideal response tailored directly to the exact question asked and the target JD.
@@ -436,6 +447,9 @@ export interface Rubric13EvaluatorUserPromptParams {
 }
 
 export function getRubric13EvaluatorUserPrompt(params: Rubric13EvaluatorUserPromptParams): string {
+  const sessionLang = params.language || "en-US";
+  const langObj = SUPPORTED_LANGUAGES.find(l => l.code === sessionLang) || { name: sessionLang, native: sessionLang, code: sessionLang };
+
   const formattedExchanges = params.sessionExchanges.map((ex, i) => {
     const isFollowup = ex.type === "followup";
     const tag = isFollowup ? `[Follow-up Probe for Main Question #${ex.mainQuestionIndex != null ? ex.mainQuestionIndex + 1 : i + 1}]` : `[Main Question #${ex.mainQuestionIndex != null ? ex.mainQuestionIndex + 1 : i + 1}]`;
@@ -446,6 +460,11 @@ Candidate Answer: ${ex.answer && ex.answer.trim() ? ex.answer.trim() : "(No verb
   }).join("\n\n---\n\n");
 
   return `EVALUATE THIS COMPLETED INTERVIEW SESSION UNDER RUBRIC 1.3:
+
+<session_language>
+Language Code: ${sessionLang}
+Target Report Language: ${langObj.name} (${langObj.native})
+</session_language>
 
 <target_role>
 ${params.targetRole || "Professional Candidate"}
@@ -481,5 +500,6 @@ CRITICAL EVALUATION REMINDERS:
 3. Traceable Evidence: Quotes MUST be literal candidate statements. Do NOT fabricate quotes.
 4. Assessment Coverage: Calculate as Sum of (Weight % * Evidence Factor) where Sufficient=1.0, Partial=0.5, Insufficient=0.0, Not Directly Assessed=0.0.
 5. Voice-only Boundary: Do NOT claim to evaluate actual hands-on coding execution, CAD drawing, spreadsheets, physical exams, or visual body language.
-6. Output MUST be valid JSON only.`;
+6. STRICT LANGUAGE ENFORCEMENT: All narrative sections of the evaluation JSON (executive_summary, weight_rationale, observable_behaviors, observed_gaps, strengths, gaps, evaluator_note, actions, expected_outcome, benchmark_model) MUST be written in ${langObj.name} (${langObj.native}) [${sessionLang}]. Do NOT default to English unless the session language is English.
+7. Output MUST be valid JSON only.`;
 }

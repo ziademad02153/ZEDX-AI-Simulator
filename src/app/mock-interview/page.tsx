@@ -208,12 +208,17 @@ export default function MockInterviewPage() {
 
         try {
             const state = useInterviewStore.getState();
-            _jd = state.jobDescription || localStorage.getItem("interview_context_jd") || "";
-            _resume = state.resumeText || localStorage.getItem("interview_context_resume") || "";
-            _diff = state.difficulty || localStorage.getItem("interview_context_difficulty") || "Intermediate";
-            _type = state.interviewType || localStorage.getItem("interview_context_type") || "Technical";
+            const savedLang = localStorage.getItem("interview_context_lang");
+            _lang = (savedLang && savedLang.trim()) ? savedLang : (state.language || "en-US");
+            const savedJd = localStorage.getItem("interview_context_jd");
+            _jd = state.jobDescription || savedJd || "";
+            const savedResume = localStorage.getItem("interview_context_resume");
+            _resume = state.resumeText || savedResume || "";
+            const savedDiff = localStorage.getItem("interview_context_difficulty");
+            _diff = (state.difficulty && state.difficulty !== "Intermediate") ? state.difficulty : (savedDiff || state.difficulty || "Intermediate");
+            const savedType = localStorage.getItem("interview_context_type");
+            _type = (state.interviewType && state.interviewType !== "General") ? state.interviewType : (savedType || state.interviewType || "Technical");
             _count = parseInt(localStorage.getItem("interview_context_question_count") || "10", 10);
-            _lang = state.language || localStorage.getItem("interview_context_lang") || "en-US";
             _model = localStorage.getItem("selected_ai_model") || "qwen/qwen3.8-27b";
         } catch (e) {
             console.warn("Could not read interview state", e);
@@ -592,11 +597,24 @@ export default function MockInterviewPage() {
             const nameEn = candidateName ? ` ya ${candidateName}` : "";
             const nameAr = candidateName ? ` يا ${candidateName}` : "";
 
-            nextQuestionText = langObj.code === 'ar-EG'
-                ? `أهلاً بك${nameAr}، أنا زيدكس، وهعمل معاك الانترفيو النهارده. ياريت تبدأ وتعرفني بنفسك وتكلمني شوية عن خبراتك؟`
-                : langObj.code.startsWith('ar') 
-                ? `أهلاً بك${nameAr}، أنا زيدكس، وسأكون مسؤولاً عن الانترفيو الخاص بك اليوم. هل يمكن أن تبدأ بتعريف نفسك والتحدث قليلاً عن خبراتك؟`
-                : `Welcome${nameEn}, I am ZEDX. I will be conducting your interview today. Could you please start by introducing yourself and telling me a little bit about your background?`;
+            if (langObj.code === 'ar-EG') {
+                nextQuestionText = `أهلاً بك${nameAr}، أنا زيدكس، وهعمل معاك الانترفيو النهارده. ياريت تبدأ وتعرفني بنفسك وتكلمني شوية عن خبراتك؟`;
+            } else if (langObj.code.startsWith('ar')) {
+                nextQuestionText = `أهلاً بك${nameAr}، أنا زيدكس، وسأكون مسؤولاً عن الانترفيو الخاص بك اليوم. هل يمكن أن تبدأ بتعريف نفسك والتحدث قليلاً عن خبراتك؟`;
+            } else if (langObj.code === 'en-US') {
+                nextQuestionText = `Welcome${nameEn}, I am ZEDX. I will be conducting your interview today. Could you please start by introducing yourself and telling me a little bit about your background?`;
+            } else if (langObj.code === 'es-ES') {
+                nextQuestionText = `¡Bienvenido${candidateName ? ` ${candidateName}` : ""}! Soy ZED-X y hoy realizaré tu entrevista de práctica. Para comenzar, ¿podrías presentarte y contarme un poco sobre ti y tu experiencia profesional?`;
+            } else if (langObj.code === 'fr-FR') {
+                nextQuestionText = `Bonjour${candidateName ? ` ${candidateName}` : ""} et bienvenue ! Je suis ZED-X et je vais mener votre entretien aujourd'hui. Pourriez-vous commencer par vous présenter et me parler un peu de votre parcours ?`;
+            } else if (langObj.code === 'de-DE') {
+                nextQuestionText = `Hallo${candidateName ? ` ${candidateName}` : ""}, herzlich willkommen! Ich bin ZED-X und werde heute Ihr Interview führen. Könnten Sie sich bitte kurz vorstellen und etwas über Ihren Werdegang erzählen?`;
+            } else {
+                // Extract introductory greeting from q1 (everything before the closing "are you ready?" question)
+                const q1Sentences = (langObj.q1 || "").split(/(?<=[.!?。！？])\s+/);
+                const greetingPart = q1Sentences.length > 1 ? q1Sentences.slice(0, -1).join(" ") : (langObj.q1 || "");
+                nextQuestionText = `${greetingPart}${candidateName ? ` ${candidateName}` : ""}. ${langObj.q2 || ""}`;
+            }
 
             isFollowUp = false;
             mainQuestionIndexRef.current = 0;
@@ -621,6 +639,7 @@ CRITICAL RULES:
 3. DO NOT ask a follow-up.
 4. DO NOT ask any previously asked questions: [${askedQuestions}].
 5. DO NOT ask the candidate if they have questions for you.
+6. MANDATORY LANGUAGE: You MUST formulate your entire reaction and new question strictly in ${langObj.name} (${langObj.native}) [${langObj.code}]. NEVER speak in English unless the session language is English ("en-US").
 Job Description Context: ${jd}
 Resume Context: ${resume}`;
             } else {
@@ -635,6 +654,7 @@ CRITICAL RULES:
 3. Spoken text only. No markdown, no thinking tags.
 4. DO NOT ask any previously asked questions: [${askedQuestions}].
 5. DO NOT ask the candidate if they have questions for you.
+6. MANDATORY LANGUAGE: You MUST formulate your entire reaction and question strictly in ${langObj.name} (${langObj.native}) [${langObj.code}]. NEVER speak in English unless the session language is English ("en-US").
 Job Description Context: ${jd}
 Resume Context: ${resume}`;
             }
