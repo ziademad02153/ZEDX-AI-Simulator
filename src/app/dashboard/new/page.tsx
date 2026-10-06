@@ -268,7 +268,11 @@ export default function NewInterviewPage() {
         }
 
         setTimeout(() => {
-            router.push("/dashboard/new/how-to-use");
+            if (isDesktop || (typeof window !== "undefined" && !!(window as any).electronAPI?.isElectron)) {
+                router.push("/desktop-assistant");
+            } else {
+                router.push("/dashboard/new/how-to-use");
+            }
         }, 800);
     };
 

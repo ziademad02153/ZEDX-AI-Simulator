@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 export default function middleware(request: NextRequest) {
     // Define protected routes
-    const protectedPaths = ['/dashboard', '/interview'];
+    const protectedPaths = ['/dashboard', '/interview', '/desktop-assistant'];
     const publicPaths = ['/scanner-frame', '/desktop/overlay'];
     if (publicPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
         const requestHeaders = new Headers(request.headers);
@@ -48,6 +48,7 @@ export const config = {
     matcher: [
         '/dashboard/:path*',
         '/interview/:path*',
+        '/desktop-assistant/:path*',
         '/desktop/overlay/:path*',
         '/scanner-frame/:path*',
     ],

@@ -1,5 +1,17 @@
 "use client";
 
+/**
+ * ============================================================================
+ * WEB PLATFORM MOCK INTERVIEW SIMULATOR
+ * ============================================================================
+ * This file is for the WEB PLATFORM ONLY (Candidate practice, camera, video,
+ * and conversational AI interviewer).
+ * 
+ * NOTE: Changes in this file DO NOT affect the Electron Desktop Stealth Copilot.
+ * The Electron Desktop Assistant is located at: `src/app/desktop-assistant/page.tsx`
+ * ============================================================================
+ */
+
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Mic, MicOff, Video, AlertCircle, Loader2, X, Camera, CameraOff } from "lucide-react";

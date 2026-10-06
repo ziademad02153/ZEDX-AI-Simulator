@@ -4,21 +4,27 @@ import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: Request) {
     try {
-        // SECURITY CHECK: Verify user authentication (30X Audit Fix)
+        const isDev = process.env.NODE_ENV === 'development';
         const authHeader = request.headers.get('Authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return NextResponse.json({ error: "Unauthorized - Please sign in" }, { status: 401 });
+        let token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined;
+        if (token === 'undefined' || token === 'null') token = undefined;
+
+        let user: any = null;
+        if (token) {
+            const supabaseAdmin = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+            );
+            const { data, error } = await supabaseAdmin.auth.getUser(token);
+            if (!error && data?.user) {
+                user = data.user;
+            } else {
+                console.warn('[Transcribe API] Token validation warning:', error?.message);
+            }
         }
 
-        const token = authHeader.split(' ')[1];
-        const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
-
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-        if (authError || !user) {
-            return NextResponse.json({ error: "Unauthorized - Invalid token" }, { status: 401 });
+        if (!user && !isDev) {
+            return NextResponse.json({ error: "Unauthorized - Please sign in" }, { status: 401 });
         }
 
         const formData = await request.formData();
@@ -43,12 +49,28 @@ export async function POST(request: Request) {
             process.env.GROQ_API_KEY_11,
             process.env.GROQ_API_KEY_12,
             process.env.GROQ_API_KEY_13,
-            process.env.GROQ_API_KEY_14
+            process.env.GROQ_API_KEY_14,
+            process.env.GROQ_STT_KEY_1,
+            process.env.GROQ_STT_KEY_2,
+            process.env.GROQ_STT_KEY_3,
+            process.env.GROQ_STT_KEY_4,
+            process.env.GROQ_STT_KEY_5,
+            process.env.GROQ_STT_KEY_6,
+            process.env.GROQ_STT_KEY_7,
+            process.env.GROQ_STT_KEY_8,
+            process.env.GROQ_STT_KEY_9,
+            process.env.GROQ_STT_KEY_10,
+            process.env.GROQ_STT_KEY_11,
+            process.env.GROQ_STT_KEY_12,
+            process.env.GROQ_STT_KEY_13,
+            process.env.GROQ_STT_KEY_14
         ].filter(Boolean) as string[];
 
-        // Use the received file directly as a Blob/File
-        const audioFile = file;
-        console.log(`[Transcribe API] Processing file: ${audioFile.name}, Type: ${audioFile.type}, Size: ${audioFile.size} bytes`);
+        const arrayBuffer = await file.arrayBuffer();
+        if (arrayBuffer.byteLength < 500) {
+            return NextResponse.json({ text: "" });
+        }
+        console.log(`[Transcribe API] Processing audio: ${arrayBuffer.byteLength} bytes`);
 
         if (API_KEYS.length === 0) {
             console.error("[Transcribe API] No keys found! Check .env.local");
@@ -64,11 +86,10 @@ export async function POST(request: Request) {
         for (const apiKey of shuffledKeys) {
             try {
                 const maskedKey = apiKey.substring(0, 8) + '...';
-                console.log(`[Transcribe API] Attempting with Key: ${maskedKey}`);
 
                 const groqFormData = new FormData();
-                // Use the file directly. Filename is important for Groq to detect format.
-                groqFormData.append("file", audioFile, "audio.webm");
+                const audioBlob = new Blob([arrayBuffer], { type: "audio/webm" });
+                groqFormData.append("file", audioBlob, "audio.webm");
                 groqFormData.append("model", formData.get("model")?.toString() || "whisper-large-v3-turbo");
                 groqFormData.append("temperature", "0");
 
@@ -96,26 +117,28 @@ export async function POST(request: Request) {
                     return NextResponse.json({ text: data.text });
                 }
 
-                // If not ok, capture error and try next key
                 const errorBody = await response.text();
                 lastError = { status: response.status, body: errorBody };
-                console.warn(`[Transcribe API] Key ${maskedKey} failed (${response.status}). Body: ${errorBody.substring(0, 200)}`);
+                console.warn(`[Transcribe API] Key ${maskedKey} returned status ${response.status}`);
 
-                // If it's a 413 (File too large) or 400 (Bad Request/Invalid File), don't retry.
-                // Retrying a bad file with a different key won't fix it and just wastes limits.
-                if (response.status === 413 || response.status === 400) {
-                    console.warn(`[Transcribe API] Aborting retry for status ${response.status}`);
+                // If Groq indicates corrupt/unreadable audio format (400), don't return 503 to break UI
+                if (response.status === 400) {
+                    console.warn(`[Transcribe API] Invalid or unreadable audio format from client: ${errorBody.substring(0, 150)}`);
+                    return NextResponse.json({ text: "" });
+                }
+
+                if (response.status === 413) {
                     break;
                 }
 
             } catch (err: unknown) {
                 const error = err as Error;
                 lastError = error;
-                console.error(`[Transcribe API] Fetch failed for key. Trying next...`, error.message);
+                console.error(`[Transcribe API] Fetch failed for key:`, error.message);
             }
         }
 
-        // If we reach here, ALL keys failed
+        // If we reach here, ALL keys failed or were rate limited
         return NextResponse.json({
             error: "All transcription servers failed or rate limited.",
             details: lastError

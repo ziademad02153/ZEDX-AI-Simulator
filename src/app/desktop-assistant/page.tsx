@@ -2,14 +2,17 @@
 
 /**
  * ============================================================================
- * ARCHITECTURAL NOTICE:
+ * ELECTRON DESKTOP STEALTH COPILOT
  * ============================================================================
- * 1. For ELECTRON DESKTOP STEALTH COPILOT, the dedicated file is:
- *    `src/app/desktop-assistant/page.tsx`
- * 2. For WEB MOCK INTERVIEW & CANDIDATE SIMULATION, the dedicated file is:
- *    `src/app/mock-interview/page.tsx`
+ * This file is EXCLUSIVELY for the Electron Desktop Assistant HUD.
+ * Runs on the candidate machine as a transparent, draggable, screen-share-proof
+ * overlay during live interviews.
  * 
- * If accessed from desktop, this page automatically redirects to `/desktop-assistant`.
+ * STRICT RULES:
+ * 1. DO NOT add Web Training features, mock interview practice, camera simulation,
+ *    or interviewer speech synthesis here.
+ * 2. For Web Mock Interview / Candidate Practice, edit:
+ *    `src/app/mock-interview/page.tsx`
  * ============================================================================
  */
 

@@ -86,5 +86,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return () => ipcRenderer.removeListener('update-ready', wrapper);
     },
 
+    // Screen Protection (Anti-Screen Capture / Black Box Toggle)
+    toggleProtection: () => ipcRenderer.invoke('toggle-protection'),
+    getProtectionState: () => ipcRenderer.sendSync('get-protection-state'),
+    onProtectionToggled: (callback) => {
+        const wrapper = (event, enabled) => callback(enabled);
+        ipcRenderer.on('protection-toggled', wrapper);
+        return () => ipcRenderer.removeListener('protection-toggled', wrapper);
+    },
+
     isElectron: true
 });

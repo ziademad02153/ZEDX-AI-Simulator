@@ -42,6 +42,16 @@ export default function LoginPage() {
 
     useEffect(() => { setError(null); setSuccess(null); }, [mode]);
 
+    const getPostLoginRedirect = () => {
+        if (typeof window !== "undefined") {
+            const isDesktop = (window as unknown as { electronAPI?: { isElectron?: boolean } }).electronAPI?.isElectron ||
+                new URLSearchParams(window.location.search).get("desktop") === "true" ||
+                new URLSearchParams(window.location.search).get("from") === "/desktop";
+            if (isDesktop) return "/dashboard/new";
+        }
+        return "/dashboard";
+    };
+
     useEffect(() => {
         const checkAuth = async () => {
             try {
@@ -52,7 +62,7 @@ export default function LoginPage() {
                     const sessionId = data.session.access_token.slice(0, 32);
                     const isSecure = window.location.protocol === "https:";
                     document.cookie = `auth_token=${sessionId}; path=/; max-age=86400; SameSite=Lax${isSecure ? "; Secure" : ""}`;
-                    window.location.href = "/dashboard";
+                    window.location.href = getPostLoginRedirect();
                 } else {
                     setIsCheckingSession(false);
                 }
@@ -126,7 +136,7 @@ export default function LoginPage() {
                 const sessionId = result?.session?.access_token?.slice(0, 32) || crypto.randomUUID();
                 const isSecure = window.location.protocol === "https:";
                 document.cookie = `auth_token=${sessionId}; path=/; max-age=86400; SameSite=Lax${isSecure ? "; Secure" : ""}`;
-                window.location.href = "/dashboard";
+                window.location.href = getPostLoginRedirect();
             }
         } catch (err: unknown) {
             const error = err as Error;
@@ -159,7 +169,7 @@ export default function LoginPage() {
             const sessionId = result?.session?.access_token?.slice(0, 32) || crypto.randomUUID();
             const isSecure = window.location.protocol === "https:";
             document.cookie = `auth_token=${sessionId}; path=/; max-age=86400; SameSite=Lax${isSecure ? "; Secure" : ""}`;
-            window.location.href = "/dashboard";
+            window.location.href = getPostLoginRedirect();
         } catch (err: unknown) {
             const error = err as Error;
             setError(error.message || "Invalid code");

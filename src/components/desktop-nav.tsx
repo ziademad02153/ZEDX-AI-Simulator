@@ -6,7 +6,10 @@ import Image from "next/image";
 import { Download, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { usePathname } from "next/navigation";
+
 export function DesktopNavBar() {
+    const pathname = usePathname();
     const [isDesktop, setIsDesktop] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [user, setUser] = useState<{ email?: string; user_metadata?: { avatar_url?: string; full_name?: string } } | null>(null);
@@ -56,13 +59,13 @@ export function DesktopNavBar() {
     const handleSignOut = async () => {
         try {
             await supabase.auth.signOut();
-            window.location.href = '/';
+            window.location.href = '/login?desktop=true';
         } catch (error) {
             console.error('Sign out error:', error);
         }
     };
 
-    if (!isDesktop) return null;
+    if (!isDesktop || pathname === '/desktop' || pathname === '/desktop/overlay' || pathname?.startsWith('/desktop/overlay') || pathname === '/scanner-frame') return null;
 
     const handleBack = () => {
         if (window.history.length > 1) {
@@ -170,7 +173,7 @@ export function DesktopNavBar() {
                                     <p className="text-zinc-400 text-xs truncate">{user.email}</p>
                                 </div>
                                     <button
-                                        onClick={() => { window.location.href = '/interview'; setIsDropdownOpen(false); }}
+                                        onClick={() => { window.location.href = '/desktop-assistant'; setIsDropdownOpen(false); }}
                                         className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
                                     >
                                         Simulation Setup

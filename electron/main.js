@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage, clipboard, session, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage, clipboard, session, desktopCapturer, globalShortcut } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 
@@ -8,12 +8,25 @@ const ICON_PATH = path.join(__dirname, '..', 'public', 'favicon.ico');
 app.userAgentFallback = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 function initOverlaySystem() {
-    if (process.platform === 'win32') {
-        app.setAppUserModelId('System.Helper');
-    }
     if (process.platform === 'darwin') {
         app.dock.hide();
     }
+}
+
+let hiddenOwnerWindow = null;
+function getOwnerWindow() {
+    if (process.platform !== 'win32') return null;
+    if (!hiddenOwnerWindow || hiddenOwnerWindow.isDestroyed()) {
+        hiddenOwnerWindow = new BrowserWindow({
+            width: 0,
+            height: 0,
+            show: false,
+            frame: false,
+            focusable: false,
+            skipTaskbar: true
+        });
+    }
+    return hiddenOwnerWindow;
 }
 
 let floatingIconWindow = null;
@@ -22,6 +35,25 @@ let scannerFrameWindow = null;
 let tray = null;
 let isAppVisible = false;
 let isScannerFrameOpen = false;
+let isContentProtectionEnabled = true;
+
+function setProtectionState(enabled) {
+    isContentProtectionEnabled = enabled;
+    try {
+        if (mainAppWindow && !mainAppWindow.isDestroyed()) {
+            mainAppWindow.setContentProtection(enabled);
+        }
+        if (floatingIconWindow && !floatingIconWindow.isDestroyed()) {
+            floatingIconWindow.setContentProtection(enabled);
+        }
+        if (scannerFrameWindow && !scannerFrameWindow.isDestroyed()) {
+            scannerFrameWindow.setContentProtection(enabled);
+        }
+        console.log(`[Protection] Screen Content Protection is now: ${enabled ? 'ENABLED (Black on Fullscreen Share)' : 'DISABLED (Transparent/Hidden via Window Share)'}`);
+    } catch (e) {
+        console.error('[Protection] Failed to update content protection:', e);
+    }
+}
 
 const isDev = !app.isPackaged;
 const APP_URL = isDev ? 'http://localhost:3000' : 'https://zedx-ai.tech';
@@ -43,6 +75,7 @@ function createScannerFrame() {
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
     scannerFrameWindow = new BrowserWindow({
+        parent: getOwnerWindow() || undefined,
         width: 400,
         height: 300,
         x: Math.floor(width / 2 - 200),
@@ -58,7 +91,7 @@ function createScannerFrame() {
         hasShadow: false,
         backgroundColor: '#00000000',
         icon: ICON_PATH,
-        show: true,
+        show: false,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
@@ -73,9 +106,15 @@ function createScannerFrame() {
         scannerFrameWindow.setAlwaysOnTop(true, 'floating', 1);
     }
 
-    scannerFrameWindow.setContentProtection(true);
+    scannerFrameWindow.setContentProtection(isContentProtectionEnabled);
+    scannerFrameWindow.setSkipTaskbar(true);
     scannerFrameWindow.loadURL(`${APP_URL}/scanner-frame?isScanner=true`, {
         extraHeaders: "x-is-scanner: true\n"
+    });
+
+    scannerFrameWindow.once('ready-to-show', () => {
+        scannerFrameWindow.showInactive();
+        scannerFrameWindow.setSkipTaskbar(true);
     });
 
     scannerFrameWindow.on('closed', () => {
@@ -99,12 +138,14 @@ function createFloatingIcon() {
     const centerX = Math.round((width / 2) - 28);
 
     floatingIconWindow = new BrowserWindow({
+        parent: getOwnerWindow() || undefined,
         width: 56,
         height: 56,
         x: centerX,
         y: 15,
         frame: false,
         transparent: true,
+        type: 'toolbar',
         alwaysOnTop: true,
         skipTaskbar: true,
         resizable: false,
@@ -112,7 +153,7 @@ function createFloatingIcon() {
         hasShadow: false,
         focusable: false, // GHOST MODE: Prevent focus stealing
         icon: ICON_PATH,
-        show: true,
+        show: false,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
@@ -121,11 +162,18 @@ function createFloatingIcon() {
         }
     });
 
-    floatingIconWindow.setContentProtection(true);
+    floatingIconWindow.setContentProtection(isContentProtectionEnabled);
+    floatingIconWindow.setSkipTaskbar(true);
 
     if (process.platform === 'win32') {
         floatingIconWindow.setAlwaysOnTop(true, 'screen-saver', 10);
     }
+    floatingIconWindow.setSkipTaskbar(true);
+
+    floatingIconWindow.webContents.on('did-finish-load', () => {
+        floatingIconWindow.showInactive();
+        floatingIconWindow.setSkipTaskbar(true);
+    });
 
     floatingIconWindow.loadFile(path.join(__dirname, 'floating-icon.html'));
 }
@@ -134,12 +182,13 @@ function createMainAppWindow() {
     const { width } = screen.getPrimaryDisplay().workAreaSize;
 
     mainAppWindow = new BrowserWindow({
-        width: 500,
-        height: 750,
-        minWidth: 400,
+        parent: getOwnerWindow() || undefined,
+        width: 520,
+        height: 780,
+        minWidth: 420,
         minHeight: 600,
-        x: Math.floor(width / 2) - 250,
-        y: 120,
+        x: Math.floor(width / 2) - 260,
+        y: 80,
         frame: false,
         transparent: true,
         icon: ICON_PATH,
@@ -147,9 +196,9 @@ function createMainAppWindow() {
         skipTaskbar: true, // HUD BACKGROUND MODE
         resizable: true,
         movable: true,
-        hasShadow: true,
-        focusable: true, // TEMPORARY: Enable focus so user can login
-        show: true,
+        hasShadow: false,
+        focusable: true,
+        show: false,
         backgroundColor: '#00000000',
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
@@ -160,16 +209,38 @@ function createMainAppWindow() {
         }
     });
 
-    mainAppWindow.setContentProtection(true);
+    if (process.platform === 'win32') {
+        mainAppWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+    } else {
+        mainAppWindow.setAlwaysOnTop(true, 'floating', 1);
+    }
+
+    mainAppWindow.once('ready-to-show', () => {
+        mainAppWindow.show();
+        mainAppWindow.setSkipTaskbar(true);
+        isAppVisible = true;
+        try {
+            mainAppWindow.setContentProtection(isContentProtectionEnabled);
+        } catch (e) {
+            console.error('[App] Failed to setContentProtection:', e);
+        }
+    });
+
+    // Safety fallback: if ready-to-show takes too long (e.g. Next.js first compile), show window
+    setTimeout(() => {
+        if (mainAppWindow && !mainAppWindow.isDestroyed() && !mainAppWindow.isVisible()) {
+            mainAppWindow.show();
+            mainAppWindow.setSkipTaskbar(true);
+            isAppVisible = true;
+            try {
+                mainAppWindow.setContentProtection(isContentProtectionEnabled);
+            } catch (e) {}
+        }
+    }, 3500);
 
     const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
     mainAppWindow.webContents.setUserAgent(userAgent);
-
-    if (process.platform === 'win32') {
-        mainAppWindow.setAlwaysOnTop(true, 'screen-saver', 5);
-    } else {
-        mainAppWindow.setAlwaysOnTop(true, 'floating', 5);
-    }
+    mainAppWindow.setSkipTaskbar(true);
 
     mainAppWindow.on('close', (e) => {
         e.preventDefault();
@@ -177,23 +248,35 @@ function createMainAppWindow() {
         isAppVisible = false;
     });
 
-    // Notify renderer if page fails to load
+    // Auto-retry connection if Next.js dev server is still compiling or booting
     mainAppWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-        console.error(`[App] Load fail: ${errorDescription} (${errorCode})`);
+        console.error(`[App] Load fail: ${errorDescription} (${errorCode}) - Retrying in 2s...`);
         mainAppWindow.webContents.send('load-error', errorDescription);
+        setTimeout(() => {
+            if (mainAppWindow && !mainAppWindow.isDestroyed()) {
+                loadAppContent();
+            }
+        }, 2000);
+    });
+
+    mainAppWindow.webContents.on('did-finish-load', () => {
+        if (!mainAppWindow.isVisible()) {
+            mainAppWindow.show();
+            mainAppWindow.setSkipTaskbar(true);
+            isAppVisible = true;
+        }
+    });
+
+    // Relay renderer console messages to terminal for instant debugging
+    mainAppWindow.webContents.on('console-message', (event, level, message) => {
+        console.log(`[Renderer] ${message}`);
     });
 
     // Auto-toggle Ghost Mode based on URL
     const toggleGhostMode = (url) => {
         if (!mainAppWindow) return;
-        // If on interview pages, enable Ghost Mode (prevent focus stealing)
-        const isInterviewSession = url.includes('/interview') || url.includes('/how-to-use') || url.includes('/scanner-frame') || url.includes('/session');
-        if (isInterviewSession) {
-            mainAppWindow.setFocusable(false);
-        } else {
-            // Enable focus for login / OAuth pages
-            mainAppWindow.setFocusable(true);
-        }
+        // Keep focusable enabled so user can type, click buttons, and copy answers in Copilot
+        mainAppWindow.setFocusable(true);
     };
 
     mainAppWindow.webContents.on('did-navigate', (event, url) => toggleGhostMode(url));
@@ -204,7 +287,7 @@ function createMainAppWindow() {
 
 function loadAppContent() {
     if (!mainAppWindow) return;
-    const startUrl = `${APP_URL}/dashboard?desktop=true`;
+    const startUrl = `${APP_URL}/desktop-assistant`;
     mainAppWindow.loadURL(startUrl).catch(e => console.error('[App] Load fail:', e));
 }
 
@@ -214,14 +297,19 @@ function toggleApp() {
         mainAppWindow.hide();
         isAppVisible = false;
     } else {
-        mainAppWindow.showInactive(); // GHOST MODE: Show without stealing focus
+        mainAppWindow.show();
+        mainAppWindow.setSkipTaskbar(true);
+        mainAppWindow.focus();
         isAppVisible = true;
     }
 }
 
 function showApp() {
     if (!mainAppWindow) return;
-    mainAppWindow.showInactive(); // GHOST MODE: Show without stealing focus
+    mainAppWindow.show();
+    mainAppWindow.setSkipTaskbar(true);
+    mainAppWindow.focus();
+    isAppVisible = true;
 }
 
 function setupIpcHandlers() {
@@ -326,6 +414,15 @@ function setupIpcHandlers() {
     ipcMain.on('resize-overlay', (event, { width, height }) => floatingIconWindow?.setSize(width, height));
     ipcMain.on('set-ignore-mouse-events', (event, ignore, options) => floatingIconWindow?.setIgnoreMouseEvents(ignore, options));
 
+    // Screen Protection (Anti-Capture / Black Box Toggle)
+    ipcMain.handle('toggle-protection', () => {
+        setProtectionState(!isContentProtectionEnabled);
+        return isContentProtectionEnabled;
+    });
+    ipcMain.on('get-protection-state', (event) => {
+        event.returnValue = isContentProtectionEnabled;
+    });
+
     // Updater IPCs
     ipcMain.on('download-update', () => autoUpdater.downloadUpdate());
     ipcMain.on('install-update', () => autoUpdater.quitAndInstall());
@@ -379,8 +476,27 @@ async function initialize() {
             autoUpdater.checkForUpdates();
         }, 1000 * 60 * 60 * 2);
     }
+
+    // Register Global Shortcuts
+    try {
+        // Ctrl+Shift+H: Instant Hide / Show
+        globalShortcut.register('CommandOrControl+Shift+H', () => {
+            toggleApp();
+        });
+
+        // Ctrl+Shift+P: Toggle Screen Protection
+        globalShortcut.register('CommandOrControl+Shift+P', () => {
+            setProtectionState(!isContentProtectionEnabled);
+            mainAppWindow?.webContents.send('protection-toggled', isContentProtectionEnabled);
+        });
+    } catch (shortcutErr) {
+        console.error('[App] Failed to register global shortcuts:', shortcutErr);
+    }
 }
 
 app.whenReady().then(initialize);
+app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
+});
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 app.on('before-quit', () => { mainAppWindow = null; });
