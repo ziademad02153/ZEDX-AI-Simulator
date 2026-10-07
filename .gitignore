@@ -54,3 +54,25 @@ PROJECT_RULES.md
 public/*.exe
 *.7z
 groq_docs_reference.md
+
+# Private customer documents stay local; public site assets belong in public/.
+/*.pdf
+/ZEDX_*Proposal*.md
+/private/
+/local-docs/
+
+# Local review artifacts and generated test results
+/PROJECT_REVIEW_AR.md
+/PAYMENT_FIXES_AR.md
+/PAYMENT_SECURITY_PROOF.jpg
+/results/
+/test-results/
+/playwright-report/
+
+# Local credentials, agent state, and CLI caches
+/.codex/
+/.aws/
+/supabase/.temp/
+*.key
+*.p12
+*.pfx
