@@ -29,6 +29,8 @@ export default function PricingPage() {
     const [copied, setCopied] = useState(false);
     const [userTier, setUserTier] = useState<string>("free");
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [hasPermanentAccess, setHasPermanentAccess] = useState(false);
+    const [profileLoaded, setProfileLoaded] = useState(false);
 
     useEffect(() => {
         posthog.capture('pricing_viewed');
@@ -36,15 +38,36 @@ export default function PricingPage() {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
                 setIsAuthenticated(true);
-                const { data: profile } = await supabase.from('profiles').select('tier').eq('id', session.user.id).single();
-                if (profile?.tier) setUserTier(profile.tier);
+                const { data: profile } = await supabase.from('profiles').select('tier, subscription_expires_at').eq('id', session.user.id).single();
+                if (profile?.tier) {
+                    setUserTier(profile.subscription_expires_at && new Date(profile.subscription_expires_at) <= new Date() ? 'free' : profile.tier);
+                    setHasPermanentAccess(profile.tier !== 'free' && !profile.subscription_expires_at);
+                    setProfileLoaded(true);
+                }
             }
         };
         fetchTier();
     }, [posthog]);
 
+    const canPurchase = (tier: string) => {
+        if (!profileLoaded) {
+            toast.error("Unable to verify your subscription. Please refresh before purchasing.");
+            return false;
+        }
+        if (hasPermanentAccess) {
+            toast.error("You have permanent paid access. Contact support before purchasing another plan.");
+            return false;
+        }
+        if (userTier === 'ultra' && tier === 'pro') {
+            toast.error("You have active Ultra access. Pro can be purchased after it expires.");
+            return false;
+        }
+        return true;
+    };
+
     const handleInstapaySubmit = async () => {
         if (!transactionId.trim()) return;
+        if (!canPurchase(instapayTier)) return;
         setIsSubmitting(true);
 
         try {
@@ -72,7 +95,7 @@ export default function PricingPage() {
                 setIsSubmitting(false);
                 return;
             } else {
-                posthog.capture('purchase_completed', { tier: instapayTier, method: 'instapay' });
+                posthog.capture('payment_submitted', { tier: instapayTier, method: 'instapay' });
                 setSubmitSuccess(true);
             }
         } catch (e) {
@@ -273,6 +296,7 @@ export default function PricingPage() {
                                                     router.push("/login");
                                                     return;
                                                 }
+                                                if (!canPurchase('pro')) return;
                                                 posthog.capture('checkout_started', { tier: 'pro', method: 'gumroad' });
                                                 window.open('https://ziademad5.gumroad.com/l/hkfdfv', '_blank');
                                             }}
@@ -293,6 +317,7 @@ export default function PricingPage() {
                                                 router.push("/login");
                                                 return;
                                             }
+                                            if (!canPurchase('pro')) return;
                                             posthog.capture('checkout_started', { tier: 'pro', method: 'instapay' });
                                             setInstapayTier("pro");
                                             setIsInstapayModalOpen(true);
@@ -413,7 +438,7 @@ export default function PricingPage() {
                                                     router.push("/login");
                                                     return;
                                                 }
-                                                // TODO: Update with real Ultra link
+                                                if (!canPurchase('ultra')) return;
                                                 posthog.capture('checkout_started', { tier: 'ultra', method: 'gumroad' });
                                                 window.open('https://ziademad5.gumroad.com/l/molojy', '_blank');
                                             }}
@@ -433,6 +458,7 @@ export default function PricingPage() {
                                                 router.push("/login");
                                                 return;
                                             }
+                                            if (!canPurchase('ultra')) return;
                                             posthog.capture('checkout_started', { tier: 'ultra', method: 'instapay' });
                                             setInstapayTier("ultra");
                                             setIsInstapayModalOpen(true);
@@ -586,8 +612,10 @@ export default function PricingPage() {
                                                         if (!isAuthenticated) {
                                                             window.location.href = '/login';
                                                         } else if (plan.tier === 'pro') {
+                                                            if (!canPurchase('pro')) return;
                                                             window.open('https://ziademad5.gumroad.com/l/hkfdfv', '_blank');
                                                         } else if (plan.tier === 'ultra') {
+                                                            if (!canPurchase('ultra')) return;
                                                             window.open('https://ziademad5.gumroad.com/l/molojy', '_blank');
                                                         }
                                                     }}
@@ -729,7 +757,7 @@ export default function PricingPage() {
                             Instapay Payment
                         </DialogTitle>
                         <DialogDescription className="text-zinc-400 text-[14px] leading-relaxed mt-3">
-                            To upgrade to <strong className="text-white font-medium">{instapayTier === "ultra" ? "ZEDX Ultra" : "ZEDX Pro"}</strong>, please transfer exactly <strong className={instapayTier === "ultra" ? "text-amber-400 font-semibold" : "text-emerald-400 font-semibold"}>{instapayTier === "ultra" ? "600 EGP" : "300 EGP"}</strong> to the account below. Once transferred, provide your handle or transaction ID for verification.
+                            To upgrade to <strong className="text-white font-medium">{instapayTier === "ultra" ? "ZEDX Ultra" : "ZEDX Pro"}</strong>, please transfer exactly <strong className={instapayTier === "ultra" ? "text-amber-400 font-semibold" : "text-emerald-400 font-semibold"}>{instapayTier === "ultra" ? "600 EGP" : "300 EGP"}</strong> to the account below. Once transferred, provide the unique transaction reference from your transfer receipt for verification.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -762,13 +790,14 @@ export default function PricingPage() {
 
                             <div className="space-y-3">
                                 <label className="text-[12px] font-medium text-zinc-400 tracking-wide uppercase pl-1">
-                                    Your Handle or Phone Number
+                                    Transaction Reference from Your Receipt
                                 </label>
                                 <input
                                     type="text"
                                     value={transactionId}
                                     onChange={(e) => setTransactionId(e.target.value)}
-                                    placeholder="e.g. 01012345678 or handle@instapay"
+                                    placeholder="Enter the unique reference for this transfer"
+                                    maxLength={50}
                                     className="w-full bg-black/50 border border-white/10 rounded-full px-5 py-3.5 text-[15px] text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all shadow-inner"
                                 />
                             </div>

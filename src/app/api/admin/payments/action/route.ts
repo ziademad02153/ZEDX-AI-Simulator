@@ -1,101 +1,40 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: Request) {
+    if (!process.env.ADMIN_SECRET_KEY || req.headers.get("x-admin-key") !== process.env.ADMIN_SECRET_KEY) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body.id !== "string" || !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(body.id)
+        || !["approve", "reject"].includes(body.action)) {
+        return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    }
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
+    }
     try {
-        const adminKey = req.headers.get("x-admin-key");
-        const EXPECTED_KEY = process.env.ADMIN_SECRET_KEY;
-        
-        if (!EXPECTED_KEY || !adminKey || adminKey !== EXPECTED_KEY) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        const body = await req.json();
-        const { id, action } = body;
-
-        if (!id || !action || (action !== 'approve' && action !== 'reject')) {
-            return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
-        }
-
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        
-        if (!supabaseServiceKey) {
-            return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
-        }
-
-        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+        const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY, {
             auth: { autoRefreshToken: false, persistSession: false }
         });
-
-        if (action === 'reject') {
-            const { error } = await supabaseAdmin
-                .from("pending_approvals")
-                .update({ status: 'rejected' })
-                .eq("id", id);
-            
-            if (error) throw error;
-            return NextResponse.json({ success: true, message: "Rejected" });
-        }
-
-        if (action === 'approve') {
-            // 1. Get the user_id for this approval
-            const { data: approval, error: fetchError } = await supabaseAdmin
-                .from("pending_approvals")
-                .select("user_id, amount")
-                .eq("id", id)
-                .single();
-            
-            if (fetchError || !approval) {
-                return NextResponse.json({ error: "Approval not found" }, { status: 404 });
+        const { data, error } = await admin.rpc("process_instapay_payment", {
+            p_approval_id: body.id, p_action: body.action
+        });
+        if (error) {
+            if (error.code === "P0002") return NextResponse.json({ error: "Payment or profile not found" }, { status: 404 });
+            if (error.code === "P0001" || error.code === "23505") {
+                const message = error.message === "ACTIVE_HIGHER_TIER"
+                    ? "This user has active Ultra access. A Pro payment requires manual review."
+                    : error.message === "PERMANENT_GRANT_REQUIRES_REVIEW"
+                    ? "This user has permanent paid access. Review this payment before changing their grant."
+                    : "This payment has already been processed or requires manual review.";
+                return NextResponse.json({ error: message }, { status: 409 });
             }
-
-            // 2. Fetch the current user's profile to get existing expiration date
-            const { data: profile, error: profileError } = await supabaseAdmin
-                .from("profiles")
-                .select("subscription_expires_at")
-                .eq("id", approval.user_id)
-                .single();
-                
-            if (profileError) throw profileError;
-
-            const targetTier = (approval.amount && approval.amount >= 600) ? 'ultra' : 'pro';
-            const monthsToAdd = targetTier === 'ultra' ? 3 : 1;
-            
-            // Calculate expiration date properly by accumulating time
-            let baseDate = new Date();
-            if (profile?.subscription_expires_at) {
-                const currentExp = new Date(profile.subscription_expires_at);
-                if (currentExp > baseDate) {
-                    baseDate = currentExp;
-                }
-            }
-            
-            baseDate.setMonth(baseDate.getMonth() + monthsToAdd);
-
-            const { error: updateProfileError } = await supabaseAdmin
-                .from("profiles")
-                .update({ 
-                    tier: targetTier,
-                    subscription_expires_at: baseDate.toISOString()
-                })
-                .eq("id", approval.user_id);
-            
-            if (updateProfileError) throw updateProfileError;
-
-            // 3. ONLY if the profile update succeeds, mark the transaction as approved
-            const { error: updateApprovalError } = await supabaseAdmin
-                .from("pending_approvals")
-                .update({ status: 'approved' })
-                .eq("id", id);
-            
-            if (updateApprovalError) throw updateApprovalError;
-
-            return NextResponse.json({ success: true, message: `Approved and upgraded to ${targetTier}` });
+            console.error("Payment processing failed:", error.code);
+            return NextResponse.json({ error: "Failed to process payment" }, { status: 500 });
         }
-
-    } catch (error: any) {
-        console.error("Admin Action Error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(data);
+    } catch {
+        return NextResponse.json({ error: "Failed to process payment" }, { status: 500 });
     }
 }

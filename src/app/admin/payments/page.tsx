@@ -19,6 +19,7 @@ type PendingApproval = {
 
 export default function AdminPaymentsPage() {
     const [approvals, setApprovals] = useState<PendingApproval[]>([]);
+    const [reviews, setReviews] = useState<{ provider: string; external_id: string; user_id: string; product: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -36,6 +37,7 @@ export default function AdminPaymentsPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Failed to fetch");
             setApprovals(data.approvals || []);
+            setReviews(data.reviews || []);
             setIsAuthenticated(true);
         } catch (err: any) {
             setError(err.message);
@@ -120,6 +122,17 @@ export default function AdminPaymentsPage() {
                     </Button>
                 </div>
 
+                {reviews.length > 0 && (
+                    <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+                        <h2 className="font-semibold text-amber-400">Gumroad payments requiring manual review</h2>
+                        <p className="mt-2 text-sm text-zinc-300">Review these sales in Gumroad before adjusting access: a refund overlaps another purchase, a Pro purchase conflicts with active Ultra, or the account has permanent paid access.</p>
+                        {reviews.map(review => (
+                            <p key={`${review.provider}:${review.external_id}`} className="mt-2 break-all text-sm text-zinc-300">
+                                Sale: {review.external_id} · Product: {review.product} · User: {review.user_id}
+                            </p>
+                        ))}
+                    </div>
+                )}
                 <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
                     {approvals.length === 0 ? (
                         <div className="p-12 text-center text-zinc-500">

@@ -14,6 +14,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
+    "test:payments": "node --test tests/payment-integrity.test.mjs tests/payment-routes.test.mjs",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
     "dist": "npm run build && electron-builder",
     "build:win": "npm run build && electron-builder --win",
@@ -90,6 +91,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.1",

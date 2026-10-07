@@ -61,7 +61,13 @@ export async function GET(req: Request) {
             profiles: { email: emailMap.get(a.user_id) || "Unknown User" }
         }));
 
-        return NextResponse.json({ approvals: enrichedApprovals });
+        const { data: reviews, error: reviewError } = await supabaseAdmin.from("payment_receipts")
+            .select("provider, external_id, user_id, product, state, created_at")
+            .eq("state", "needs_review").order("created_at", { ascending: false });
+        if (reviewError) {
+            return NextResponse.json({ error: "Unable to load payment reviews" }, { status: 500 });
+        }
+        return NextResponse.json({ approvals: enrichedApprovals, reviews });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

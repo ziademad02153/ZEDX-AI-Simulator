@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
+import nodemailer from "nodemailer";
+
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+}[char]!));
 
 export async function POST(req: Request) {
     try {
-        const body = await req.json();
-        const { transactionId, tier } = body;
+        const body = await req.json().catch(() => null);
+        const tier = body?.tier;
+        const transactionId = typeof body?.transactionId === "string" ? body.transactionId.trim().toLowerCase() : "";
+
+        if (tier !== "pro" && tier !== "ultra") {
+            return NextResponse.json({ error: "Invalid subscription tier" }, { status: 400 });
+        }
 
         if (!transactionId || typeof transactionId !== 'string') {
             return NextResponse.json({ error: "Transaction ID is required" }, { status: 400 });
@@ -23,7 +32,6 @@ export async function POST(req: Request) {
         }
         const token = authHeader.split(' ')[1];
 
-        const { createClient } = require('@supabase/supabase-js');
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -48,15 +56,17 @@ export async function POST(req: Request) {
             { auth: { autoRefreshToken: false, persistSession: false } }
         );
 
-        // 40X SECURITY FIX: Prevent Duplicate Transaction IDs (Anti-Spam)
-        const { data: existingTx } = await supabaseAdmin
-            .from("pending_approvals")
-            .select("id")
-            .eq("transaction_id", transactionId)
-            .single();
-
-        if (existingTx) {
-            return NextResponse.json({ error: "This Transaction ID has already been submitted for review." }, { status: 409 });
+        const { data: profile, error: profileError } = await supabaseAdmin.from("profiles")
+            .select("tier, subscription_expires_at").eq("id", user.id).single();
+        if (profileError || !profile) {
+            return NextResponse.json({ error: "Unable to verify subscription" }, { status: 500 });
+        }
+        if (profile.tier !== "free" && !profile.subscription_expires_at) {
+            return NextResponse.json({ error: "Your account has permanent paid access. Contact support before purchasing another plan." }, { status: 409 });
+        }
+        if (tier === "pro" && profile.tier === "ultra" && (!profile.subscription_expires_at
+            || new Date(profile.subscription_expires_at) > new Date())) {
+            return NextResponse.json({ error: "You already have active Ultra access. Pro can be purchased after it expires." }, { status: 409 });
         }
 
         const { error: insertError } = await supabaseAdmin
@@ -71,13 +81,15 @@ export async function POST(req: Request) {
             });
 
         if (insertError) {
+            if (insertError.code === "23505") {
+                return NextResponse.json({ error: "This transaction reference has already been submitted." }, { status: 409 });
+            }
             console.error("Error inserting pending approval:", insertError);
             return NextResponse.json({ error: "Failed to submit request" }, { status: 500 });
         }
 
         // Send email notification to Admin
         try {
-            const nodemailer = require("nodemailer");
             const transporter = nodemailer.createTransport({
                 service: "gmail",
                 auth: {
@@ -95,8 +107,8 @@ export async function POST(req: Request) {
                         <h2 style="color: #10b981;">New Instapay Payment Request!</h2>
                         <p>A user has just submitted a new payment request for <strong>ZEDX ${tier === "ultra" ? "Ultra" : "Pro"}</strong>.</p>
                         <hr style="border: 1px solid #eee; margin: 15px 0;" />
-                        <p><strong>User Email:</strong> ${user.email || 'N/A'}</p>
-                        <p><strong>Transaction ID/Username:</strong> ${transactionId}</p>
+                        <p><strong>User Email:</strong> ${escapeHtml(user.email || 'N/A')}</p>
+                        <p><strong>Transaction Reference:</strong> ${escapeHtml(transactionId)}</p>
                         <p><strong>Amount:</strong> ${amount} EGP</p>
                         <hr style="border: 1px solid #eee; margin: 15px 0;" />
                         <p>Please review and approve/reject</p>

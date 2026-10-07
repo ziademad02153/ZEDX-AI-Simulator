@@ -1,93 +1,48 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: Request) {
+    const secret = new URL(request.url).searchParams.get("secret");
+    if (!process.env.GUMROAD_WEBHOOK_SECRET || secret !== process.env.GUMROAD_WEBHOOK_SECRET) {
+        return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
+    }
     try {
-        // 1. Security Check: Verify Webhook Secret
-        const url = new URL(request.url);
-        const secret = url.searchParams.get('secret');
-        const expectedSecret = process.env.GUMROAD_WEBHOOK_SECRET;
-
-        if (!expectedSecret || secret !== expectedSecret) {
-            return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
+        const form = await request.formData();
+        const email = form.get("email");
+        const saleId = form.get("sale_id");
+        let product = form.get("permalink") ?? form.get("product_permalink");
+        if (form.get("test") === "true") {
+            return NextResponse.json({ success: true, ignored: true });
         }
-
-        // Gumroad sends data as application/x-www-form-urlencoded
-        const formData = await request.formData();
-        
-        const email = formData.get('email') as string;
-        const permalink = formData.get('permalink') as string;
-        
-        if (!email) {
-            return NextResponse.json({ error: "Missing email" }, { status: 400 });
+        if (typeof product === "string" && product.startsWith("https://")) {
+            const productUrl = new URL(product);
+            if (productUrl.hostname === "gumroad.com" || productUrl.hostname.endsWith(".gumroad.com")
+                || productUrl.hostname === "gum.co") product = productUrl.pathname.split("/").filter(Boolean).pop() ?? "";
         }
-
-        const refunded = formData.get('refunded');
-        const chargebacked = formData.get('chargebacked');
-        const isRefunded = refunded === 'true' || chargebacked === 'true';
-
-        // Determine tier based on Gumroad product permalink
-        let targetTier: 'free' | 'pro' | 'ultra' = 'free';
-        let monthsToAdd = 0;
-
-        if (isRefunded) {
-            // 70X SECURITY FIX: Refund Fraud Prevention
-            // If the user refunded or charged back, immediately revoke their access
-            targetTier = 'free';
-            monthsToAdd = -120; // Set expiration date to the past
-        } else if (permalink === 'hkfdfv') {
-            targetTier = 'pro';
-            monthsToAdd = 1;
-        } else if (permalink === 'molojy') {
-            targetTier = 'ultra';
-            monthsToAdd = 3;
-        } else {
-            // Unknown product, ignore
-            return NextResponse.json({ message: "Ignored unknown product" }, { status: 200 });
+        if (product !== "hkfdfv" && product !== "molojy") {
+            return NextResponse.json({ success: true, ignored: true });
         }
-
-        const supabaseAdmin = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
-        );
-
-        // Fetch current user profile to check existing expiration date
-        const { data: profile } = await supabaseAdmin
-            .from("profiles")
-            .select("subscription_expires_at")
-            .ilike("email", email)
-            .single();
-
-        let baseDate = new Date();
-        if (profile?.subscription_expires_at) {
-            const currentExp = new Date(profile.subscription_expires_at);
-            if (currentExp > baseDate) {
-                // If they still have time left, add to their existing time
-                baseDate = currentExp;
-            }
+        if (typeof email !== "string" || !email.trim() || email.length > 320
+            || typeof saleId !== "string" || !saleId.trim() || saleId.length > 200) {
+            return NextResponse.json({ error: "Missing or invalid email/sale_id" }, { status: 400 });
         }
-
-        // Calculate new expiration date
-        baseDate.setMonth(baseDate.getMonth() + monthsToAdd);
-
-        // Update the user in Supabase by email
-        const { error } = await supabaseAdmin
-            .from("profiles")
-            .update({
-                tier: targetTier,
-                subscription_expires_at: baseDate.toISOString()
-            })
-            .ilike("email", email);
-
+        if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
+        }
+        const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+            auth: { autoRefreshToken: false, persistSession: false }
+        });
+        const { data, error } = await admin.rpc("process_gumroad_payment", {
+            p_sale_id: saleId.trim(), p_email: email.trim(), p_product: product,
+            p_refunded: (form.get("refunded") === "true" && form.get("partially_refunded") !== "true")
+                || form.get("chargebacked") === "true" || form.get("chargedback") === "true"
+        });
         if (error) {
-            console.error("Gumroad Webhook DB Error:", error);
-            return NextResponse.json({ error: "Failed to update user profile" }, { status: 500 });
+            console.error("Gumroad processing failed:", error.code);
+            return NextResponse.json({ error: "Payment could not be processed" }, { status: 500 });
         }
-
-        return NextResponse.json({ success: true, message: `Upgraded ${email} to ${targetTier}` }, { status: 200 });
-
-    } catch (error: any) {
-        console.error("Gumroad Webhook Parse Error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return NextResponse.json(data);
+    } catch {
+        return NextResponse.json({ error: "Invalid webhook payload" }, { status: 400 });
     }
 }
