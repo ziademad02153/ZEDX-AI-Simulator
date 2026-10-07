@@ -277,20 +277,20 @@ function DesktopUserDropdown({ userAvatar, userName, userEmail, userTier, handle
                         "rounded-full overflow-hidden cursor-pointer transition-all duration-300 shadow-sm shrink-0",
                         userTier === 'pro' ? "ring-2 ring-[#a3e635] ring-offset-2 ring-offset-white dark:ring-offset-[#0a0a0a]" : 
                         userTier === 'ultra' ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-white dark:ring-offset-[#0a0a0a]" : "border border-zinc-200 dark:border-zinc-700 hover:ring-2 hover:ring-emerald-500/50",
-                        scrolled ? "w-7 h-7 sm:w-9 sm:h-9" : "w-9 h-9 sm:w-11 sm:h-11"
+                        scrolled ? "w-7 h-7 sm:w-8 sm:h-8" : "w-8 h-8 sm:w-[35px] sm:h-[35px]"
                     )}
                 >
                     {userAvatar ? (
-                        <Image src={userAvatar} alt="Avatar" width={48} height={48} className="w-full h-full object-cover" />
+                        <Image src={userAvatar} alt="Avatar" width={40} height={40} className="w-full h-full object-cover" />
                     ) : (
-                        <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 font-bold text-base">
+                        <div className="w-full h-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 font-bold text-sm">
                             {userName?.charAt(0).toUpperCase() || 'U'}
                         </div>
                     )}
                 </div>
                 {(userTier === 'pro' || userTier === 'ultra') && (
                     <div className={cn(
-                        "absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-black text-[6.5px] tracking-[0.1em] font-black px-1.5 py-[2px] rounded-full shadow-sm z-10 uppercase whitespace-nowrap pointer-events-none",
+                        "absolute -bottom-2.5 left-1/2 -translate-x-1/2 text-black text-[6.5px] tracking-[0.1em] font-black px-1.5 py-[1.5px] rounded-full shadow-xs z-10 uppercase whitespace-nowrap pointer-events-none",
                         userTier === 'ultra' ? "bg-gradient-to-r from-amber-500 to-yellow-300" : "bg-gradient-to-r from-emerald-500 to-[#a3e635]"
                     )}>
                         {userTier.toUpperCase()}

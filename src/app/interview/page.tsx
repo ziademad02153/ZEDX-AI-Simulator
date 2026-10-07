@@ -25,6 +25,7 @@ import { SettingsDialog } from "@/components/settings-dialog";
 import { useConfirmDialog } from "@/components/confirm-dialog";
 import { interviewService } from "@/lib/interview-service";
 import { useInterviewStore } from "@/lib/store";
+import { SUPPORTED_LANGUAGES } from "@/lib/languages";
 import { supabase } from "@/lib/supabase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Lock } from "lucide-react";
@@ -185,7 +186,8 @@ export default function InterviewPage() {
             const savedType = state.interviewType || localStorage.getItem("interview_context_type") || "General";
             const savedJD = state.jobDescription || localStorage.getItem("interview_context_jd") || "";
             const savedResume = state.resumeText || localStorage.getItem("interview_context_resume") || "";
-            const savedLang = state.language || localStorage.getItem("interview_context_lang") || "en-US";
+            const rawLang = (state.language && state.language.trim()) || localStorage.getItem("interview_context_lang") || "en-US";
+            const savedLang = SUPPORTED_LANGUAGES.some(l => l.code === rawLang) ? rawLang : "en-US";
             const savedDifficulty = state.difficulty || localStorage.getItem("interview_context_difficulty") || "Intermediate";
             setInterviewContext({ type: savedType, jd: savedJD, resume: savedResume, lang: savedLang, difficulty: savedDifficulty });
         } catch {

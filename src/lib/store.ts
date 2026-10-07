@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 interface InterviewState {
+    targetRole?: string;
     interviewType: string;
     jobDescription: string;
     resumeText: string;
@@ -11,6 +12,7 @@ interface InterviewState {
 }
 
 const initialState = {
+    targetRole: '',
     interviewType: 'General',
     jobDescription: '',
     resumeText: '',

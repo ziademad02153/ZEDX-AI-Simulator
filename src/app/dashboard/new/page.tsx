@@ -81,6 +81,7 @@ import { useInterviewStore } from "@/lib/store";
 export default function NewInterviewPage() {
     const router = useRouter();
     const posthog = usePostHog();
+    const [targetRole, setTargetRole] = useState("");
     const [jobDescription, setJobDescription] = useState("");
     const [resume, setResume] = useState("");
     const [interviewType, setInterviewType] = useState("Role-Specific");
@@ -161,6 +162,31 @@ export default function NewInterviewPage() {
                 setSelectedModel(savedModel);
             } else {
                 setSelectedModel("openai/gpt-oss-20b");
+            }
+            const savedRole = localStorage.getItem("interview_context_target_role");
+            if (savedRole && savedRole.trim()) {
+                setTargetRole(savedRole);
+            }
+            const savedLang = localStorage.getItem("interview_context_lang");
+            if (savedLang && SUPPORTED_LANGUAGES.some(l => l.code === savedLang)) {
+                setLanguage(savedLang);
+                useInterviewStore.getState().setInterviewContext({ language: savedLang });
+            } else {
+                setLanguage("en-US");
+                useInterviewStore.getState().setInterviewContext({ language: "en-US" });
+                localStorage.setItem("interview_context_lang", "en-US");
+            }
+            const savedDifficulty = localStorage.getItem("interview_context_difficulty");
+            if (savedDifficulty && ["Beginner", "Intermediate", "Expert"].includes(savedDifficulty)) {
+                setDifficulty(savedDifficulty);
+            }
+            const savedType = localStorage.getItem("interview_context_type");
+            if (savedType && ["Role-Specific", "Behavioral", "Technical", "Project Deep Dive"].includes(savedType)) {
+                setInterviewType(savedType);
+            }
+            const savedCount = localStorage.getItem("interview_context_question_count");
+            if (savedCount && ["4", "10", "15", "20", "25", "30", "35", "40"].includes(savedCount)) {
+                setQuestionCount(savedCount);
             }
         } catch { }
     }, [router]);
@@ -255,12 +281,14 @@ export default function NewInterviewPage() {
 
         try {
             useInterviewStore.getState().setInterviewContext({
+                targetRole,
                 interviewType,
                 jobDescription,
                 resumeText: resume,
                 language,
                 difficulty,
             });
+            localStorage.setItem("interview_context_target_role", targetRole);
             localStorage.setItem("interview_context_lang", language);
             localStorage.setItem("interview_context_jd", jobDescription);
             localStorage.setItem("interview_context_resume", resume);
@@ -268,6 +296,11 @@ export default function NewInterviewPage() {
             localStorage.setItem("interview_context_type", interviewType);
             localStorage.setItem("selected_ai_model", selectedModel);
             localStorage.setItem("interview_context_question_count", questionCount.toString());
+            // Clear previous interview pointers so new session never redirects to old report
+            localStorage.removeItem("current_db_id");
+            localStorage.removeItem("interview_results");
+            localStorage.removeItem("session_exchanges");
+            localStorage.removeItem("interview_completed_at");
         } catch (e) {
             console.warn(e);
         }
@@ -291,354 +324,378 @@ export default function NewInterviewPage() {
                 <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-[150px]"></div>
             </div>
 
-            <div className="relative z-10 w-full mx-auto px-6 py-8 sm:py-12 pb-32">
-                {/* Header */}
-                <div className="flex flex-col items-start gap-4 mb-8 sm:mb-12">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
+            <div className="relative z-10 w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-8 max-w-[1520px] antialiased font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text','Inter',sans-serif]">
+                {/* macOS / iOS Style Header */}
+                <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5">
+                    <div className="flex items-center gap-3 sm:gap-3.5">
                         <Link href="/dashboard">
-                            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-full w-10 h-10 sm:w-14 sm:h-14">
-                                <ArrowLeft size={20} className="sm:size-[28px]" />
-                            </Button>
+                            <button className="w-[38px] h-[38px] rounded-full bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.14] active:scale-95 text-zinc-600 dark:text-zinc-300 border border-black/[0.06] dark:border-white/[0.08] transition-all flex items-center justify-center shrink-0">
+                                <ArrowLeft size={16} />
+                            </button>
                         </Link>
                         <div>
-                            <h1 className="text-3xl sm:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-500 dark:from-white dark:to-gray-400 mb-1 sm:mb-2 tracking-tight">
+                            <h1 className="text-[22px] sm:text-[26px] font-bold tracking-tight text-zinc-900 dark:text-white leading-tight">
                                 Setup Interview
                             </h1>
-                            <p className="text-base sm:text-lg text-gray-500 dark:text-gray-400 font-medium tracking-wide">Set up the interview you're preparing for.</p>
+                            <p className="text-[12px] sm:text-[13px] text-zinc-500 dark:text-[#86868b] font-normal">Configure role details and AI interview parameters.</p>
                         </div>
                     </div>
                 </div>
 
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-stretch">
+                    {/* Left Section (8 cols on desktop): Job Description + Resume side-by-side, with Settings panel below */}
+                    <div className="lg:col-span-8 flex flex-col gap-3.5">
+                        {/* Side-by-Side Cards Row */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 flex-1 items-stretch">
 
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[calc(100vh-250px)]">
-                    {/* Left Column: Configuration (8 cols) */}
-                    <div className="lg:col-span-7 flex flex-col gap-8 h-full">
-
-                        {/* Job Description Card */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.4 }}
-                            className="group relative bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-1.5 shadow-xl shadow-zinc-200/20 dark:shadow-none overflow-hidden flex-1 flex flex-col"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none"></div>
-                            <div className="relative bg-white/50 dark:bg-zinc-800/50 backdrop-blur-md rounded-[2.2rem] p-6 sm:p-10 flex-1 flex flex-col">
-                                <div className="flex items-center justify-between mb-6 sm:mb-8">
-                                    <div className="flex items-center gap-4 sm:gap-5">
-                                        <div className="flex items-center justify-center shrink-0">
-                                            <Image src="/Job description.png" alt="Job Description" width={56} height={56} className="object-contain dark:invert drop-shadow-[0_0_12px_rgba(16,185,129,0.3)] transition-all" />
+                            {/* Job Description Card (macOS Window Material) */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 12 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-3xl border border-black/10 dark:border-white/[0.12] rounded-[20px] p-4.5 sm:p-5 shadow-lg shadow-black/20 ring-1 ring-inset ring-white/50 dark:ring-white/[0.08] flex flex-col justify-between flex-1"
+                            >
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-8 h-8 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.08] flex items-center justify-center shrink-0">
+                                            <Image src="/job-desc-icon.png" alt="Job Description" width={20} height={20} className="object-contain dark:invert" />
                                         </div>
                                         <div>
-                                            <h3 className="font-semibold text-xl sm:text-2xl text-gray-900 dark:text-white mb-0.5 sm:mb-1 tracking-tight">Job Description</h3>
-                                            <p className="text-base sm:text-lg text-gray-500 font-medium">Paste the target role details.</p>
+                                            <h3 className="font-semibold text-[15px] sm:text-[16px] text-zinc-900 dark:text-white tracking-tight">Job Description</h3>
+                                            <p className="text-[12px] text-zinc-500 dark:text-[#86868b] whitespace-nowrap">Position requirements & role</p>
                                         </div>
                                     </div>
-                                    <span className="text-[10px] sm:text-sm font-bold font-mono text-[#84cc16] dark:text-[#a3e635] bg-[#84cc16]/10 dark:bg-[#84cc16]/20 border border-[#84cc16]/20 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl tracking-wider uppercase">REQUIRED</span>
+                                    <span className="text-[10px] font-bold font-mono text-[#84cc16] dark:text-[#a3e635] bg-[#84cc16]/10 dark:bg-[#84cc16]/15 border border-[#84cc16]/20 px-2 py-0.5 rounded-full tracking-wider uppercase shrink-0">REQUIRED</span>
                                 </div>
-                                <textarea
-                                    className="w-full flex-1 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 sm:p-6 text-base sm:text-lg text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:outline-none focus:border-[#84cc16]/50 focus:ring-1 focus:ring-[#84cc16]/50 resize-none transition-all min-h-[180px] sm:min-h-[220px] leading-relaxed"
-                                    placeholder="Paste the job description for the role you're applying to..."
-                                    value={jobDescription}
-                                    onChange={(e) => setJobDescription(e.target.value)}
-                                />
-                            </div>
-                        </motion.div>
-
-                        {/* Resume Card */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.4, delay: 0.1 }}
-                            className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-6 sm:p-10 relative overflow-hidden shadow-xl shadow-zinc-200/20 dark:shadow-none flex-1 flex flex-col"
-                        >
-                            <div className="flex flex-col gap-6 mb-8">
-                                <div className="flex items-center gap-4 sm:gap-5">
-                                    <div className="flex items-center justify-center shrink-0">
-                                        <Image src="/cv.png" alt="Resume CV" width={56} height={56} className="object-contain drop-shadow-[0_0_12px_rgba(16,185,129,0.3)] transition-all" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-semibold text-xl sm:text-2xl text-gray-900 dark:text-white tracking-tight">Resume</h3>
-                                        <p className="text-base sm:text-lg text-gray-500 font-medium">Add your CV for tailored context and better results.</p>
-                                    </div>
+                                <div className="flex flex-col gap-2.5 flex-1">
+                                    <input
+                                        type="text"
+                                        className="w-full h-[42px] bg-black/[0.03] dark:bg-[#2c2c2e]/60 border border-black/[0.06] dark:border-white/[0.08] hover:border-black/[0.12] dark:hover:border-white/[0.14] focus:bg-white dark:focus:bg-[#2c2c2e] focus:border-[#84cc16] focus:ring-2 focus:ring-[#84cc16]/20 rounded-xl px-3.5 text-[16px] sm:text-[14px] font-medium text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-[#636366] transition-all outline-none"
+                                        placeholder="Target Role (e.g. Senior Frontend Engineer)"
+                                        value={targetRole}
+                                        onChange={(e) => setTargetRole(e.target.value)}
+                                    />
+                                    <textarea
+                                        className="w-full bg-black/[0.03] dark:bg-[#2c2c2e]/60 border border-black/[0.06] dark:border-white/[0.08] hover:border-black/[0.12] dark:hover:border-white/[0.14] focus:bg-white dark:focus:bg-[#2c2c2e] focus:border-[#84cc16] focus:ring-2 focus:ring-[#84cc16]/20 rounded-xl p-3.5 text-[16px] sm:text-[13px] font-normal text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-[#636366] resize-none transition-all flex-1 min-h-[190px] leading-relaxed outline-none"
+                                        placeholder="Paste the job description for the role you're applying to..."
+                                        value={jobDescription}
+                                        onChange={(e) => setJobDescription(e.target.value)}
+                                    />
                                 </div>
-                                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                                    <label className="h-11 sm:h-12 px-6 flex items-center justify-center gap-2 bg-[#84cc16] hover:bg-[#65a30d] text-white sm:text-gray-900 font-bold rounded-xl cursor-pointer transition-colors w-full sm:w-auto shadow-lg shadow-[#84cc16]/20 order-1">
-                                        <Upload size={18} />
-                                        Upload New CV
-                                        <input type="file" className="hidden" accept=".pdf,.txt" onChange={handleFileUpload} />
-                                    </label>
-                                    <div className="w-full sm:w-56 order-2">
-                                        <CustomSelect
-                                            options={savedResumes.map(r => ({ label: r.name, value: r.id }))}
-                                            value={selectedResumeId}
-                                            onChange={(id) => {
-                                                const r = savedResumes.find(sr => sr.id === id);
-                                                if (r) { setResume(r.content); setSelectedResumeId(id); }
-                                            }}
-                                            placeholder="Saved Resumes"
-                                            triggerClassName="h-11 sm:h-12"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                            <textarea
-                                className="w-full flex-1 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl p-4 sm:p-6 text-base sm:text-lg text-gray-900 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:outline-none focus:border-[#84cc16]/50 focus:ring-1 focus:ring-[#84cc16]/50 resize-none transition-all min-h-[180px] sm:min-h-[220px]"
-                                placeholder="Paste resume text or upload PDF..."
-                                value={resume}
-                                onChange={(e) => setResume(e.target.value)}
-                            />
-                            {successMessage && (
-                                <div className="mt-4 flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-500/10 p-3 rounded-xl">
-                                    <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">✓</span>
-                                    {successMessage}
-                                </div>
-                            )}
-                        </motion.div>
+                            </motion.div>
 
-                        {/* Settings Row */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.4, delay: 0.2 }}
-                            className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
-                        >
-                            <div className="relative z-[60] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-4 sm:p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
-                                <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
-                                    <div className="drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
-                                        <Image src="/Interview-Logo.png" alt="Interview Type" width={28} height={28} className="object-contain dark:invert transition-all" />
-                                    </div>
-                                    Interview Type
-                                </label>
-                                <CustomSelect
-                                    options={[
-                                        { label: "Role-Specific", value: "Role-Specific" },
-                                        { label: "Behavioral", value: "Behavioral" },
-                                        { label: "Technical", value: "Technical" },
-                                        { label: "Project Deep Dive", value: "Project Deep Dive" },
-                                    ]}
-                                    value={interviewType}
-                                    onChange={(v) => setInterviewType(v)}
-                                />
-                            </div>
-                            <div className="relative z-[50] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-4 sm:p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
-                                <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
-                                    <div className="text-emerald-600 dark:text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
-                                        <Image src="/Multi-Language.png" alt="Language Globe" width={28} height={28} className="object-contain" />
-                                    </div>
-                                    Language
-                                </label>
-                                <CustomSelect
-                                    options={SUPPORTED_LANGUAGES.map((lang, idx) => {
-                                        const isUltraLang = idx >= 20;
-                                        const isProLang = idx >= 2 && idx < 20;
-                                        let label = lang.native;
-                                        if (isUltraLang && userTier !== 'ultra' && !isDesktop) label += ' 🔒 ULTRA';
-                                        if (isProLang && userTier === 'free' && !isDesktop) label += ' 🔒 PRO';
-                                        return { label, value: lang.code };
-                                    })}
-                                    value={language}
-                                    onChange={(val) => {
-                                        const idx = SUPPORTED_LANGUAGES.findIndex(l => l.code === val);
-                                        const isUltraLang = idx >= 20;
-                                        const isProLang = idx >= 2 && idx < 20;
-                                        if (isUltraLang && userTier !== 'ultra' && !isDesktop) { router.push("/pricing"); return; }
-                                        if (isProLang && userTier === 'free' && !isDesktop) { router.push("/pricing"); return; }
-                                        setLanguage(val);
-                                    }}
-                                />
-                            </div>
-                            {!isDesktop && (
-                                <>
-                                    <div className="relative z-[40] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-4 sm:p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
-                                        <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
-                                            <div className="drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
-                                                <Image src="/Granular Scorecards.png" alt="Difficulty Scorecard" width={28} height={28} className="object-contain" />
-                                            </div>
-                                            Difficulty
-                                        </label>
-                                        <CustomSelect
-                                            options={[
-                                                { label: "Beginner", value: "Beginner" },
-                                                { label: "Intermediate", value: "Intermediate" },
-                                                { label: `Expert${userTier !== 'ultra' && !isDesktop ? ' 🔒 ULTRA' : ''}`, value: "Expert" },
-                                            ]}
-                                            value={difficulty}
-                                            onChange={(val) => {
-                                                if (val === "Expert" && userTier !== 'ultra' && !isDesktop) { router.push("/pricing"); return; }
-                                                setDifficulty(val);
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="relative z-[30] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-4 sm:p-6 shadow-xl shadow-zinc-200/20 dark:shadow-none">
-                                        <label className="flex items-center gap-3 text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3 sm:mb-4 tracking-tight">
-                                            <div className="drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
-                                                <Image src="/question.png" alt="Questions" width={36} height={36} className="object-contain scale-110" />
-                                            </div>
-                                            Questions
-                                        </label>
-                                        <CustomSelect
-                                            options={[
-                                                { label: "4 Questions", value: "4" },
-                                                { label: `10 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "10" },
-                                                { label: `15 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "15" },
-                                                { label: `20 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "20" },
-                                                { label: `25 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "25" },
-                                                { label: `30 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "30" },
-                                                { label: `35 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "35" },
-                                                { label: `40 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "40" },
-                                            ]}
-                                            value={questionCount}
-                                            onChange={(val) => {
-                                                if (parseInt(val) > 4 && !isPro && !isDesktop) { router.push("/pricing"); return; }
-                                                setQuestionCount(val);
-                                            }}
-                                        />
-                                    </div>
-                                </>
-                            )}
-                        </motion.div>
-
-                    </div>
-
-
-                    {/* Right Column: Model Selection & Chat (5 cols) */}
-                    <div className="lg:col-span-5 relative flex flex-col h-full">
-
-                        {/* Model Selection Card */}
-                        <motion.div
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.5 }}
-                            className="bg-white/70 dark:bg-zinc-900/60 backdrop-blur-xl border border-zinc-200/50 dark:border-white/10 rounded-[2.5rem] p-6 sm:p-10 shadow-xl shadow-zinc-200/20 dark:shadow-none flex-grow flex flex-col h-full"
-                        >
-                            {/* AI Model Header with AI.jpg */}
-                            <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden shadow-sm border border-gray-100 dark:border-white/10">
-                                    <Image src="/AI.jpg" alt="AI Model" width={48} height={48} className="w-full h-full object-cover" />
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold text-gray-900 dark:text-white text-xl sm:text-2xl tracking-tight">Interview Engine</h3>
-                                    <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium">Select your preferred AI interviewer</p>
-                                </div>
-                            </div>
-
-                            {/* Models List */}
-                            <div className="space-y-3 sm:space-y-4 mb-8">
-                                {AI_MODELS.map((model) => {
-                                    const isLocked = (model.tier === 'ultra' && userTier !== 'ultra' && !isDesktop) ||
-                                        (model.tier === 'pro' && userTier === 'free' && !isDesktop);
-
-                                    return (
-                                        <div
-                                            key={model.id}
-                                            onClick={() => {
-                                                if (isLocked) {
-                                                    router.push("/pricing");
-                                                    return;
-                                                }
-                                                setSelectedModel(model.id);
-                                            }}
-                                            className={cn(
-                                                "relative p-3.5 sm:p-5 rounded-2xl border-2 transition-all flex items-center gap-4 sm:gap-5 group/item overflow-hidden",
-                                                selectedModel === model.id
-                                                    ? "bg-white dark:bg-white/5 border-[#84cc16] shadow-sm"
-                                                    : "bg-gray-50 dark:bg-black/20 border-transparent hover:bg-gray-100 dark:hover:bg-white/5",
-                                                isLocked ? "cursor-pointer" : "cursor-pointer"
-                                            )}
-                                        >
-                                            {isLocked && (
-                                                <div className="absolute inset-0 z-10 flex items-center justify-end pr-5 backdrop-blur-[2.5px] bg-white/5 dark:bg-black/20">
-                                                    <div className={cn(
-                                                        "px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider shadow-lg flex items-center gap-1.5",
-                                                        model.tier === 'ultra' ? "bg-amber-500/20 text-amber-500 border border-amber-500/30" : "bg-emerald-500/20 text-emerald-500 border border-emerald-500/30"
-                                                    )}>
-                                                        {model.tier === 'ultra' ? 'ULTRA' : 'PRO'}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            <div className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white dark:bg-black p-1.5 sm:p-2 shadow-sm border border-gray-100 dark:border-white/10 flex items-center justify-center relative z-0", isLocked && "opacity-50 blur-[1px]")}>
-                                                <Image
-                                                    src={model.logo}
-                                                    alt={model.name}
-                                                    width={40}
-                                                    height={40}
-                                                    className={cn("w-full h-full object-contain", model.logo.includes('openai') && "dark:invert")}
-                                                />
-                                            </div>
-                                            <div className={cn("flex-1 relative z-0", isLocked && "opacity-60 blur-[1px]")}>
-                                                <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-                                                    <h4 className={cn("font-bold text-sm sm:text-base flex items-center gap-2", selectedModel === model.id ? "text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400")}>
-                                                        {model.name}
-                                                    </h4>
-                                                    {selectedModel === model.id && !isLocked && (
-                                                        <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#84cc16] shadow-[0_0_12px_rgba(132,204,22,0.5)]"></div>
-                                                    )}
-                                                </div>
-                                                <p className="text-[10px] sm:text-sm text-gray-400 dark:text-gray-500">{model.description}</p>
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-
-                            {/* Chat Preview */}
+                            {/* Resume Card (macOS Window Material) */}
                             <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.5, delay: 0.2 }}
-                                className="flex-1 flex flex-col"
+                                initial={{ opacity: 0, y: 12 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3, delay: 0.05 }}
+                                className="bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-3xl border border-black/10 dark:border-white/[0.12] rounded-[20px] p-4.5 sm:p-5 shadow-lg shadow-black/20 ring-1 ring-inset ring-white/50 dark:ring-white/[0.08] flex flex-col justify-between flex-1"
                             >
-                                <div className="flex items-center justify-between mb-4 px-2">
-                                    <h3 className="text-lg font-semibold text-gray-500 dark:text-gray-400 flex items-center gap-3 tracking-tight">
-                                        <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center">
-                                            <Image src="/AI2.png" alt="AI" width={24} height={24} className="w-full h-full object-cover" />
+                                <div className="flex items-center justify-between gap-2 mb-3">
+                                    <div className="flex items-center gap-2.5 shrink-0">
+                                        <div className="w-8 h-8 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.08] flex items-center justify-center shrink-0">
+                                            <Image src="/cv-icon.png" alt="Resume" width={20} height={20} className="object-contain" />
                                         </div>
-                                        Test Drive Model
-                                    </h3>
+                                        <div className="shrink-0">
+                                            <h3 className="font-semibold text-[15px] sm:text-[16px] text-zinc-900 dark:text-white tracking-tight">Resume</h3>
+                                            <p className="text-[12px] text-zinc-500 dark:text-[#86868b] whitespace-nowrap">Your CV & experience</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <label className="h-[30px] px-2.5 flex items-center justify-center gap-1.5 bg-[#84cc16] hover:bg-[#72b012] active:scale-[0.98] text-zinc-950 font-semibold rounded-lg cursor-pointer transition-all shadow-xs text-[12px] shrink-0">
+                                            <Upload size={12} />
+                                            Upload
+                                            <input type="file" className="hidden" accept=".pdf,.txt" onChange={handleFileUpload} />
+                                        </label>
+                                        <div className="w-32 sm:w-40 min-w-0">
+                                            <CustomSelect
+                                                options={savedResumes.map(r => ({ label: r.name, value: r.id }))}
+                                                value={selectedResumeId}
+                                                onChange={(id) => {
+                                                    const r = savedResumes.find(sr => sr.id === id);
+                                                    if (r) { setResume(r.content); setSelectedResumeId(id); }
+                                                }}
+                                                placeholder="Saved Resumes"
+                                                triggerClassName="h-[30px] text-[12px] px-2 bg-black/[0.03] dark:bg-[#2c2c2e]/60 border-black/[0.06] dark:border-white/[0.08] rounded-lg"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex-1 h-[250px] sm:h-[350px] mb-6">
-                                    <ModelChat
-                                        modelId={selectedModel}
-                                        modelName={currentModelData.name}
-                                        modelLogo={currentModelData.logo}
+                                <div className="flex flex-col flex-1">
+                                    <textarea
+                                        className="w-full bg-black/[0.03] dark:bg-[#2c2c2e]/60 border border-black/[0.06] dark:border-white/[0.08] hover:border-black/[0.12] dark:hover:border-white/[0.14] focus:bg-white dark:focus:bg-[#2c2c2e] focus:border-[#84cc16] focus:ring-2 focus:ring-[#84cc16]/20 rounded-xl p-3.5 text-[16px] sm:text-[13px] font-normal text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-[#636366] resize-none transition-all flex-1 min-h-[230px] sm:min-h-[242px] leading-relaxed outline-none"
+                                        placeholder="Paste resume text or upload PDF..."
+                                        value={resume}
+                                        onChange={(e) => setResume(e.target.value)}
+                                    />
+                                    {successMessage && (
+                                        <div className="mt-2 flex items-center gap-1.5 text-[12px] text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg">
+                                            <span className="w-3.5 h-3.5 rounded-full bg-emerald-500/20 flex items-center justify-center text-[9px]">✓</span>
+                                            <span className="truncate">{successMessage}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        </div>
+
+                        {/* Settings Panel (Apple Inset Grouped Control Panel - Perfectly matches the combined width of both cards above) */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: 0.1 }}
+                            className="w-full bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-3xl border border-black/10 dark:border-white/[0.12] rounded-[20px] p-3.5 sm:p-4 shadow-lg shadow-black/20 ring-1 ring-inset ring-white/50 dark:ring-white/[0.08]"
+                        >
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                                <div className="flex flex-col gap-1.5 relative z-[60]">
+                                    <label className="flex items-center gap-1.5 text-[12px] font-semibold text-zinc-600 dark:text-zinc-300 tracking-tight truncate">
+                                        <div className="w-5 h-5 rounded-md bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center shrink-0">
+                                            <Image src="/Interview-Logo.png" alt="Interview Type" width={12} height={12} className="object-contain dark:invert" />
+                                        </div>
+                                        <span className="truncate">Interview Type</span>
+                                    </label>
+                                    <CustomSelect
+                                        options={[
+                                            { label: "Role-Specific", value: "Role-Specific" },
+                                            { label: "Behavioral", value: "Behavioral" },
+                                            { label: "Technical", value: "Technical" },
+                                            { label: "Project Deep Dive", value: "Project Deep Dive" },
+                                        ]}
+                                        value={interviewType}
+                                        onChange={(v) => {
+                                            setInterviewType(v);
+                                            useInterviewStore.getState().setInterviewContext({ interviewType: v });
+                                            try { localStorage.setItem("interview_context_type", v); } catch {}
+                                        }}
+                                        triggerClassName="h-[38px] text-[13px] bg-black/[0.03] dark:bg-white/[0.05] border-black/[0.06] dark:border-white/[0.08] rounded-xl"
                                     />
                                 </div>
 
-                                {/* Static Start Interview Button */}
-                                <div className="mt-auto pt-6">
-                                    {error && (
-                                        <div className="mb-4 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm font-medium flex items-center gap-2 backdrop-blur-md animate-in slide-in-from-bottom-2">
-                                            <AlertCircle size={18} />
-                                            {error}
+                                <div className="flex flex-col gap-1.5 relative z-[50]">
+                                    <label className="flex items-center gap-1.5 text-[12px] font-semibold text-zinc-600 dark:text-zinc-300 tracking-tight truncate">
+                                        <div className="w-5 h-5 rounded-md bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center shrink-0">
+                                            <Image src="/Multi-Language.png" alt="Language" width={12} height={12} className="object-contain" />
                                         </div>
-                                    )}
-                                    <Button
-                                        onClick={handleStart}
-                                        disabled={isLoading || !isValid}
-                                        className={cn(
-                                            "w-full h-14 sm:h-16 text-lg sm:text-xl font-bold rounded-2xl transition-all duration-300 shadow-xl",
-                                            isValid
-                                                ? "bg-[#84cc16] hover:bg-[#65a30d] text-white dark:text-gray-900 shadow-[#84cc16]/25 hover:shadow-[#84cc16]/35 hover:-translate-y-0.5 active:translate-y-0"
-                                                : "bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                                        )}
-                                    >
-                                        {isLoading ? (
-                                            <span className="flex items-center justify-center gap-3">
-                                                <Loader2 size={20} className="animate-spin sm:size-[24px]" />
-                                                Preparing...
-                                            </span>
-                                        ) : (
-                                            <span className="flex items-center justify-center gap-3">
-                                                Start Interview
-                                                <ArrowLeft className="rotate-180 sm:size-[24px]" size={20} />
-                                            </span>
-                                        )}
-                                    </Button>
-
+                                        <span className="truncate">Language</span>
+                                    </label>
+                                    <CustomSelect
+                                        options={SUPPORTED_LANGUAGES.map((lang, idx) => {
+                                            const isUltraLang = idx >= 20;
+                                            const isProLang = idx >= 2 && idx < 20;
+                                            let label = lang.native;
+                                            if (isUltraLang && userTier !== 'ultra' && !isDesktop) label += ' 🔒 ULTRA';
+                                            if (isProLang && userTier === 'free' && !isDesktop) label += ' 🔒 PRO';
+                                            return { label, value: lang.code };
+                                        })}
+                                        value={language}
+                                        onChange={(val) => {
+                                            const idx = SUPPORTED_LANGUAGES.findIndex(l => l.code === val);
+                                            const isUltraLang = idx >= 20;
+                                            const isProLang = idx >= 2 && idx < 20;
+                                            if (isUltraLang && userTier !== 'ultra' && !isDesktop) { router.push("/pricing"); return; }
+                                            if (isProLang && userTier === 'free' && !isDesktop) { router.push("/pricing"); return; }
+                                            setLanguage(val);
+                                            useInterviewStore.getState().setInterviewContext({ language: val });
+                                            try { localStorage.setItem("interview_context_lang", val); } catch {}
+                                        }}
+                                        triggerClassName="h-[38px] text-[13px] bg-black/[0.03] dark:bg-white/[0.05] border-black/[0.06] dark:border-white/[0.08] rounded-xl"
+                                    />
                                 </div>
-                            </motion.div>
+
+                                {!isDesktop && (
+                                    <>
+                                        <div className="flex flex-col gap-1.5 relative z-[40]">
+                                            <label className="flex items-center gap-1.5 text-[12px] font-semibold text-zinc-600 dark:text-zinc-300 tracking-tight truncate">
+                                                <div className="w-5 h-5 rounded-md bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center shrink-0">
+                                                    <Image src="/Granular Scorecards.png" alt="Difficulty" width={12} height={12} className="object-contain" />
+                                                </div>
+                                                <span className="truncate">Difficulty</span>
+                                            </label>
+                                            <CustomSelect
+                                                options={[
+                                                    { label: "Beginner", value: "Beginner" },
+                                                    { label: "Intermediate", value: "Intermediate" },
+                                                    { label: `Expert${userTier !== 'ultra' && !isDesktop ? ' 🔒 ULTRA' : ''}`, value: "Expert" },
+                                                ]}
+                                                value={difficulty}
+                                                onChange={(val) => {
+                                                    if (val === "Expert" && userTier !== 'ultra' && !isDesktop) { router.push("/pricing"); return; }
+                                                    setDifficulty(val);
+                                                    useInterviewStore.getState().setInterviewContext({ difficulty: val });
+                                                    try { localStorage.setItem("interview_context_difficulty", val); } catch {}
+                                                }}
+                                                triggerClassName="h-[38px] text-[13px] bg-black/[0.03] dark:bg-white/[0.05] border-black/[0.06] dark:border-white/[0.08] rounded-xl"
+                                            />
+                                        </div>
+
+                                        <div className="flex flex-col gap-1.5 relative z-[30]">
+                                            <label className="flex items-center gap-1.5 text-[12px] font-semibold text-zinc-600 dark:text-zinc-300 tracking-tight truncate">
+                                                <div className="w-5 h-5 rounded-md bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-center shrink-0">
+                                                    <Image src="/question.png" alt="Questions" width={12} height={12} className="object-contain" />
+                                                </div>
+                                                <span className="truncate">Questions</span>
+                                            </label>
+                                            <CustomSelect
+                                                options={[
+                                                    { label: "4 Questions", value: "4" },
+                                                    { label: `10 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "10" },
+                                                    { label: `15 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "15" },
+                                                    { label: `20 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "20" },
+                                                    { label: `25 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "25" },
+                                                    { label: `30 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "30" },
+                                                    { label: `35 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "35" },
+                                                    { label: `40 Questions${!isPro && !isDesktop ? ' 🔒 PRO' : ''}`, value: "40" },
+                                                ]}
+                                                value={questionCount}
+                                                onChange={(val) => {
+                                                    if (parseInt(val) > 4 && !isPro && !isDesktop) { router.push("/pricing"); return; }
+                                                    setQuestionCount(val);
+                                                    try { localStorage.setItem("interview_context_question_count", val); } catch {}
+                                                }}
+                                                triggerClassName="h-[38px] text-[13px] bg-black/[0.03] dark:bg-white/[0.05] border-black/[0.06] dark:border-white/[0.08] rounded-xl"
+                                            />
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+
+                    {/* Right Column: AI Model Selection & Test Drive & Start CTA (4 cols on desktop) */}
+                    <div className="lg:col-span-4 relative flex flex-col">
+                        <motion.div
+                            initial={{ opacity: 0, x: 16 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-3xl border border-black/10 dark:border-white/[0.12] rounded-[20px] p-4.5 sm:p-5 shadow-lg shadow-black/20 ring-1 ring-inset ring-white/50 dark:ring-white/[0.08] flex flex-col justify-between h-full"
+                        >
+                            <div>
+                                {/* AI Model Header */}
+                                <div className="flex items-center gap-2.5 mb-3">
+                                    <div className="w-8 h-8 rounded-xl overflow-hidden border border-black/[0.06] dark:border-white/[0.08] shrink-0">
+                                        <Image src="/AI.jpg" alt="AI Model" width={32} height={32} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-zinc-900 dark:text-white text-[15px] sm:text-[16px] tracking-tight">Interview Engine</h3>
+                                        <p className="text-[12px] text-zinc-500 dark:text-[#86868b]">Select your preferred AI interviewer.</p>
+                                    </div>
+                                </div>
+
+                                {/* Models List */}
+                                <div className="space-y-1.5 mb-3">
+                                    {AI_MODELS.map((model) => {
+                                        const isLocked = (model.tier === 'ultra' && userTier !== 'ultra' && !isDesktop) ||
+                                            (model.tier === 'pro' && userTier === 'free' && !isDesktop);
+
+                                        return (
+                                            <div
+                                                key={model.id}
+                                                onClick={() => {
+                                                    if (isLocked) {
+                                                        router.push("/pricing");
+                                                        return;
+                                                    }
+                                                    setSelectedModel(model.id);
+                                                }}
+                                                className={cn(
+                                                    "relative p-2 rounded-xl border transition-all flex items-center gap-2.5 group/item overflow-hidden",
+                                                    selectedModel === model.id
+                                                        ? "bg-white dark:bg-white/[0.09] border-[#84cc16] shadow-xs ring-1 ring-[#84cc16]/30"
+                                                        : "bg-black/[0.02] dark:bg-[#2c2c2e]/40 border-black/[0.04] dark:border-white/[0.06] hover:bg-black/[0.04] dark:hover:bg-[#2c2c2e]/80",
+                                                    isLocked ? "cursor-pointer" : "cursor-pointer"
+                                                )}
+                                            >
+                                                {isLocked && (
+                                                    <div className="absolute inset-0 z-10 flex items-center justify-end pr-2.5 backdrop-blur-[2px] bg-white/20 dark:bg-black/30">
+                                                        <div className={cn(
+                                                            "px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-xs flex items-center gap-1",
+                                                            model.tier === 'ultra' ? "bg-amber-500/20 text-amber-500 border border-amber-500/30" : "bg-emerald-500/20 text-emerald-500 border border-emerald-500/30"
+                                                        )}>
+                                                            {model.tier === 'ultra' ? 'ULTRA' : 'PRO'}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <div className={cn("w-7.5 h-7.5 rounded-lg bg-white dark:bg-zinc-800 p-0.5 shadow-xs border border-black/[0.05] dark:border-white/[0.08] flex items-center justify-center shrink-0 relative z-0", isLocked && "opacity-50 blur-[1px]")}>
+                                                    <Image
+                                                        src={model.logo}
+                                                        alt={model.name}
+                                                        width={24}
+                                                        height={24}
+                                                        className={cn("w-full h-full object-contain", model.logo.includes('openai') && "dark:invert")}
+                                                    />
+                                                </div>
+                                                <div className={cn("flex-1 min-w-0 relative z-0", isLocked && "opacity-60 blur-[1px]")}>
+                                                    <div className="flex items-center justify-between">
+                                                        <h4 className={cn("font-semibold text-[13px] sm:text-[14px] truncate flex items-center gap-1.5", selectedModel === model.id ? "text-zinc-900 dark:text-white" : "text-zinc-600 dark:text-zinc-300")}>
+                                                            {model.name}
+                                                        </h4>
+                                                        {selectedModel === model.id && !isLocked && (
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-[#84cc16] shadow-[0_0_8px_rgba(132,204,22,0.6)] shrink-0"></div>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[11px] text-zinc-400 dark:text-[#86868b] truncate">{model.description}</p>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+
+                                {/* Chat Preview (macOS Subwindow) */}
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ duration: 0.3, delay: 0.1 }}
+                                    className="flex flex-col"
+                                >
+                                    <div className="flex items-center justify-between mb-1.5 px-0.5">
+                                        <h3 className="text-[12px] font-semibold text-zinc-500 dark:text-[#86868b] flex items-center gap-1.5 tracking-tight">
+                                            <div className="w-3.5 h-3.5 rounded-full overflow-hidden flex items-center justify-center">
+                                                <Image src="/AI2.png" alt="AI" width={14} height={14} className="w-full h-full object-cover" />
+                                            </div>
+                                            Test Drive Model
+                                        </h3>
+                                    </div>
+                                    <div className="h-[140px] sm:h-[150px] mb-2">
+                                        <ModelChat
+                                            modelId={selectedModel}
+                                            modelName={currentModelData.name}
+                                            modelLogo={currentModelData.logo}
+                                        />
+                                    </div>
+                                </motion.div>
+                            </div>
+
+                            {/* macOS Primary Action Button */}
+                            <div className="pt-1">
+                                {error && (
+                                    <div className="mb-2 p-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[12px] font-medium flex items-center gap-1.5 backdrop-blur-md animate-in slide-in-from-bottom-2">
+                                        <AlertCircle size={14} />
+                                        <span className="truncate">{error}</span>
+                                    </div>
+                                )}
+                                <Button
+                                    onClick={handleStart}
+                                    disabled={isLoading || !isValid}
+                                    className={cn(
+                                        "w-full h-[44px] text-[14px] sm:text-[15px] font-bold rounded-xl transition-all duration-200 shadow-sm",
+                                        isValid
+                                            ? "bg-[#84cc16] hover:bg-[#72b012] text-zinc-950 shadow-[0_4px_16px_rgba(132,204,22,0.25)] active:scale-[0.985]"
+                                            : "bg-black/[0.04] dark:bg-white/[0.08] text-zinc-400 dark:text-zinc-400/90 border border-black/[0.06] dark:border-white/[0.08] cursor-not-allowed"
+                                    )}
+                                >
+                                    {isLoading ? (
+                                        <span className="flex items-center justify-center gap-2">
+                                            <Loader2 size={16} className="animate-spin" />
+                                            Preparing...
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center justify-center gap-2">
+                                            Start Interview
+                                            <ArrowLeft className="rotate-180" size={16} />
+                                        </span>
+                                    )}
+                                </Button>
+                            </div>
                         </motion.div>
                     </div>
                 </div>

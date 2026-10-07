@@ -96,11 +96,13 @@ export async function POST(request: Request) {
         const interviewType = interview.analysis?.interview_type || "General";
         const difficulty = interview.analysis?.difficulty || "Mid-Level";
         
-        // Derive target role
+        // Derive target role (prioritize explicit user input)
+        const explicitTargetRole = (typeof interview.analysis?.target_role === "string" && interview.analysis.target_role.trim().length > 0)
+            ? interview.analysis.target_role.trim()
+            : null;
         const targetRoleMatch = jd.split('\n')[0].replace(/^#+\s*/, '').trim();
-        const targetRole = targetRoleMatch && targetRoleMatch.length < 60 
-            ? targetRoleMatch 
-            : (interview.title ? interview.title.replace(/^Interview - /, '') : "Candidate Role");
+        const targetRole = explicitTargetRole 
+            || (targetRoleMatch && targetRoleMatch.length < 60 ? targetRoleMatch : (interview.title ? interview.title.replace(/^Interview - /, '') : "Candidate Role"));
 
         // Fetch user resume text if not directly in session analysis
         let resumeText = interview.analysis?.resume_text;

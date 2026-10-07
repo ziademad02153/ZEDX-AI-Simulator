@@ -117,6 +117,7 @@ export interface Rubric13Report {
  * Represents the structure of the JSONB analysis column which tracks meeting/session data.
  */
 export interface SessionAnalysis {
+    target_role?: string;
     job_description?: string;
     resume_name?: string;
     resume_text?: string;
