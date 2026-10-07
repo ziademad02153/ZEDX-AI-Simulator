@@ -15,6 +15,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://zedx-ai.tech"),
+  // Next resolves ./ against the current route, excluding query parameters.
+  alternates: { canonical: "./" },
   applicationName: "ZEDX",
   appleWebApp: {
     title: "ZEDX AI Interview Simulator",

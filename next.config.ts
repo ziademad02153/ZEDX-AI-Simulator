@@ -16,10 +16,25 @@ const nextConfig: NextConfig = {
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' }
         ],
       },
+      // Authenticated application screens are not search landing pages.
+      // Keep them crawlable so search engines can read this noindex directive.
+      ...[
+        'login', 'onboarding', 'auth', 'dashboard', 'admin', 'interview',
+        'mock-interview', 'desktop-assistant', 'desktop', 'scanner-frame', 'api',
+      ].map((route) => ({
+        source: `/${route}/:path*`,
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
+      })),
     ];
   },
   async redirects() {
     return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.zedx-ai.tech' }],
+        destination: 'https://zedx-ai.tech/:path*',
+        permanent: true,
+      },
       {
         source: '/:path*',
         has: [

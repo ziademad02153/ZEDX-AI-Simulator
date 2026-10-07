@@ -7,14 +7,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
         '',
         '/about',
         '/download',
-        '/login',
-        '/dashboard',
+        '/pricing',
+        '/contact-sales',
         '/privacy',
         '/terms'
     ].map((route) => ({
         url: `${baseUrl}${route}`,
-        lastModified: new Date('2026-09-15'),
-        changeFrequency: 'daily' as const,
         priority: route === '' ? 1 : 0.8,
     }));
 
