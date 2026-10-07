@@ -50,7 +50,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
                         assessmentId: rawReport.assessment_id || `ZEDX-${id.slice(0, 8).toUpperCase()}`,
                         assessmentDate: rawReport.assessment_date || data.created_at,
                         candidateName: rawReport.candidate?.name || "Candidate",
-                        targetRole: data.title || rawReport.candidate?.target_role || "Software Developer",
+                        targetRole: (data.analysis as any)?.target_role || rawReport.candidate?.target_role || (data.title ? data.title.replace(/^Interview - /, '') : "Software Developer"),
                         track: data.analysis?.interview_type || rawReport.candidate?.track || "Role-Specific",
                         interviewType: data.analysis?.interview_type || rawReport.candidate?.interview_type || "Technical",
                         difficulty: data.analysis?.difficulty || rawReport.candidate?.difficulty || "Intermediate",

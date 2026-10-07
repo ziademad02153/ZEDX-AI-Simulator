@@ -133,6 +133,7 @@ export default function MockInterviewPage() {
     const [isInterviewStarted, setIsInterviewStarted] = useState(false);
     
     // Context State
+    const [targetRole, setTargetRole] = useState("");
     const [jd, setJd] = useState("");
     const [resume, setResume] = useState("");
     const [difficulty, setDifficulty] = useState("Intermediate");
@@ -198,6 +199,7 @@ export default function MockInterviewPage() {
 
     // Initialize context from Zustand (and fallback to localStorage for backwards compatibility/hard reloads if any)
     useEffect(() => {
+        let _targetRole = "";
         let _jd = "";
         let _resume = "";
         let _diff = "Intermediate";
@@ -208,8 +210,19 @@ export default function MockInterviewPage() {
 
         try {
             const state = useInterviewStore.getState();
+            const savedTargetRole = localStorage.getItem("interview_context_target_role");
+            _targetRole = state.targetRole || savedTargetRole || "";
+            const stateLang = state.language && state.language.trim();
             const savedLang = localStorage.getItem("interview_context_lang");
-            _lang = (savedLang && savedLang.trim()) ? savedLang : (state.language || "en-US");
+            _lang = stateLang || (savedLang && savedLang.trim()) || "en-US";
+            if (!SUPPORTED_LANGUAGES.some(l => l.code === _lang)) {
+                console.warn(`[Mock Interview] Unsupported language code "${_lang}". Falling back to "en-US".`);
+                _lang = "en-US";
+            }
+            try {
+                localStorage.setItem("interview_context_lang", _lang);
+                useInterviewStore.getState().setInterviewContext({ language: _lang });
+            } catch {}
             const savedJd = localStorage.getItem("interview_context_jd");
             _jd = state.jobDescription || savedJd || "";
             const savedResume = localStorage.getItem("interview_context_resume");
@@ -229,6 +242,10 @@ export default function MockInterviewPage() {
             return;
         }
 
+        dbInterviewIdRef.current = null;
+        try { localStorage.removeItem("current_db_id"); } catch {}
+
+        setTargetRole(_targetRole);
         setJd(_jd);
         setResume(_resume);
         setDifficulty(_diff);
@@ -430,6 +447,7 @@ export default function MockInterviewPage() {
         if (dbInterviewIdRef.current) {
             interviewService.updateInterview(dbInterviewIdRef.current, {
                 analysis: {
+                    target_role: targetRole || undefined,
                     job_description: jd,
                     resume_name: resume ? resume.substring(0, 80).replace(/\n/g, ' ') : "Uploaded Resume",
                     resume_text: resume || undefined,
@@ -514,6 +532,7 @@ export default function MockInterviewPage() {
 
         // Auto-save progress to DB in background with full session data
         const sessionPayload = {
+            target_role: targetRole || undefined,
             job_description: jd,
             resume_name: resume ? resume.substring(0, 80).replace(/\n/g, ' ') : "Uploaded Resume",
             resume_text: resume || undefined,
@@ -531,7 +550,8 @@ export default function MockInterviewPage() {
             interviewService.updateInterview(dbInterviewIdRef.current, { analysis: sessionPayload }).catch(console.error);
             localStorage.setItem("current_db_id", dbInterviewIdRef.current);
         } else {
-            interviewService.saveInterview(`Interview - ${interviewType} (${difficulty})`, "", sessionPayload).then(saved => {
+            const interviewTitle = targetRole ? `Interview - ${targetRole} (${difficulty})` : `Interview - ${interviewType} (${difficulty})`;
+            interviewService.saveInterview(interviewTitle, "", sessionPayload).then(saved => {
                 dbInterviewIdRef.current = saved.id;
                 localStorage.setItem("current_db_id", saved.id);
             }).catch(console.error);
@@ -594,8 +614,10 @@ export default function MockInterviewPage() {
                 }
             } catch (e) {}
 
-            const nameEn = candidateName ? ` ya ${candidateName}` : "";
-            const nameAr = candidateName ? ` يا ${candidateName}` : "";
+            const lowerName = candidateName.toLowerCase();
+            const arName = PHONETIC_EGYPTIAN_NAMES_AR[lowerName] || candidateName;
+            const nameEn = candidateName ? `, ${candidateName}` : "";
+            const nameAr = candidateName ? ` يا ${arName}` : "";
 
             if (langObj.code === 'ar-EG') {
                 nextQuestionText = `أهلاً بك${nameAr}، أنا زيدكس، وهعمل معاك الانترفيو النهارده. ياريت تبدأ وتعرفني بنفسك وتكلمني شوية عن خبراتك؟`;
@@ -928,13 +950,26 @@ Resume Context: ${resume}`;
     };
 
     const endInterview = () => {
-        if (confirm("Are you sure you want to end the interview early? Your current progress will be saved.")) {
+        if (confirm("Are you sure you want to end the interview early?")) {
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-            if (dbInterviewIdRef.current) {
-                router.push(`/dashboard/report/${dbInterviewIdRef.current}`);
-            } else {
-                router.push("/dashboard/report");
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.src = "";
             }
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
+
+            // Check if any answers were actually given in this session
+            const hasAnswers = questionsAsked.some(q => q.a && q.a.trim().length > 0);
+            if (!hasAnswers) {
+                // Exited early without answering - return directly to dashboard
+                router.push("/dashboard");
+                return;
+            }
+
+            // If candidate provided at least one answer, complete and save this session
+            completeInterview(questionsAsked);
         }
     };
 
