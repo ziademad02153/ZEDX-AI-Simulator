@@ -1584,8 +1584,13 @@ export default function InterviewPage() {
                             <Button
                                 onClick={async () => {
                                     if (window.electronAPI) {
-                                        const res = await window.electronAPI.toggleScannerFrame();
-                                        setIsScannerActive(res.active);
+                                        try {
+                                            const res = await window.electronAPI.toggleScannerFrame();
+                                            setIsScannerActive(res.active);
+                                            if (res.error) showToast(res.error, 'error');
+                                        } catch {
+                                            showToast('Could not open the scanner. Please try again.', 'error');
+                                        }
                                     }
                                 }}
                                 variant={isScannerActive ? "default" : "outline"}

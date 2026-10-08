@@ -25,7 +25,7 @@ export interface ElectronAPI {
     resizeOverlay: (width: number, height: number) => void;
     setIgnoreMouseEvents: (ignore: boolean, options?: { forward?: boolean }) => void;
     // Assessment Overlay
-    toggleScannerFrame: () => Promise<{ active: boolean }>;
+    toggleScannerFrame: () => Promise<{ active: boolean; error?: string }>;
     updateScannerBounds: (bounds: { x: number, y: number, width: number, height: number }) => void;
     captureScannerArea: (bounds: { x: number, y: number, width: number, height: number }) => Promise<{ success: boolean; error?: string }>;
     onProcessOcr: (callback: (data: { sourceId: string, bounds: { x: number, y: number, width: number, height: number }, scaleFactor?: number }) => void) => void;

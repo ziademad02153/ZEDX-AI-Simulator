@@ -1,0 +1,24 @@
+{
+  "bytes": 18077249,
+  "sha256": "29f1025eb23a5b5c192cd14a6efbce4509402ff265405072ee6f7d1a09b78f8c",
+  "parts": [
+    "piper-data-00.bin",
+    "piper-data-01.bin",
+    "piper-data-02.bin",
+    "piper-data-03.bin",
+    "piper-data-04.bin",
+    "piper-data-05.bin",
+    "piper-data-06.bin",
+    "piper-data-07.bin",
+    "piper-data-08.bin",
+    "piper-data-09.bin",
+    "piper-data-10.bin",
+    "piper-data-11.bin",
+    "piper-data-12.bin",
+    "piper-data-13.bin",
+    "piper-data-14.bin",
+    "piper-data-15.bin",
+    "piper-data-16.bin",
+    "piper-data-17.bin"
+  ]
+}
