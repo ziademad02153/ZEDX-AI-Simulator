@@ -232,9 +232,9 @@ test('English browser voice preference survives client navigation without invoki
 
 test('the real worker initializes inference before readiness and does not return warmup audio', async () => {
  const source=readFileSync(new URL('../src/lib/piper-amy.worker.ts',import.meta.url),'utf8');const messages=[];const texts=[];let releaseWarmup;let options;
- const scope={postMessage:message=>messages.push(message)};
+ const scope={location:{origin:'http://localhost:3000'},postMessage:message=>messages.push(message)};
  const session={predict:async text=>{texts.push(text);if(text==='Ready.')await new Promise(resolve=>{releaseWarmup=resolve;});return new Blob(['audio']);}};
- vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:{},self:scope,console:{warn(){}},require:name=>name.includes('opening')?{AMY_OPENING_TEXT:'Welcome to ZEDX.'}:{TtsSession:{create:async opt=>{options=opt;return session;}}}});
+ vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:{},URL,self:scope,console:{warn(){}},require:name=>name.includes('data-manifest')?{default:{parts:['piper-data-00.bin']}}:name.includes('runtime-assets')?{preparePiperRuntime:async()=>({})}:name.includes('opening')?{AMY_OPENING_TEXT:'Welcome to ZEDX.'}:{TtsSession:{WASM_LOCATIONS:{},create:async opt=>{options=opt;return session;}}}});
  scope.onmessage({data:{id:1}});await new Promise(resolve=>setImmediate(resolve));
  options.progress({loaded:50,total:100});assert.equal(messages.at(-1).progress.loaded,50);
  assert.equal(messages.some(message=>'audio' in message),false);

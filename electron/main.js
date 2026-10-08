@@ -65,7 +65,7 @@ const isDev = !app.isPackaged;
 const APP_URL = isDev ? 'http://localhost:3000' : 'https://zedx-ai.tech';
 
 // --- ASSESSMENT OVERLAY FRAME ---
-function createScannerFrame() {
+async function createScannerFrame() {
     // v19.0 FIX: Remove listeners from old window before destroying to prevent race condition "closed" signals
     if (scannerFrameWindow) {
         try {
@@ -114,22 +114,36 @@ function createScannerFrame() {
 
     scannerFrameWindow.setContentProtection(isContentProtectionEnabled);
     scannerFrameWindow.setSkipTaskbar(true);
-    scannerFrameWindow.loadURL(`${APP_URL}/scanner-frame?isScanner=true`, {
-        extraHeaders: "x-is-scanner: true\n"
-    });
-
-    scannerFrameWindow.once('ready-to-show', () => {
-        scannerFrameWindow.showInactive();
-        scannerFrameWindow.setSkipTaskbar(true);
-    });
-
-    scannerFrameWindow.on('closed', () => {
+    const frame = scannerFrameWindow;
+    frame.on('closed', () => {
+        if (scannerFrameWindow !== frame) return;
         scannerFrameWindow = null;
         isScannerFrameOpen = false;
         broadcastScannerState(false);
     });
 
-    broadcastScannerState(true);
+    let timeout;
+    try {
+        await Promise.race([
+            frame.loadURL(`${APP_URL}/scanner-frame?isScanner=true`, {
+                extraHeaders: "x-is-scanner: true\n"
+            }),
+            new Promise((_, reject) => {
+                timeout = setTimeout(() => reject(new Error('Scanner did not load within 30 seconds. Please try again.')), 30000);
+            })
+        ]);
+        if (frame.isDestroyed() || scannerFrameWindow !== frame) return { active: false };
+        frame.showInactive();
+        frame.setSkipTaskbar(true);
+        broadcastScannerState(true);
+        return { active: true };
+    } catch (error) {
+        console.error('[Scanner] Window load failed:', error);
+        if (!frame.isDestroyed()) frame.destroy();
+        return { active: false, error: 'Could not open the scanner. Check your connection and try again.' };
+    } finally {
+        clearTimeout(timeout);
+    }
 }
 
 function broadcastScannerState(active) {
@@ -340,8 +354,7 @@ function setupIpcHandlers() {
             }
             return { active: false };
         } else {
-            createScannerFrame();
-            return { active: true };
+            return await createScannerFrame();
         }
     });
 
