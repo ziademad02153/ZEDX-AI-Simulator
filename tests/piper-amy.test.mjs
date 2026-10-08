@@ -4,6 +4,26 @@ import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 
+test('Amy speech chunks preserve the question and bound inference size', () => {
+    const { api } = engine();
+    const text = 'Welcome to ZEDX. Tell me about your most recent project and how you handled a difficult technical problem. ' + 'Explain your approach and the result in detail. '.repeat(12);
+    const chunks = api.splitAmySpeechText(text);
+    assert.ok(chunks.length > 1);
+    assert.ok(chunks.every(chunk => chunk.length > 0 && chunk.length <= 180));
+    assert.equal(chunks.join(' ').replace(/\s+/g, ' ').trim(), text.replace(/\s+/g, ' ').trim());
+    assert.equal(chunks[0], 'Welcome to ZEDX.');
+    assert.equal(api.splitAmySpeechText('My score was 3.5 out of 5. What changed?')[0], 'My score was 3.5 out of 5.');
+    assert.throws(() => api.splitAmySpeechText(text, 0), /Invalid/);
+});
+
+test('Amy chunking handles long text without sentence punctuation', () => {
+    const { api } = engine();
+    const text = 'project '.repeat(150).trim();
+    const chunks = api.splitAmySpeechText(text);
+    assert.ok(chunks.every(chunk => chunk.length <= 180));
+    assert.equal(chunks.join(' '), text);
+});
+
 function engine() {
     const workers = [];
     class Worker {
@@ -20,6 +40,46 @@ function engine() {
         { exports, Worker, window: { Worker }, Blob, setTimeout, clearTimeout });
     return { api: exports, workers };
 }
+
+test('a saved model is described as initialization and does not unlock before opening audio is ready', async () => {
+    const { api, workers } = engine();
+    const loading = api.preloadAmySpeech();
+    const id = workers[0].messages[0].id;
+    workers[0].respond({ id, cached: true });
+    assert.equal(api.getAmySpeechState().cached, true);
+    assert.equal(api.canStartWithEnglishVoice('en-US', false, api.getAmySpeechState(), 'amy'), false);
+    workers[0].respond({ id });
+    await loading;
+    assert.equal(api.getAmySpeechState().status, 'ready');
+    api.disposeAmySpeech();
+});
+
+test('hardware-page start waits for Amy before navigating, and stays put on preparation failure', async () => {
+    const source = readFileSync(new URL('../src/app/dashboard/new/how-to-use/page.tsx', import.meta.url), 'utf8');
+    const ast = ts.createSourceFile('page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    let handler;
+    function visit(node) {
+        if (ts.isVariableDeclaration(node) && node.name.getText(ast) === 'handleStart') handler = node.initializer;
+        ts.forEachChild(node, visit);
+    }
+    visit(ast);
+    assert.ok(handler);
+    for (const fail of [false, true]) {
+        const routes = [], errors = [];
+        let release;
+        const exports = {};
+        vm.runInNewContext(ts.transpileModule(`exports.start = ${handler.getText(ast)};`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, {
+            exports, markInterviewStart() {}, needsAmy: () => true, setPreparingVoice() {}, setVoiceError: error => errors.push(error),
+            preloadAmySpeech: () => new Promise((resolve, reject) => { release = () => fail ? reject(new Error('not ready')) : resolve(); }),
+            router: { push: route => routes.push(route) }
+        });
+        const starting = exports.start();
+        assert.equal(routes.length, 0);
+        release(); await starting;
+        if (fail) { assert.equal(routes.length, 0); assert.match(errors.at(-1), /Amy is not ready/); }
+        else assert.deepEqual(routes, ['/mock-interview']);
+    }
+});
 
 test('Amy preload is shared and synthesis reuses the loaded worker', async () => {
     const { api, workers } = engine();
@@ -71,6 +131,7 @@ test('Interview effect replay retains the preloaded voice; real unmount disposes
         compilerOptions: { target: ts.ScriptTarget.ES2022 }
     }).outputText, {
         exports, speechCleanupTimer: { current: null }, isMounted: { current: false }, speechRequestRef: { current: 0 },
+        amyPlaybackCancelRef: { current: null },
         setTimeout: callback => { timers.set(++nextTimer, callback); return nextTimer; },
         clearTimeout: id => timers.delete(id), disposeAmySpeech: () => disposed++
     });
@@ -119,13 +180,16 @@ test('English browser voice preference survives client navigation without invoki
 test('the real worker initializes inference before readiness and does not return warmup audio', async () => {
  const source=readFileSync(new URL('../src/lib/piper-amy.worker.ts',import.meta.url),'utf8');const messages=[];const texts=[];let releaseWarmup;let options;
  const scope={postMessage:message=>messages.push(message)};
- const session={predict:async text=>{texts.push(text);if(text==='Ready.')await new Promise(resolve=>{releaseWarmup=resolve;});return new Blob(['audio']);}};
- vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:{},self:scope,console:{warn(){}},require:()=>({TtsSession:{create:async opt=>{options=opt;return session;}}})});
+ const session={predict:async text=>{texts.push(text);if(text==='Welcome to ZEDX.')await new Promise(resolve=>{releaseWarmup=resolve;});return new Blob(['audio']);}};
+ vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:{},self:scope,console:{warn(){}},require:name=>name.includes('opening')?{AMY_OPENING_TEXT:'Welcome to ZEDX.'}:{TtsSession:{create:async opt=>{options=opt;return session;}}}});
  scope.onmessage({data:{id:1}});await new Promise(resolve=>setImmediate(resolve));
- options.progress({loaded:50,total:100});assert.equal(messages[0].progress.loaded,50);
+ options.progress({loaded:50,total:100});assert.equal(messages.at(-1).progress.loaded,50);
  assert.equal(messages.some(message=>'audio' in message),false);
  releaseWarmup();await new Promise(resolve=>setImmediate(resolve));
  assert.equal(messages.at(-1).id,1);assert.equal(messages.at(-1).audio,undefined);
  scope.onmessage({data:{id:2,text:'The actual question'}});await new Promise(resolve=>setImmediate(resolve));
- assert.deepEqual(texts,['Ready.','The actual question']);assert.ok(messages.at(-1).audio instanceof Blob);
+ assert.deepEqual(texts,['Welcome to ZEDX.','The actual question']);assert.ok(messages.at(-1).audio instanceof Blob);
+ scope.onmessage({data:{id:3,text:'Welcome to ZEDX.'}});await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(texts.length,2,'Opening playback reuses audio prepared in setup');
+ assert.ok(messages.at(-1).audio instanceof Blob);
 });

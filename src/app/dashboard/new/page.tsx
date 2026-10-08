@@ -550,6 +550,7 @@ export default function NewInterviewPage() {
                                                 {englishVoice === 'browser' ? 'Browser English voice selected ✓' :
                                                     amyState.status === 'ready' ? 'Amy is ready ✓' :
                                                     amyState.status === 'error' ? 'Amy could not be prepared. Retry or choose an English browser voice.' :
+                                                    amyState.cached ? 'Starting your saved Amy voice — no model download…' :
                                                     amyState.progress === 100 ? 'Initializing the English voice…' :
                                                     amyState.progress !== null ? `Downloading the English voice… ${amyState.progress}%` : 'Preparing the English voice…'}
                                             </p>

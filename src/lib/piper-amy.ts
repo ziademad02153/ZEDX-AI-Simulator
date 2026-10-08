@@ -3,12 +3,12 @@
 let worker: Worker | undefined;
 let nextId = 0;
 let ready: Promise<void> | undefined;
-export type AmySpeechState = { status: 'idle' | 'loading' | 'ready' | 'error'; progress: number | null };
+export type AmySpeechState = { status: 'idle' | 'loading' | 'ready' | 'error'; progress: number | null; cached?: boolean };
 let speechState: AmySpeechState = { status: 'idle', progress: null };
 const listeners = new Set<() => void>();
 let englishPreference: 'amy' | 'browser' | undefined;
 function publish(state: AmySpeechState): void {
-    if (speechState.status === state.status && speechState.progress === state.progress) return;
+    if (speechState.status === state.status && speechState.progress === state.progress && speechState.cached === state.cached) return;
     speechState = state;
     listeners.forEach(listener => listener());
 }
@@ -46,9 +46,13 @@ function request(text?: string): Promise<Blob | undefined> {
     if (typeof window === 'undefined' || !window.Worker) return Promise.reject(new Error('Browser workers are unavailable'));
     if (!worker) {
         worker = new Worker(new URL('./piper-amy.worker.ts', import.meta.url), { type: 'module' });
-        worker.onmessage = ({ data }: MessageEvent<{ id: number; audio?: Blob; error?: string; progress?: { loaded: number; total: number } }>) => {
+        worker.onmessage = ({ data }: MessageEvent<{ id: number; audio?: Blob; error?: string; cached?: boolean; progress?: { loaded: number; total: number } }>) => {
             const task = pending.get(data.id);
             if (!task) return;
+            if (typeof data.cached === 'boolean') {
+                publish({ status: 'loading', progress: null, cached: data.cached });
+                return;
+            }
             if (data.progress) {
                 const { loaded, total } = data.progress;
                 if (speechState.status === 'loading' && Number.isFinite(loaded) && Number.isFinite(total) && total > 0) {
@@ -94,4 +98,22 @@ export async function synthesizeAmySpeech(text: string): Promise<Blob> {
     const audio = await request(text);
     if (!(audio instanceof Blob) || !audio.size) throw new Error('Amy returned empty audio');
     return audio;
+}
+
+// Keep inference bounded so playback can start before the whole question is rendered.
+export function splitAmySpeechText(text: string, maxLength = 180): string[] {
+    if (!Number.isInteger(maxLength) || maxLength < 1) throw new Error('Invalid speech chunk size');
+    const sentences = text.trim().match(/[\s\S]+?(?:[.!?]+(?:["')]+)?(?=\s|$)|$)/g) || [];
+    const chunks: string[] = [];
+    for (const sentence of sentences) {
+        let remaining = sentence.trim();
+        while (remaining.length > maxLength) {
+            const boundary = remaining.lastIndexOf(' ', maxLength);
+            const cut = boundary > 0 ? boundary : maxLength;
+            chunks.push(remaining.slice(0, cut).trim());
+            remaining = remaining.slice(cut).trim();
+        }
+        if (remaining) chunks.push(remaining);
+    }
+    return chunks;
 }

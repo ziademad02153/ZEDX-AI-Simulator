@@ -15,6 +15,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useInterviewStore } from '@/lib/store';
+import { getEnglishSpeechPreference, preloadAmySpeech } from '@/lib/piper-amy';
+import { resolveWebInterviewLanguage } from '@/lib/web-interview-language';
+import { markInterviewStart } from '@/lib/interview-startup-timing';
 
 export default function HowToUsePage() {
     const router = useRouter();
@@ -36,6 +40,20 @@ export default function HowToUsePage() {
     const [isTestingMic, setIsTestingMic] = useState(false);
     const [isMicTested, setIsMicTested] = useState(false);
     const [agreed, setAgreed] = useState(false);
+    const [preparingVoice, setPreparingVoice] = useState(false);
+    const [voiceError, setVoiceError] = useState('');
+
+    const needsAmy = () => {
+        const context = useInterviewStore.getState();
+        let savedLanguage: string | null = null;
+        try { savedLanguage = localStorage.getItem('interview_context_lang'); } catch {}
+        const language = resolveWebInterviewLanguage(context.language, savedLanguage, Boolean(context.jobDescription && context.resumeText));
+        return !window.electronAPI && language === 'en-US' && getEnglishSpeechPreference() === 'amy';
+    };
+
+    useEffect(() => {
+        if (needsAmy()) void preloadAmySpeech().catch(() => { /* Start displays a retryable error. */ });
+    }, []);
 
     useEffect(() => {
         if (window.electronAPI) {
@@ -173,8 +191,17 @@ export default function HowToUsePage() {
 
     // Instructions removed as requested
 
-    const handleStart = () => {
-        router.push("/mock-interview");
+    const handleStart = async () => {
+        markInterviewStart();
+        setVoiceError('');
+        setPreparingVoice(true);
+        try {
+            // A reload on this page must not open the interview with a cold engine.
+            if (needsAmy()) await preloadAmySpeech();
+            router.push("/mock-interview");
+        } catch {
+            setVoiceError('Amy is not ready yet. Please retry before starting the interview.');
+        } finally { setPreparingVoice(false); }
     };
 
     return (
@@ -366,7 +393,7 @@ export default function HowToUsePage() {
 
                         <Button
                             onClick={handleStart}
-                            disabled={!isMicTested}
+                            disabled={!isMicTested || preparingVoice}
                             className={cn(
                                 "h-14 sm:h-16 px-12 text-lg sm:text-xl font-bold rounded-full shadow-lg transition-all",
                                 isMicTested 
@@ -374,8 +401,9 @@ export default function HowToUsePage() {
                                     : "bg-gray-200 dark:bg-zinc-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                             )}
                         >
-                            Start Interview
+                            {preparingVoice ? 'Preparing Amy…' : 'Start Interview'}
                         </Button>
+                        {voiceError && <p role="alert" className="mt-3 text-sm text-red-500">{voiceError}</p>}
                     </motion.div>
                 )}
             </AnimatePresence>

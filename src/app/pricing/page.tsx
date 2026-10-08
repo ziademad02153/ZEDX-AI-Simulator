@@ -176,7 +176,7 @@ export default function PricingPage() {
                             {/* Upgrade nudge — subtle, not aggressive */}
                             <div className="mt-2 pt-4 border-t border-gray-200 dark:border-white/5">
                                 <p className="text-[12px] text-gray-400 dark:text-zinc-600 font-medium leading-relaxed">
-                                    ↑ Upgrade for unlimited sessions, 29 languages & premium AI models
+                                    ↑ Upgrade for unlimited sessions, 30 languages & premium AI models
                                 </p>
                             </div>
                         </div>
@@ -366,7 +366,7 @@ export default function PricingPage() {
 
                             {[
                                 { label: "Advanced Voice-to-Voice AI", sub: "Zero latency, natural flowing conversations" },
-                                { label: "All 29 Languages Unlocked", sub: "Full global language access without limits" },
+                                { label: "All 30 Languages Unlocked", sub: "Full global language access without limits" },
                                 { label: "Technical & Behavioral", sub: "Complete tailored interview scenarios" },
                                 { label: "Real-Time Evaluation", sub: "Granular feedback & PDF reports" },
                                 { label: "Expert Difficulty Level", sub: "The ultimate FAANG-level challenge" },
@@ -669,7 +669,7 @@ export default function PricingPage() {
                                     category: "Language & Customization",
                                     rows: [
                                         { label: "20 Languages", free: false, pro: true, ultra: true, ent: true },
-                                        { label: "All 29 Languages", free: false, pro: false, ultra: true, ent: true },
+                                        { label: "All 30 Languages", free: false, pro: false, ultra: true, ent: true },
                                         { label: "Custom difficulty level", free: false, pro: true, ultra: true, ent: true },
                                         { label: "Expert (FAANG) difficulty", free: false, pro: false, ultra: true, ent: true },
                                         { label: "Custom interview length", free: false, pro: true, ultra: true, ent: true },
