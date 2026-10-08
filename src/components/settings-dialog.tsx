@@ -1,5 +1,7 @@
 "use client";
 
+import { syncServerSession } from "@/lib/session-sync";
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Settings, User, LogOut, Trash2 } from "lucide-react";
@@ -32,6 +34,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         setIsLoading(true);
         try {
             await supabase.auth.signOut();
+            await syncServerSession(null);
             // Clear auth cookie
             document.cookie = "auth_token=; path=/; max-age=0";
             window.location.href = "/login";

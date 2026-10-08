@@ -1,5 +1,7 @@
 "use client";
 
+import { syncServerSession } from "@/lib/session-sync";
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
@@ -59,6 +61,7 @@ export function DesktopNavBar() {
     const handleSignOut = async () => {
         try {
             await supabase.auth.signOut();
+            await syncServerSession(null);
             window.location.href = '/login?desktop=true';
         } catch (error) {
             console.error('Sign out error:', error);

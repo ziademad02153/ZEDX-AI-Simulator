@@ -8,6 +8,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { SUPPORTED_LANGUAGES } from "@/lib/languages";
+import { preloadAmySpeech, getAmySpeechState, subscribeAmySpeech, canStartWithEnglishVoice, setEnglishSpeechPreference, disposeAmySpeech } from "@/lib/piper-amy";
+import { loadWebSpeechVoices, selectWebSpeechVoice } from "@/lib/web-interview-language";
 import { resumeService, Resume } from "@/lib/resume-service";
 import { ModelChat } from "@/components/dashboard/model-chat";
 import { PaywallModal } from "@/components/paywall-modal";
@@ -86,6 +88,20 @@ export default function NewInterviewPage() {
     const [resume, setResume] = useState("");
     const [interviewType, setInterviewType] = useState("Role-Specific");
     const [language, setLanguage] = useState("en-US");
+    const [languageRestored, setLanguageRestored] = useState(false);
+    const [amyState, setAmyState] = useState(getAmySpeechState);
+    const [englishVoice, setEnglishVoice] = useState<'amy' | 'browser'>('amy');
+    const [voiceRetry, setVoiceRetry] = useState(0);
+    const [checkingBrowserVoice, setCheckingBrowserVoice] = useState(false);
+    const [browserVoiceError, setBrowserVoiceError] = useState('');
+    useEffect(() => {
+        if (languageRestored && language !== 'en-US' && getAmySpeechState().status === 'loading' && !(window as unknown as { electronAPI?: unknown }).electronAPI) disposeAmySpeech();
+        if (!languageRestored || language !== 'en-US' || englishVoice !== 'amy' || (window as unknown as { electronAPI?: unknown }).electronAPI) return;
+        const unsubscribe = subscribeAmySpeech(() => setAmyState(getAmySpeechState()));
+        setAmyState(getAmySpeechState());
+        void preloadAmySpeech().catch(() => { /* The setup panel shows retry and an explicit alternative. */ });
+        return unsubscribe;
+    }, [language, languageRestored, englishVoice, voiceRetry]);
     const [difficulty, setDifficulty] = useState("Intermediate");
     const [questionCount, setQuestionCount] = useState("4");
     const [selectedModel, setSelectedModel] = useState("openai/gpt-oss-20b");
@@ -100,6 +116,27 @@ export default function NewInterviewPage() {
     const [isPro, setIsPro] = useState(false);
     const [userTier, setUserTier] = useState<"free" | "pro" | "ultra">("free");
     const [showPaywall, setShowPaywall] = useState(false);
+    const englishVoiceReady = canStartWithEnglishVoice(language, isDesktop, amyState, englishVoice);
+
+    const useBrowserEnglishVoice = async () => {
+        setCheckingBrowserVoice(true);
+        setBrowserVoiceError('');
+        try {
+            if (!window.speechSynthesis) throw new Error('unsupported');
+            const voices = await loadWebSpeechVoices(window.speechSynthesis);
+            if (!selectWebSpeechVoice(voices, 'en-US')) throw new Error('unavailable');
+            setEnglishVoice('browser');
+            disposeAmySpeech();
+        } catch {
+            setBrowserVoiceError('No English browser voice is available. Please retry Amy or use another supported browser.');
+        } finally { setCheckingBrowserVoice(false); }
+    };
+
+    const retryAmyVoice = () => {
+        setBrowserVoiceError('');
+        setEnglishVoice('amy');
+        setVoiceRetry(value => value + 1);
+    };
 
     // Prevent accidental reload if the user has entered some data
     useEffect(() => {
@@ -189,6 +226,7 @@ export default function NewInterviewPage() {
                 setQuestionCount(savedCount);
             }
         } catch { }
+        setLanguageRestored(true);
     }, [router]);
 
     const isValid = jobDescription.trim().length > 10 && resume.trim().length > 10 && AI_MODELS.some(m => m.id === selectedModel);
@@ -232,6 +270,12 @@ export default function NewInterviewPage() {
     };
 
     const handleStart = async () => {
+        // Guard the action as well as the button, including a worker failure after rendering.
+        if (!isDesktop && !(window as unknown as { electronAPI?: unknown }).electronAPI &&
+            !canStartWithEnglishVoice(language, false, getAmySpeechState(), englishVoice)) {
+            setError('Please wait until the English voice is ready, or select an available browser voice.');
+            return;
+        }
         if (!isValid) {
             setError("Please fill in Job Description and Resume to proceed.");
             return;
@@ -280,6 +324,7 @@ export default function NewInterviewPage() {
         });
 
         try {
+            if (!isDesktop) setEnglishSpeechPreference(language === 'en-US' ? englishVoice : 'amy');
             useInterviewStore.getState().setInterviewContext({
                 targetRole,
                 interviewType,
@@ -499,6 +544,34 @@ export default function NewInterviewPage() {
                                         }}
                                         triggerClassName="h-[38px] text-[13px] bg-black/[0.03] dark:bg-white/[0.05] border-black/[0.06] dark:border-white/[0.08] rounded-xl"
                                     />
+                                    {language === 'en-US' && !isDesktop && (
+                                        <div className="rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03] p-3 space-y-2">
+                                            <p role="status" aria-live="polite" className="text-xs font-medium text-zinc-700 dark:text-zinc-200">
+                                                {englishVoice === 'browser' ? 'Browser English voice selected ✓' :
+                                                    amyState.status === 'ready' ? 'Amy is ready ✓' :
+                                                    amyState.status === 'error' ? 'Amy could not be prepared. Retry or choose an English browser voice.' :
+                                                    amyState.progress === 100 ? 'Initializing the English voice…' :
+                                                    amyState.progress !== null ? `Downloading the English voice… ${amyState.progress}%` : 'Preparing the English voice…'}
+                                            </p>
+                                            {englishVoice === 'amy' && (amyState.status === 'loading' || amyState.status === 'idle') && (
+                                                <>
+                                                    <progress aria-label="English voice preparation" value={amyState.progress ?? undefined} max={100} className="w-full h-1.5 accent-lime-500" />
+                                                    <p className="text-[11px] text-zinc-500">First use downloads the voice (about 63 MB) and playback files. Saved in this browser. You can finish your setup while it prepares.</p>
+                                                </>
+                                            )}
+                                            {englishVoice === 'browser' || amyState.status === 'error' ? (
+                                                <button type="button" onClick={retryAmyVoice} className="text-xs font-semibold underline text-zinc-700 dark:text-zinc-200">
+                                                    {englishVoice === 'browser' ? 'Use Amy instead' : 'Retry Amy'}
+                                                </button>
+                                            ) : null}
+                                            {englishVoice === 'amy' && amyState.status !== 'ready' && (
+                                                <button type="button" disabled={checkingBrowserVoice} onClick={useBrowserEnglishVoice} className="block text-xs font-semibold underline text-zinc-700 dark:text-zinc-200 disabled:opacity-50">
+                                                    {checkingBrowserVoice ? 'Checking browser voice…' : 'Use browser voice instead'}
+                                                </button>
+                                            )}
+                                            {browserVoiceError && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{browserVoiceError}</p>}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {!isDesktop && (
@@ -675,7 +748,7 @@ export default function NewInterviewPage() {
                                 )}
                                 <Button
                                     onClick={handleStart}
-                                    disabled={isLoading || !isValid}
+                                    disabled={isLoading || !isValid || !englishVoiceReady || (language === 'en-US' && !isDesktop && checkingBrowserVoice)}
                                     className={cn(
                                         "w-full h-[44px] text-[14px] sm:text-[15px] font-bold rounded-xl transition-all duration-200 shadow-sm",
                                         isValid
@@ -690,7 +763,7 @@ export default function NewInterviewPage() {
                                         </span>
                                     ) : (
                                         <span className="flex items-center justify-center gap-2">
-                                            Start Interview
+                                            {!englishVoiceReady ? 'Preparing English voice…' : 'Start Interview'}
                                             <ArrowLeft className="rotate-180" size={16} />
                                         </span>
                                     )}

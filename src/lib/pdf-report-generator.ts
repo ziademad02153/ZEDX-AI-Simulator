@@ -1,3 +1,4 @@
+import { getReportLabels, reportStatusLabel, reportMetadataLabel, reportTime } from "@/lib/report-labels";
 import { Rubric13Report, CompetencyEvaluation, QuestionEvaluation, CoachingPlanAction } from "@/lib/interview-service";
 import { ZEDX_LOGO_BASE64 } from "@/lib/assets/zedx-logo-base64";
 
@@ -7,7 +8,7 @@ import { ZEDX_LOGO_BASE64 } from "@/lib/assets/zedx-logo-base64";
  * with dynamic pagination (2 questions per question page), full null-safety for unrated scores,
  * and zero browser headers/footers.
  */
-export function generateExecutiveReportHtml(report: Rubric13Report): string {
+export function generateExecutiveReportHtml(report: Rubric13Report, preserveInterviewLanguage = false): string {
     const {
         assessment_id,
         assessment_date,
@@ -19,7 +20,9 @@ export function generateExecutiveReportHtml(report: Rubric13Report): string {
         descriptive_session_metrics
     } = report;
 
-    const formattedDate = new Date(assessment_date).toLocaleDateString("en-US", {
+    const labels = getReportLabels(candidate.language, preserveInterviewLanguage);
+    const localized = preserveInterviewLanguage && candidate.language !== 'en-US';
+    const formattedDate = new Date(assessment_date).toLocaleDateString(preserveInterviewLanguage ? candidate.language : "en-US", {
         year: "numeric",
         month: "short",
         day: "numeric"
@@ -37,6 +40,7 @@ export function generateExecutiveReportHtml(report: Rubric13Report): string {
 
     // Helper for formatting competency key labels
     const formatCompKey = (key: string): string => {
+        if (localized) return competencies.find(comp => comp.key === key)?.name || key;
         return key
             .replace(/_/g, " ")
             .replace(/\b\w/g, c => c.toUpperCase())
@@ -61,11 +65,11 @@ export function generateExecutiveReportHtml(report: Rubric13Report): string {
                 <img src="data:image/png;base64,${ZEDX_LOGO_BASE64}" class="brand-icon" alt="ZEDX Icon">
                 <div class="brand-text">
                     <span class="brand-title">ZEDX AI</span>
-                    <span class="brand-subtitle">Performance Analysis Report</span>
+                    <span class="brand-subtitle">${escapeHtml(labels.report)}</span>
                 </div>
             </div>
             <div class="header-right">
-                <span class="header-meta">Assessment ID: <strong>${escapeHtml(assessment_id)}</strong></span>
+                <span class="header-meta">${escapeHtml(labels.id)}: <strong>${escapeHtml(assessment_id)}</strong></span>
             </div>
         </header>
     `;
@@ -80,7 +84,7 @@ export function generateExecutiveReportHtml(report: Rubric13Report): string {
                 <span class="footer-hash">${escapeHtml(assessment_id)}</span>
             </div>
             <div class="footer-page-num">
-                Page ${pageNum} of ${totalPages}
+                ${escapeHtml(labels.page)} ${pageNum} ${escapeHtml(labels.of)} ${totalPages}
             </div>
         </footer>
     `;
@@ -93,17 +97,17 @@ export function generateExecutiveReportHtml(report: Rubric13Report): string {
         .filter(b => typeof b === "string" && !/^(did not|failed to|unable to|no |lack of|does not|has not|missed)/i.test(b.trim()));
 
     const displayStrengths = isZeroEvidence || positiveStrengths.length === 0
-        ? ["No observable strengths demonstrated due to lack of substantive response."]
+        ? []
         : positiveStrengths.slice(0, 4);
 
     const allGaps = competencies.flatMap(c => c.observed_gaps || []).filter(Boolean);
     const displayGaps = allGaps.length > 0
         ? allGaps.slice(0, 4)
-        : ["Expand on quantitative architectural trade-offs.", "Structure verbal technical explanations with explicit Context-Action-Result format."];
+        : [];
 
     // Cleanse action plan 7 days of false 3.0 promises
     action_plan_7_days.forEach(plan => {
-        if (typeof plan.expected_outcome === "string") {
+        if (!localized && typeof plan.expected_outcome === "string") {
             plan.expected_outcome = plan.expected_outcome.replace(
                 /achieves a BARS score of at least 3\.0.*$/i,
                 "delivers structured, evidence-backed answers in future mock sessions."
@@ -119,11 +123,11 @@ export function generateExecutiveReportHtml(report: Rubric13Report): string {
     });
 
     return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${escapeHtml(preserveInterviewLanguage ? candidate.language : 'en')}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZEDX AI - Candidate Evaluation Report - ${escapeHtml(candidate.name)}</title>
+    <title>ZEDX AI - ${escapeHtml(labels.report)} - ${escapeHtml(candidate.name)}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
@@ -931,7 +935,7 @@ export function generateExecutiveReportHtml(report: Rubric13Report): string {
         }
     </style>
 </head>
-<body>
+<body dir="${preserveInterviewLanguage && candidate.language.startsWith('ar') ? 'rtl' : 'ltr'}">
 
 <!-- ==========================================
      PAGE 1: EXECUTIVE ASSESSMENT SUMMARY
@@ -944,19 +948,19 @@ export function generateExecutiveReportHtml(report: Rubric13Report): string {
         <div class="candidate-bar">
             <div class="candidate-main">
                 <h1 class="candidate-name">${escapeHtml(candidate.name)}</h1>
-                <div class="candidate-tagline">Target Role: ${escapeHtml(candidate.target_role)} • ${escapeHtml(candidate.track)} Track</div>
+                <div class="candidate-tagline">${escapeHtml(labels.role)}: ${escapeHtml(candidate.target_role)} • ${escapeHtml(reportMetadataLabel(candidate.track, candidate.language, preserveInterviewLanguage))}</div>
             </div>
             <div class="candidate-meta-grid">
                 <div class="meta-col">
-                    <span class="meta-lbl">Assessment Date</span>
+                    <span class="meta-lbl">${escapeHtml(labels.date)}</span>
                     <span class="meta-val">${formattedDate}</span>
                 </div>
                 <div class="meta-col">
-                    <span class="meta-lbl">Evaluation Mode</span>
-                    <span class="meta-val">${escapeHtml(candidate.difficulty)} • ${escapeHtml(candidate.interview_type)}</span>
+                    <span class="meta-lbl">${escapeHtml(labels.info)}</span>
+                    <span class="meta-val">${escapeHtml(reportMetadataLabel(candidate.difficulty, candidate.language, preserveInterviewLanguage))} • ${escapeHtml(reportMetadataLabel(candidate.interview_type, candidate.language, preserveInterviewLanguage))}</span>
                 </div>
                 <div class="meta-col right">
-                    <span class="meta-lbl">Assessment ID</span>
+                    <span class="meta-lbl">${escapeHtml(labels.id)}</span>
                     <span class="meta-val">${escapeHtml(assessment_id)}</span>
                 </div>
             </div>
@@ -965,25 +969,25 @@ export function generateExecutiveReportHtml(report: Rubric13Report): string {
         <!-- Executive Score Card -->
         <div class="executive-card">
             <div class="score-box">
-                <div class="score-number">
-                    ${overall_evaluation.bars_score !== null 
+                <div class="score-number" dir="ltr">
+                    ${overall_evaluation.bars_score !== null
                         ? `${overall_evaluation.bars_score.toFixed(1)}<span class="score-denom">/ 5.0</span>`
-                        : `<span style="font-size: 36px;">N/A</span>`
+                        : `<span style="font-size: 18px; line-height: 1.4;">${escapeHtml(labels.unrated)}</span>`
                     }
                 </div>
-                <div class="score-label">OVERALL BARS SCORE</div>
+                <div class="score-label">${escapeHtml(labels.score)}</div>
                 <div class="hire-pill ${overall_evaluation.bars_score === null ? 'slate' : (overall_evaluation.bars_score >= 3.0 ? '' : 'amber')}">
-                    ★ ${escapeHtml(overall_evaluation.performance_level)}
+                    ★ ${escapeHtml(reportStatusLabel(overall_evaluation.performance_level, labels))}
                 </div>
-                <div class="score-subnote">Standardized Performance Scale</div>
+                <div class="score-subnote">${escapeHtml(labels.scale)}</div>
             </div>
             <div class="executive-narrative">
-                <div class="narrative-title">Performance Summary</div>
+                <div class="narrative-title">${escapeHtml(labels.summary)}</div>
                 <p class="narrative-p">${escapeHtml(overall_evaluation.executive_summary)}</p>
                 <div class="tag-row">
-                    <span class="eval-tag">Assessment Coverage: ${overall_evaluation.assessment_coverage_pct}%</span>
-                    <span class="eval-tag">Evidence: ${escapeHtml(overall_evaluation.evidence_completeness)}</span>
-                    <span class="eval-tag">Language: ${escapeHtml(candidate.language)}</span>
+                    <span class="eval-tag">${escapeHtml(labels.coverage)}: ${overall_evaluation.assessment_coverage_pct}%</span>
+                    <span class="eval-tag">${escapeHtml(labels.evidence)}: ${escapeHtml(reportStatusLabel(overall_evaluation.evidence_completeness, labels))}</span>
+                    <span class="eval-tag">${escapeHtml(labels.language)}: ${escapeHtml(candidate.language)}</span>
                 </div>
             </div>
         </div>
@@ -992,7 +996,7 @@ export function generateExecutiveReportHtml(report: Rubric13Report): string {
         <div class="section-wrapper">
             <div class="section-heading-row">
                 <div class="section-heading">
-                    <span>COMPETENCY ANALYSIS</span>
+                    <span>${escapeHtml(labels.competencies)}</span>
                 </div>
             </div>
             <div class="competencies-card">
@@ -1001,18 +1005,18 @@ export function generateExecutiveReportHtml(report: Rubric13Report): string {
                     const isUnrated = comp.bars_score === null;
                     const fillPct = isUnrated ? 0 : Math.min(100, Math.max(0, (comp.bars_score! / 5.0) * 100));
                     const isAmber = !isUnrated && comp.bars_score! < 2.5;
-                    const scoreText = isUnrated ? "Unrated" : `${comp.bars_score!.toFixed(1)} / 5.0`;
+                    const scoreText = isUnrated ? escapeHtml(labels.unrated) : `${comp.bars_score!.toFixed(1)} / 5.0`;
 
                     return `
                     <div class="comp-item">
                         <div class="comp-left">
                             <span class="comp-title">${escapeHtml(comp.name)}</span>
-                            <span class="comp-desc">Weight: ${comp.weight_pct}% • ${escapeHtml(desc)}</span>
+                            <span class="comp-desc">${escapeHtml(labels.weight)}: ${comp.weight_pct}% • ${escapeHtml(desc)}</span>
                         </div>
                         <div class="comp-bar-shell">
                             <div class="comp-bar-fill ${isUnrated ? 'unrated' : (isAmber ? 'amber' : '')}" style="width: ${fillPct}%;"></div>
                         </div>
-                        <div class="comp-score-num">${scoreText}</div>
+                        <div class="comp-score-num" dir="ltr">${scoreText}</div>
                     </div>
                     `;
                 }).join("")}
@@ -1024,7 +1028,7 @@ export function generateExecutiveReportHtml(report: Rubric13Report): string {
             <div class="panel-card">
                 <div class="panel-header green">
                     <span class="status-dot green"></span>
-                    <span>Observable Strengths & Convincing Evidence</span>
+                    <span>${escapeHtml(labels.strengths)}</span>
                 </div>
                 ${displayStrengths.map(s => `
                     <div class="bullet-point">
@@ -1036,7 +1040,7 @@ export function generateExecutiveReportHtml(report: Rubric13Report): string {
             <div class="panel-card">
                 <div class="panel-header amber">
                     <span class="status-dot amber"></span>
-                    <span>Identified Gaps & Development Priorities</span>
+                    <span>${escapeHtml(labels.gaps)}</span>
                 </div>
                 ${displayGaps.map(g => `
                     <div class="bullet-point">
@@ -1065,33 +1069,33 @@ ${questionPages.map((pageQuestions, pageIdx) => {
             <div style="display: flex; flex-direction: column; gap: 11px; margin-top: 12px;">
                 ${pageQuestions.map(q => {
                     const isUnrated = q.bars_score === null;
-                    const scoreText = isUnrated ? "Unrated" : `${q.bars_score!.toFixed(1)} / 5.0`;
+                    const scoreText = isUnrated ? escapeHtml(labels.unrated) : `${q.bars_score!.toFixed(1)} / 5.0`;
                     const scoreAccentClass = isUnrated ? "slate" : (q.bars_score! >= 3.0 ? "" : "amber");
 
-                    const strengthsText = q.strengths && q.strengths.length > 0 
-                        ? q.strengths.join(". ") 
-                        : (isUnrated ? "No observable strengths demonstrated due to lack of substantive response." : "Demonstrated baseline verbal readiness.");
+                    const strengthsText = q.strengths && q.strengths.length > 0
+                        ? q.strengths.join(". ")
+                        : "—";
 
-                    const gapsText = q.gaps && q.gaps.length > 0 
-                        ? q.gaps.join(". ") 
-                        : "No major fatal flaws observed during this exchange.";
+                    const gapsText = q.gaps && q.gaps.length > 0
+                        ? q.gaps.join(". ")
+                        : "—";
 
-                    const rationaleText = q.scoring_rationale || q.evaluator_note || 
-                        (!isUnrated ? `Evaluated at BARS ${q.bars_score!.toFixed(1)}/5.0 based on response depth and gap profile.` : "Insufficient verbal evidence provided.");
+                    const rationaleText = q.scoring_rationale || q.evaluator_note ||
+                        labels.insufficient;
 
-                    const benchmarkText = q.benchmark_model || 
-                        "A distinguished response clearly sets operational context, provides structured decision trade-offs, and quantifies performance outcomes.";
+                    const benchmarkText = q.benchmark_model ||
+                        "—";
 
                     return `
                     <div class="question-card">
                         <div class="q-header-row">
                             <div class="q-meta-left" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                                <span class="q-num-pill">QUESTION ${q.question_number}</span>
+                                <span class="q-num-pill">${escapeHtml(labels.question)} ${q.question_number}</span>
                                 ${q.targeted_competencies.map(c => `<span class="q-cat-tag">${escapeHtml(formatCompKey(c))}</span>`).join("")}
                             </div>
                             <div class="q-score-display">
                                 <span class="q-score-accent ${scoreAccentClass}"></span>
-                                <span>BARS Score: <strong>${scoreText}</strong></span>
+                                <span><strong dir="ltr">${scoreText}</strong></span>
                             </div>
                         </div>
 
@@ -1100,35 +1104,35 @@ ${questionPages.map((pageQuestions, pageIdx) => {
                         </div>
 
                         <div class="transcript-box">
-                            <div style="font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; margin-bottom: 3px;">Candidate Spoken Response</div>
+                            <div style="font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; margin-bottom: 3px;">${escapeHtml(labels.response)}</div>
                             <div class="transcript-content" style="font-style: italic; color: #1e293b; margin-bottom: 4px;">
                                 "${escapeHtml(q.candidate_answer)}"
                             </div>
                             ${q.follow_up && q.follow_up.probe ? `
                                 <div class="followup-box" style="margin-top: 6px; padding: 6px 10px; background: #f8fafc; border-left: 3px solid #6366f1; border-radius: 4px;">
-                                    <div style="font-size: 8pt; color: #4338ca; font-weight: 600; margin-bottom: 2px;">↳ Follow-up Probe: ${escapeHtml(q.follow_up.probe)}</div>
-                                    <div style="font-size: 8.5pt; color: #334155; font-style: italic;">Follow-up Response: "${escapeHtml(q.follow_up.response || "")}"</div>
+                                    <div style="font-size: 8pt; color: #4338ca; font-weight: 600; margin-bottom: 2px;">↳ ${escapeHtml(labels.followup)}: ${escapeHtml(q.follow_up.probe)}</div>
+                                    <div style="font-size: 8.5pt; color: #334155; font-style: italic;">${escapeHtml(labels.followResponse)}: "${escapeHtml(q.follow_up.response || "")}"</div>
                                 </div>
                             ` : ""}
                         </div>
 
                         <div class="analysis-grid">
                             <div class="analysis-box strengths">
-                                <span class="analysis-box-title">✓ Strengths & Behaviors</span>
+                                <span class="analysis-box-title">✓ ${escapeHtml(labels.strengths)}</span>
                                 <div class="analysis-box-body">${escapeHtml(strengthsText)}</div>
                             </div>
                             <div class="analysis-box gaps">
-                                <span class="analysis-box-title">△ Gaps & Vulnerabilities</span>
+                                <span class="analysis-box-title">△ ${escapeHtml(labels.gaps)}</span>
                                 <div class="analysis-box-body">${escapeHtml(gapsText)}</div>
                             </div>
                             <div class="analysis-box rationale">
-                                <span class="analysis-box-title">⚖ Scoring Rationale</span>
+                                <span class="analysis-box-title">⚖ ${escapeHtml(labels.rationale)}</span>
                                 <div class="analysis-box-body">${escapeHtml(rationaleText)}</div>
                             </div>
                         </div>
 
                         <div class="benchmark-box">
-                            <span class="benchmark-lbl">IDEAL BENCHMARK MODEL (5.0 / 5.0 TARGET)</span>
+                            <span class="benchmark-lbl">${escapeHtml(labels.ideal)}</span>
                             <div class="benchmark-content">${escapeHtml(benchmarkText)}</div>
                         </div>
                     </div>
@@ -1153,30 +1157,30 @@ ${questionPages.map((pageQuestions, pageIdx) => {
         <div class="section-wrapper" style="margin-top: 12px;">
             <div class="section-heading-row">
                 <div class="section-heading">
-                    <span>SESSION & VERBAL TELEMETRY METRICS</span>
+                    <span>${escapeHtml(labels.metrics)}</span>
                 </div>
-                <div class="section-hint">Descriptive conversational pacing & engagement analytics (Non-scoring)</div>
+                <div class="section-hint">${escapeHtml(labels.metricsNote)}</div>
             </div>
             <div class="telemetry-grid">
                 <div class="telemetry-card">
-                    <span class="telemetry-val">${descriptive_session_metrics?.total_duration_minutes ?? 12}m</span>
-                    <span class="telemetry-lbl">Total Session Duration</span>
-                    <span class="telemetry-sub">Live simulated dialogue</span>
+                    <span class="telemetry-val">${escapeHtml(reportTime(descriptive_session_metrics?.total_duration_minutes, 'minute', candidate.language, preserveInterviewLanguage))}</span>
+                    <span class="telemetry-lbl">${escapeHtml(labels.duration)}</span>
+
                 </div>
                 <div class="telemetry-card">
-                    <span class="telemetry-val">${descriptive_session_metrics?.average_latency_seconds != null ? descriptive_session_metrics.average_latency_seconds + 's' : '1.8s'}</span>
-                    <span class="telemetry-lbl">Average Answer Latency</span>
-                    <span class="telemetry-sub">Prompt-to-speech pause</span>
+                    <span class="telemetry-val">${escapeHtml(reportTime(descriptive_session_metrics?.average_latency_seconds, 'second', candidate.language, preserveInterviewLanguage))}</span>
+                    <span class="telemetry-lbl">${escapeHtml(labels.latency)}</span>
+
                 </div>
                 <div class="telemetry-card">
-                    <span class="telemetry-val">${descriptive_session_metrics?.total_words ?? 840}</span>
-                    <span class="telemetry-lbl">Spoken Word Count</span>
-                    <span class="telemetry-sub">Verbal volume extracted</span>
+                    <span class="telemetry-val">${descriptive_session_metrics?.total_words ?? '—'}</span>
+                    <span class="telemetry-lbl">${escapeHtml(labels.words)}</span>
+
                 </div>
                 <div class="telemetry-card">
                     <span class="telemetry-val">${descriptive_session_metrics?.total_exchanges ?? questions_assessment.length}</span>
-                    <span class="telemetry-lbl">Recorded Exchanges</span>
-                    <span class="telemetry-sub">Questions + adaptive probes</span>
+                    <span class="telemetry-lbl">${escapeHtml(labels.exchanges)}</span>
+
                 </div>
             </div>
         </div>
@@ -1185,12 +1189,12 @@ ${questionPages.map((pageQuestions, pageIdx) => {
         <div class="section-wrapper">
             <div class="section-heading-row">
                 <div class="section-heading">
-                    <span>7-DAY TARGETED COACHING ROADMAP</span>
+                    <span>${escapeHtml(labels.plan)}</span>
                 </div>
-                <div class="section-hint">Prescriptive acceleration plan based on observed gaps</div>
+                <div class="section-hint">${escapeHtml(labels.plan)}</div>
             </div>
             <div class="roadmap-grid">
-                ${(action_plan_7_days && action_plan_7_days.length >= 3 ? action_plan_7_days.slice(0, 3) : [
+                ${(action_plan_7_days && action_plan_7_days.length >= 3 ? action_plan_7_days.slice(0, 3) : localized ? [] : [
                     {
                         day_range: "Days 1-2",
                         focus_area: "Conceptual Depth & Terminology",
@@ -1214,9 +1218,9 @@ ${questionPages.map((pageQuestions, pageIdx) => {
                         <span class="phase-badge">${escapeHtml(phase.day_range)}</span>
                         <div class="phase-title">${escapeHtml(phase.focus_area)}</div>
                         <div class="phase-desc">
-                            <strong>Actions:</strong> ${escapeHtml(phase.actions.join(" "))}
+                            <strong>${escapeHtml(labels.actions)}:</strong> ${escapeHtml(phase.actions.join(" "))}
                             <br><br>
-                            <strong>Outcome:</strong> ${escapeHtml(phase.expected_outcome)}
+                            <strong>${escapeHtml(labels.outcome)}:</strong> ${escapeHtml(phase.expected_outcome)}
                         </div>
                     </div>
                 `).join("")}
@@ -1227,36 +1231,25 @@ ${questionPages.map((pageQuestions, pageIdx) => {
         <div class="section-wrapper">
             <div class="section-heading-row">
                 <div class="section-heading">
-                    <span>WEEKLY ACTION CHECKLIST</span>
+                    <span>${escapeHtml(labels.checklist)}</span>
                 </div>
-                <div class="section-hint">Concrete milestone verification</div>
+                <div class="section-hint">${escapeHtml(labels.actions)}</div>
             </div>
             <div class="checklist-card">
-                <div class="check-item">
-                    <span class="check-box">✓</span>
-                    <span>Complete targeted domain architecture review and document 3 reference patterns</span>
-                </div>
-                <div class="check-item">
-                    <span class="check-box">✓</span>
-                    <span>Rehearse CAR (Context-Action-Result) responses for 5 complex project scenarios</span>
-                </div>
-                <div class="check-item">
-                    <span class="check-box">✓</span>
-                    <span>Execute ZEDX AI re-simulation test to measure BARS competency trajectory</span>
-                </div>
+                ${action_plan_7_days.flatMap(plan => plan.actions || []).map(action => `<div class="check-item"><span class="check-box">□</span><span>${escapeHtml(action)}</span></div>`).join('')}
             </div>
         </div>
 
         <!-- Performance Synthesis Card -->
         <div class="verdict-card">
             <div class="verdict-header">
-                <span class="verdict-title">Performance Synthesis & Recommendation</span>
-                <span class="verdict-badge">Official Record</span>
+                <span class="verdict-title">${escapeHtml(labels.recommendation)}</span>
+                <span class="verdict-badge">${escapeHtml(labels.record)}</span>
             </div>
             <div class="verdict-body">
-                ${overall_evaluation.bars_score !== null ? `
-                    The candidate demonstrated an overall rating of <strong>${overall_evaluation.bars_score.toFixed(1)} / 5.0</strong> (${escapeHtml(overall_evaluation.performance_level)}) across ${competencies.length} universal dimensions with <strong>${overall_evaluation.assessment_coverage_pct}% assessment coverage</strong>. 
-                    ${overall_evaluation.bars_score >= 3.0 
+                ${localized ? escapeHtml(overall_evaluation.executive_summary) : overall_evaluation.bars_score !== null ? `
+                    The candidate demonstrated an overall rating of <strong>${overall_evaluation.bars_score.toFixed(1)} / 5.0</strong> (${escapeHtml(reportStatusLabel(overall_evaluation.performance_level, labels))}) across ${competencies.length} universal dimensions with <strong>${overall_evaluation.assessment_coverage_pct}% assessment coverage</strong>.
+                    ${overall_evaluation.bars_score >= 3.0
                         ? "The evaluation demonstrates solid technical and communication readiness meeting role standards. Targeted practice on identified development priorities is recommended to maintain momentum."
                         : "While foundational awareness was demonstrated, clear development priorities in core technical depth and structured trade-offs were observed. Completion of the 7-day targeted roadmap is advised to bridge these gaps."}
                 ` : `

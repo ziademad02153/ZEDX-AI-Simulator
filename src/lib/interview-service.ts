@@ -124,6 +124,7 @@ export interface SessionAnalysis {
     interview_type?: string; 
     difficulty?: string;
     language?: string;
+    session_mode?: 'mock_interview';
     model?: string;
     question_count?: number;
     ai_responses?: string[];

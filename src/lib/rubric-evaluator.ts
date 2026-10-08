@@ -16,6 +16,12 @@ export const FIXED_COMPETENCY_KEYS = [
 
 export type CompetencyKey = typeof FIXED_COMPETENCY_KEYS[number];
 
+function parseBarsScore(value: unknown): number | null {
+    if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return null;
+    const score = Number(value);
+    return Number.isFinite(score) && score >= 0 && score <= 5 ? Math.round(score * 10) / 10 : null;
+}
+
 export const COMPETENCY_METADATA: Record<CompetencyKey, { name: string; defaultWeight: number; focus: string }> = {
     role_and_domain_competence: {
         name: "Role & Domain Competence",
@@ -154,7 +160,7 @@ function cleanDisplayText(text: string): string {
 }
 
 /**
- * Calculates overall BARS score (1.0 to 5.0) and performance level.
+ * Calculates overall BARS score (0.0 to 5.0) and performance level.
  * Formula: Sum of (bars_score * (weight_pct / 100)) over rated competencies.
  * When all competencies are Insufficient or Not Directly Assessed, returns null and Unrated level.
  */
@@ -167,12 +173,12 @@ export function calculateOverallBarsScore(competencies: CompetencyEvaluation[]):
 
     for (const comp of competencies) {
         if (
-            comp.bars_score !== null &&
-            comp.bars_score !== undefined &&
+            typeof comp.bars_score === 'number' &&
+            Number.isFinite(comp.bars_score) && comp.bars_score >= 0 && comp.bars_score <= 5 &&
             comp.evidence_status !== "Insufficient" &&
             comp.evidence_status !== "Not Directly Assessed"
         ) {
-            const score = Math.min(5.0, Math.max(1.0, comp.bars_score));
+            const score = comp.bars_score;
             weightedScoreSum += score * comp.weight_pct;
             ratedWeightSum += comp.weight_pct;
         }
@@ -213,6 +219,7 @@ export interface EnforceReportContext {
     interviewType: string;
     difficulty: string;
     language: string;
+    strictLanguage?: boolean;
     evaluatorModel: string;
     sessionExchanges?: any[];
     descriptiveMetrics?: {
@@ -232,7 +239,7 @@ export function enforceRubric13ReportSchema(
     ctx: EnforceReportContext
 ): Rubric13Report {
     const exchanges = ctx.sessionExchanges || [];
-    const rawQuestionsList: any[] = Array.isArray(raw?.questions_assessment) ? raw.questions_assessment : [];
+    const localized = ctx.strictLanguage && ctx.language !== 'en-US';
 
     // 1. Extract and enforce the 5 competencies
     const rawCompetencies: any[] = Array.isArray(raw?.competencies) ? raw.competencies : [];
@@ -276,21 +283,22 @@ export function enforceRubric13ReportSchema(
         }
 
         // Traceable evidence quotes
+        const normalizeEvidence = (text: string) => text.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim().replace(/^["“”]+|["“”]+$/g, '').trim();
+        const answers = exchanges.map((exchange: any) => normalizeEvidence(String(exchange.answer || ''))).filter(Boolean);
         const rawQuotes = Array.isArray(rawItem.traceable_evidence) 
             ? rawItem.traceable_evidence
                 .filter((q: any) => typeof q === "string" && q.trim().length > 0)
+                .filter((q: string) => normalizeEvidence(q).length > 0)
                 .filter((q: string) => !/^(next|skip|i don'?t know|pass|ok|okay)[\.!]?$/i.test(q.trim()))
+                .filter((q: string) => exchanges.length === 0 || answers.some(answer => answer.includes(normalizeEvidence(q))))
             : [];
+
+        if (rawQuotes.length === 0 && evidenceStatus !== 'Not Directly Assessed') evidenceStatus = 'Insufficient';
 
         // STRICT Insufficient Evidence Rule:
         let barsScore: number | null = null;
         if (evidenceStatus !== "Insufficient" && evidenceStatus !== "Not Directly Assessed") {
-            let parsed = Number(rawItem.bars_score);
-            if (!isNaN(parsed) && parsed >= 1.0 && parsed <= 5.0) {
-                barsScore = Math.round(parsed * 10) / 10;
-            } else {
-                barsScore = 3.0; // neutral fallback only when evidence exists
-            }
+            barsScore = parseBarsScore(rawItem.bars_score);
         }
         
         // Filter out negative statements accidentally put into strengths
@@ -302,9 +310,7 @@ export function enforceRubric13ReportSchema(
             !/^(did not|failed to|unable to|no |lack of|does not|has not|missed)/i.test(b.trim())
         );
 
-        const observableBehaviors = positiveBehaviors.length === 0
-            ? [`No observable strengths demonstrated for ${meta.name.toLowerCase()} due to lack of positive behaviors.`]
-            : positiveBehaviors;
+        const observableBehaviors = positiveBehaviors;
 
         const observedGaps = Array.isArray(rawItem.observed_gaps) && rawItem.observed_gaps.length > 0
                 ? rawItem.observed_gaps.map((s: any) => cleanDisplayText(String(s)))
@@ -312,18 +318,18 @@ export function enforceRubric13ReportSchema(
 
         const weightRationale = typeof rawItem.weight_rationale === "string" && rawItem.weight_rationale.trim().length > 0
             ? cleanDisplayText(rawItem.weight_rationale.trim())
-            : `Assigned ${normalizedWeights[idx]}% based on target role requirements and seniority expectations.`;
+            : (localized ? '' : `Assigned ${normalizedWeights[idx]}% based on target role requirements and seniority expectations.`);
 
         return {
             key,
-            name: meta.name,
+            name: localized ? String(rawItem.name || '') : meta.name,
             weight_pct: normalizedWeights[idx],
             weight_rationale: weightRationale,
             bars_score: barsScore,
             evidence_status: evidenceStatus,
             observable_behaviors: observableBehaviors,
             observed_gaps: observedGaps,
-            traceable_evidence: rawQuotes.map((q: any) => cleanDisplayText(String(q)))
+            traceable_evidence: rawQuotes.map((q: string) => q.trim())
         };
     });
 
@@ -338,19 +344,29 @@ export function enforceRubric13ReportSchema(
     const mainExchanges = exchanges.filter((e: any) => e.type !== "followup");
     const followupExchanges = exchanges.filter((e: any) => e.type === "followup");
 
-    const questionsAssessment: QuestionEvaluation[] = rawQuestions.map((q, idx) => {
+    // Bind judgments to saved question numbers, rather than accidentally applying
+    // a reordered model response's score to another candidate answer.
+    const orderedQuestions = mainExchanges.length > 0 ? mainExchanges.map((exchange: any, idx: number) => {
+        const number = (exchange.mainQuestionIndex ?? idx) + 1;
+        return rawQuestions.find(q => Number(q.question_number) === number)
+            || (rawQuestions[idx]?.question_number == null ? rawQuestions[idx] : undefined)
+            || {};
+    }) : rawQuestions;
+
+    const questionsAssessment: QuestionEvaluation[] = orderedQuestions.map((q, idx) => {
         const mainEx = mainExchanges[idx] || exchanges[idx];
-        const followEx = followupExchanges.find((f: any) => f.mainQuestionIndex === idx);
+        const mainIndex = mainEx?.mainQuestionIndex ?? idx;
+        const followEx = followupExchanges.find((f: any) => f.mainQuestionIndex === mainIndex);
 
         let qText = q.question_text ? String(q.question_text).trim() : "";
         if (mainEx && mainEx.question && mainEx.question.trim().length > 10) {
             qText = mainEx.question.trim();
         }
-        qText = cleanDisplayText(qText || `Question ${idx + 1}`);
+        qText = cleanDisplayText(qText || (localized ? '' : `Question ${idx + 1}`));
 
         let cAnswer = q.candidate_answer ? String(q.candidate_answer).trim() : "";
-        if (mainEx && typeof mainEx.answer === "string" && mainEx.answer.trim().length > 0) {
-            cAnswer = mainEx.answer.trim();
+        if (mainEx) {
+            cAnswer = typeof mainEx.answer === "string" ? mainEx.answer.trim() : '';
         }
         cAnswer = cleanDisplayText(cAnswer);
 
@@ -360,7 +376,7 @@ export function enforceRubric13ReportSchema(
                 probe: cleanDisplayText(followEx.question),
                 response: cleanDisplayText(followEx.answer || "")
             };
-        } else if (q.follow_up && typeof q.follow_up === "object" && q.follow_up.probe) {
+        } else if (exchanges.length === 0 && q.follow_up && typeof q.follow_up === "object" && q.follow_up.probe) {
             followUpObj = {
                 probe: cleanDisplayText(String(q.follow_up.probe)),
                 response: cleanDisplayText(String(q.follow_up.response || ""))
@@ -368,26 +384,21 @@ export function enforceRubric13ReportSchema(
         }
 
         let qScore: number | null = null;
-        if (q.bars_score === null || q.bars_score === undefined || String(q.bars_score).trim().toLowerCase() === "null") {
+        if ((mainEx && !cAnswer && !followUpObj?.response) || q.bars_score === null || q.bars_score === undefined || String(q.bars_score).trim().toLowerCase() === "null") {
             qScore = null;
         } else {
-            const parsedQScore = Number(q.bars_score);
-            if (!isNaN(parsedQScore) && parsedQScore >= 1.0 && parsedQScore <= 5.0) {
-                qScore = Math.round(parsedQScore * 10) / 10;
-            } else if (overallBars !== null) {
-                qScore = overallBars;
-            }
+            qScore = parseBarsScore(q.bars_score);
         }
 
         const scoringRationale = (typeof q.scoring_rationale === "string" && q.scoring_rationale.trim().length > 0)
             ? cleanDisplayText(q.scoring_rationale.trim())
-            : (qScore !== null 
+            : localized ? '' : (qScore !== null
                 ? `Response evaluated at BARS ${qScore.toFixed(1)}/5.0 reflecting observed competencies and gap profile.` 
                 : "Evaluated based on response depth.");
 
         const benchmarkModel = typeof q.benchmark_model === "string" && q.benchmark_model.trim().length > 0
             ? cleanDisplayText(q.benchmark_model.trim())
-            : `A distinguished response for this question clearly establishes operational context, details explicit architectural decisions, and quantifies performance outcomes using standard domain terminology.`;
+            : (localized ? '' : `A distinguished response for this question clearly establishes operational context, details explicit architectural decisions, and quantifies performance outcomes using standard domain terminology.`);
 
         // Clean up strengths to remove negative gaps mistakenly placed in strengths
         const rawStrengths = Array.isArray(q.strengths) ? q.strengths.map((s: any) => cleanDisplayText(String(s))) : [];
@@ -398,15 +409,12 @@ export function enforceRubric13ReportSchema(
         const strengths = positiveStrengths.length === 0 ? [] : positiveStrengths;
 
         let gaps = Array.isArray(q.gaps) ? q.gaps.map((g: any) => cleanDisplayText(String(g))) : [];
-        if (gaps.length === 0) {
-            gaps = ["Response lacked sufficient technical depth to fully meet target expectations."];
-        }
 
         return {
-            question_number: Number(q.question_number) || (idx + 1),
+            question_number: mainEx ? mainIndex + 1 : Number(q.question_number) || (idx + 1),
             question_text: qText,
             targeted_competencies: Array.isArray(q.targeted_competencies) ? q.targeted_competencies.map(String) : ["role_and_domain_competence"],
-            candidate_answer: cAnswer || "(No verbal response provided / Unanswered)",
+            candidate_answer: cAnswer || (localized ? '' : "(No verbal response provided / Unanswered)"),
             follow_up: followUpObj,
             bars_score: qScore,
             strengths: strengths,
@@ -450,6 +458,7 @@ export function enforceRubric13ReportSchema(
     ];
 
     const cleanActionText = (text: string) => {
+        if (localized) return cleanDisplayText(text);
         return cleanDisplayText(text)
             .replace(/achieves?\s+(a\s+)?BARS\s+score\s+of\s+(at\s+least\s+)?[\d\.]+/gi, "delivers structured, evidence-backed answers in future mock sessions");
     };
@@ -461,12 +470,12 @@ export function enforceRubric13ReportSchema(
             actions: Array.isArray(p.actions) ? p.actions.map((s: any) => cleanActionText(String(s))) : ["Review interview feedback."],
             expected_outcome: cleanActionText(String(p.expected_outcome || "Deliver structured, evidence-backed answers in the next mock interview."))
         }))
-        : defaultPlan;
+        : (localized ? [] : defaultPlan);
 
     // 6. Build final executive report
     const executiveSummary = (typeof raw?.overall_evaluation?.executive_summary === "string" && raw.overall_evaluation.executive_summary.trim().length > 0)
         ? cleanDisplayText(raw.overall_evaluation.executive_summary.trim())
-        : (overallBars !== null 
+        : localized ? '' : (overallBars !== null
             ? (ctx.language?.startsWith('ar')
                 ? `أظهر المرشح تفاعلاً والتزاماً مناسباً للدور المستهدف بتقييم إجمالي ${overallBars}/5.0 (${performanceLevel}).`
                 : `Candidate demonstrated solid engagement for the target role with an overall rating of ${overallBars}/5.0 (${performanceLevel}).`)
@@ -534,8 +543,8 @@ export function generateLegacyProjection(report: Rubric13Report): LegacyScorecar
         overallScore: overallPct,
         technicalScore: technicalPct,
         communicationScore: commPct,
-        strengths: strengths.length > 0 ? strengths : ["Demonstrated professional engagement", "Communicated core concepts"],
-        improvements: improvements.length > 0 ? improvements : ["Continue expanding domain depth", "Refine trade-off articulation"],
+        strengths,
+        improvements,
         detailedFeedback: report.overall_evaluation.executive_summary
     };
 }

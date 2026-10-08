@@ -100,9 +100,8 @@ export async function POST(request: Request) {
             p_max: MAX_REQUESTS
         });
         
-        if (rateLimitError) {
-            console.error('[Rate Limit Error] Fallback to allow:', rateLimitError.message);
-            // Allow if RPC fails so we don't break the app
+        if (rateLimitError || isAllowed == null) {
+            return NextResponse.json({ error: { message: "Usage verification unavailable. Please retry." } }, { status: 503 });
         } else if (isAllowed === false) {
             return NextResponse.json({ error: { message: "Rate limit exceeded. Please wait a minute." } }, { status: 429 });
         }
@@ -110,27 +109,6 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { model, messages, promptType, promptContext, prompt, response_format, history } = body;
 
-        // 5. Teaser Mode Limit Check & Early Lock (Fix TOCTOU Race Condition)
-        let isQuestionLocked = false;
-        if (currentTier === 'free' && promptType !== 'report_evaluator') {
-            const startOfMonth = new Date();
-            startOfMonth.setDate(1);
-            startOfMonth.setHours(0, 0, 0, 0);
-
-            const { count } = await supabaseAdmin
-                .from('interviews')
-                .select('id', { count: 'exact', head: true })
-                .eq('user_id', user.id)
-                .gte('created_at', startOfMonth.toISOString());
-
-            // Block if they have 4 completed interviews OR have spammed the API with more than 16 questions
-            if ((count !== null && count >= 4) || profile.questions_asked >= 16) {
-                return NextResponse.json({ error: { message: "PAYWALL_LIMIT_REACHED", code: "PAYWALL_LIMIT_REACHED" } }, { status: 403 });
-            }
-            // Lock the question slot BEFORE making the slow Groq API call
-            await supabaseAdmin.rpc('increment_questions', { user_id: user.id });
-            isQuestionLocked = true;
-        }
 
         // 5. Backend Model Security
         // Automatically fallback to free tier model if user doesn't have access
@@ -170,6 +148,17 @@ export async function POST(request: Request) {
         if (groqApiKeys.length === 0) {
             return NextResponse.json({ error: { message: "Server AI configuration missing." } }, { status: 500 });
         }
+
+        let reservationId: string | null = null;
+        const { data: reservation, error: reservationError } = await supabaseAdmin.rpc('reserve_ai_question', { p_user_id: user.id });
+        if (reservationError || !reservation || typeof reservation.allowed !== 'boolean') {
+            return NextResponse.json({ error: { message: "Usage verification unavailable. Please retry." } }, { status: 503 });
+        }
+        if (!reservation.allowed) {
+            return NextResponse.json({ error: { message: "PAYWALL_LIMIT_REACHED", code: "PAYWALL_LIMIT_REACHED" } }, { status: 403 });
+        }
+        reservationId = reservation.reservation_id;
+
 
         // Shuffle keys to distribute load evenly across all requests (Fix biased sort)
         const shuffledKeys = shuffleArray(groqApiKeys);
@@ -297,8 +286,8 @@ export async function POST(request: Request) {
             }
         } catch (error: any) {
             // Refund the question if generation failed
-            if (isQuestionLocked) {
-                await supabaseAdmin.from('profiles').update({ questions_asked: Math.max(0, profile.questions_asked) }).eq('id', user.id);
+            if (reservationId) {
+                await supabaseAdmin.rpc('release_ai_question', { p_reservation_id: reservationId });
             }
             return NextResponse.json({ error: { message: error.message || "Failed to generate AI response after fallbacks." } }, { status: 500 });
         }

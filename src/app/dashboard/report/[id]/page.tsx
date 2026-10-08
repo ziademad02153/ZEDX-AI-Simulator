@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useState, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import { interviewService, Interview, Rubric13Report, LegacyScorecard } from "@/lib/interview-service";
 import { enforceRubric13ReportSchema } from "@/lib/rubric-evaluator";
@@ -22,6 +22,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [generationError, setGenerationError] = useState(false);
+    const generationRequest = useRef<{ id: string } | null>(null);
 
     // Prevent accidental reload while generating report
     useEffect(() => {
@@ -36,12 +37,14 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
     }, [isGenerating, rubricReport, scorecard]);
 
     useEffect(() => {
+        let cancelled = false;
         const fetchInterview = async () => {
             try {
                 const data = await interviewService.getInterviewById(id);
+                if (cancelled) return;
                 setInterview(data);
 
-                const forceRegenerate = typeof window !== "undefined" && window.location.search.includes("regenerate=rubric");
+                const forceRegenerate = typeof window !== "undefined" && new URLSearchParams(window.location.search).get('regenerate') === 'rubric';
 
                 if (!forceRegenerate && data.analysis?.rubric_report && data.analysis.rubric_report.rubric_version === "1.3") {
                     const rawReport = data.analysis.rubric_report;
@@ -55,6 +58,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
                         interviewType: data.analysis?.interview_type || rawReport.candidate?.interview_type || "Technical",
                         difficulty: data.analysis?.difficulty || rawReport.candidate?.difficulty || "Intermediate",
                         language: data.analysis?.language || rawReport.candidate?.language || "en-US",
+                        strictLanguage: data.analysis?.session_mode === 'mock_interview',
                         evaluatorModel: rawReport.candidate?.evaluator_model || "openai/gpt-oss-120b",
                         sessionExchanges: exchanges,
                         descriptiveMetrics: (rawReport as any).session_telemetry || rawReport.descriptive_session_metrics
@@ -63,9 +67,8 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
                     setRubricReport(sanitized);
                     setScorecard((data.analysis.scorecard as LegacyScorecard) || null);
 
-                    // Auto-heal DB record if it had stale flaws (1.1, Below Bar, etc.)
-                    const hadDefects = rawReport.overall_evaluation?.bars_score === 1.1 ||
-                        String(rawReport.overall_evaluation?.performance_level || "").toLowerCase().includes("below bar") ||
+                    // A legitimate low grade is not itself a defective report.
+                    const hadDefects = String(rawReport.overall_evaluation?.performance_level || "").toLowerCase().includes("below bar") ||
                         (rawReport.overall_evaluation?.assessment_coverage_pct === 0 && rawReport.overall_evaluation?.bars_score !== null);
                     
                     if (hadDefects) {
@@ -84,22 +87,27 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
                     generateReport(data);
                 }
             } catch (err: unknown) {
+                if (cancelled) return;
                 console.error("Failed to load interview report:", err);
                 setError("Failed to load interview report.");
             } finally {
-                setIsLoading(false);
+                if (!cancelled) setIsLoading(false);
             }
         };
 
         fetchInterview();
+        return () => { cancelled = true; };
     }, [id]);
 
     const generateReport = async (data: Interview) => {
+        if (generationRequest.current?.id === id) return;
+        const activeRequest = { id };
+        generationRequest.current = activeRequest;
         setIsGenerating(true);
         setGenerationError(false);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 125000);
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 65000);
 
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
@@ -110,11 +118,9 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
                     "Content-Type": "application/json",
                     ...(token ? { "Authorization": `Bearer ${token}` } : {})
                 },
-                body: JSON.stringify({ interviewId: id }),
+                body: JSON.stringify({ interviewId: id, regenerate: typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('regenerate') === 'rubric' }),
                 signal: controller.signal
             });
-
-            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({}));
@@ -122,18 +128,33 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
             }
 
             const resData = await response.json();
+            if (generationRequest.current !== activeRequest) return;
+            if (!resData.rubric_report && !resData.scorecard) throw new Error('The evaluation returned no report');
             if (resData.rubric_report) {
                 setRubricReport(resData.rubric_report);
             }
             if (resData.scorecard) {
                 setScorecard(resData.scorecard);
             }
+            if (typeof window !== 'undefined') {
+                const url = new URL(window.location.href);
+                if (url.searchParams.get('regenerate') === 'rubric') {
+                    url.searchParams.delete('regenerate');
+                    window.history.replaceState(window.history.state, '', url.toString());
+                }
+            }
 
         } catch (err) {
-            console.error("Error generating report:", err);
+            if (generationRequest.current !== activeRequest) return;
+            // Expected network/provider failures belong in the retry UI, not a dev crash overlay.
+            console.warn("Report generation interrupted:", err instanceof Error ? err.message : 'Unknown error');
             setGenerationError(true);
         } finally {
-            setIsGenerating(false);
+            clearTimeout(timeoutId);
+            if (generationRequest.current === activeRequest) {
+                generationRequest.current = null;
+                setIsGenerating(false);
+            }
         }
     };
 
