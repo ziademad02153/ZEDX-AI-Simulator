@@ -4,6 +4,59 @@ import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 
+test('setup camera and microphone close permission results arriving after cleanup', async () => {
+ const source=readFileSync(new URL('../src/app/dashboard/new/how-to-use/page.tsx',import.meta.url),'utf8');
+ const ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+ for(const marker of ['let cameraDisposed','let micDisposed']){
+  let effect;const visit=node=>{if(ts.isCallExpression(node)&&node.expression.getText(ast)==='useEffect'&&node.arguments[0]?.getText(ast).includes(marker))effect=node.arguments[0];ts.forEachChild(node,visit);};visit(ast);
+  let release,stops=0,updates=0;const out={};
+  vm.runInNewContext(ts.transpileModule(`exports.mount=${effect.getText(ast)};`,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,{
+   exports:out,step:marker.includes('camera')?1:2,isTestingMic:true,selectedVideo:'',selectedAudio:'',
+   navigator:{mediaDevices:{getUserMedia:()=>new Promise(resolve=>release=resolve)}},window:{},
+   videoRef:{current:{srcObject:null}},setStream:()=>updates++,setIsDetecting:()=>updates++,setAudioLevel:()=>updates++,setTimeout,clearTimeout,console:{error(){}}
+  });
+  out.mount()();release({getTracks:()=>[{stop:()=>stops++}]});await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(stops,1,marker);assert.equal(updates,0,marker);
+ }
+});
+
+test('hardware cleanup preserves interviewer playback and closes a late camera stream', async () => {
+ const source=readFileSync(new URL('../src/app/mock-interview/page.tsx',import.meta.url),'utf8');
+ const ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let effect;
+ const visit=node=>{if(ts.isCallExpression(node)&&node.expression.getText(ast)==='useEffect'&&node.arguments[0]?.getText(ast).includes('let hardwareDisposed'))effect=node.arguments[0];ts.forEachChild(node,visit);};visit(ast);
+ let resolveStream,stops=0,pauses=0;const out={};
+ vm.runInNewContext(ts.transpileModule(`exports.mount=${effect.getText(ast)};`,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,{
+  exports:out,isSetup:true,isMicEnabled:false,isCameraEnabled:true,
+  navigator:{mediaDevices:{getUserMedia:()=>new Promise(resolve=>{resolveStream=resolve;})}},window:{},
+  videoRef:{current:{srcObject:null}},audioRef:{current:{pause:()=>pauses++}},silenceTimerRef:{current:null},recognitionRef:{current:null},clearTimeout,
+  console:{error(){}},observeInterviewPreview:()=>()=>{}
+ });
+ const cleanup=out.mount();cleanup();
+ resolveStream({getTracks:()=>[{stop:()=>stops++}]});await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(stops,1);assert.equal(pauses,0,'Camera changes must not pause or detach question playback');
+});
+
+test('the prepared opening includes the account first name and the whole question', async () => {
+ const exports = {};
+ const source = readFileSync(new URL('../src/lib/piper-amy-opening.ts', import.meta.url), 'utf8');
+ vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports });
+ assert.match(exports.getAmyOpeningText('  Ziad Emad  '), /^Welcome, Ziad, I am ZEDX\./);
+ assert.match(exports.getAmyOpeningText(''), /^Welcome, I am ZEDX\./);
+ assert.ok(exports.getAmyOpeningText('Ziad').endsWith('your background?'));
+ const ast = ts.createSourceFile('page.tsx', readFileSync(new URL('../src/app/dashboard/new/how-to-use/page.tsx',import.meta.url),'utf8'), ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+ let handler;
+ const visit = node => { if(ts.isVariableDeclaration(node)&&node.name.getText(ast)==='prepareOpening')handler=node.initializer;ts.forEachChild(node,visit); };visit(ast);
+ const calls=[], context={}, openingPreparation={current:null}, out={};
+ vm.runInNewContext(ts.transpileModule(`exports.prepare=${handler.getText(ast)};`,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,{
+  exports:out, openingPreparation, preloadAmySpeech:async()=>{},
+  supabase:{auth:{getSession:async()=>({data:{session:{user:{user_metadata:{full_name:'Ziad Emad'}}}}})}},
+  useInterviewStore:{getState:()=>({setInterviewContext:data=>Object.assign(context,data)})},
+  getAmyOpeningText:exports.getAmyOpeningText, prepareAmyOpening:async text=>calls.push(text)
+ });
+ await Promise.all([out.prepare(),out.prepare()]);
+ assert.equal(context.candidateName,'Ziad');assert.equal(calls.length,1);assert.equal(calls[0],exports.getAmyOpeningText('Ziad'));
+});
+
 test('Amy speech chunks preserve the question and bound inference size', () => {
     const { api } = engine();
     const text = 'Welcome to ZEDX. Tell me about your most recent project and how you handled a difficult technical problem. ' + 'Explain your approach and the result in detail. '.repeat(12);
@@ -11,8 +64,8 @@ test('Amy speech chunks preserve the question and bound inference size', () => {
     assert.ok(chunks.length > 1);
     assert.ok(chunks.every(chunk => chunk.length > 0 && chunk.length <= 180));
     assert.equal(chunks.join(' ').replace(/\s+/g, ' ').trim(), text.replace(/\s+/g, ' ').trim());
-    assert.equal(chunks[0], 'Welcome to ZEDX.');
-    assert.equal(api.splitAmySpeechText('My score was 3.5 out of 5. What changed?')[0], 'My score was 3.5 out of 5.');
+    assert.ok(chunks[0].startsWith('Welcome to ZEDX. Tell me'));
+    assert.deepEqual(Array.from(api.splitAmySpeechText('My score was 3.5 out of 5. What changed?')), ['My score was 3.5 out of 5. What changed?']);
     assert.throws(() => api.splitAmySpeechText(text, 0), /Invalid/);
 });
 
@@ -70,7 +123,7 @@ test('hardware-page start waits for Amy before navigating, and stays put on prep
         const exports = {};
         vm.runInNewContext(ts.transpileModule(`exports.start = ${handler.getText(ast)};`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, {
             exports, markInterviewStart() {}, needsAmy: () => true, setPreparingVoice() {}, setVoiceError: error => errors.push(error),
-            preloadAmySpeech: () => new Promise((resolve, reject) => { release = () => fail ? reject(new Error('not ready')) : resolve(); }),
+            prepareOpening: () => new Promise((resolve, reject) => { release = () => fail ? reject(new Error('not ready')) : resolve(); }),
             router: { push: route => routes.push(route) }
         });
         const starting = exports.start();
@@ -131,7 +184,7 @@ test('Interview effect replay retains the preloaded voice; real unmount disposes
         compilerOptions: { target: ts.ScriptTarget.ES2022 }
     }).outputText, {
         exports, speechCleanupTimer: { current: null }, isMounted: { current: false }, speechRequestRef: { current: 0 },
-        amyPlaybackCancelRef: { current: null },
+        amyPlaybackCancelRef: { current: null }, audioRef: { current: null },
         setTimeout: callback => { timers.set(++nextTimer, callback); return nextTimer; },
         clearTimeout: id => timers.delete(id), disposeAmySpeech: () => disposed++
     });
@@ -180,7 +233,7 @@ test('English browser voice preference survives client navigation without invoki
 test('the real worker initializes inference before readiness and does not return warmup audio', async () => {
  const source=readFileSync(new URL('../src/lib/piper-amy.worker.ts',import.meta.url),'utf8');const messages=[];const texts=[];let releaseWarmup;let options;
  const scope={postMessage:message=>messages.push(message)};
- const session={predict:async text=>{texts.push(text);if(text==='Welcome to ZEDX.')await new Promise(resolve=>{releaseWarmup=resolve;});return new Blob(['audio']);}};
+ const session={predict:async text=>{texts.push(text);if(text==='Ready.')await new Promise(resolve=>{releaseWarmup=resolve;});return new Blob(['audio']);}};
  vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:{},self:scope,console:{warn(){}},require:name=>name.includes('opening')?{AMY_OPENING_TEXT:'Welcome to ZEDX.'}:{TtsSession:{create:async opt=>{options=opt;return session;}}}});
  scope.onmessage({data:{id:1}});await new Promise(resolve=>setImmediate(resolve));
  options.progress({loaded:50,total:100});assert.equal(messages.at(-1).progress.loaded,50);
@@ -188,8 +241,14 @@ test('the real worker initializes inference before readiness and does not return
  releaseWarmup();await new Promise(resolve=>setImmediate(resolve));
  assert.equal(messages.at(-1).id,1);assert.equal(messages.at(-1).audio,undefined);
  scope.onmessage({data:{id:2,text:'The actual question'}});await new Promise(resolve=>setImmediate(resolve));
- assert.deepEqual(texts,['Welcome to ZEDX.','The actual question']);assert.ok(messages.at(-1).audio instanceof Blob);
- scope.onmessage({data:{id:3,text:'Welcome to ZEDX.'}});await new Promise(resolve=>setImmediate(resolve));
- assert.equal(texts.length,2,'Opening playback reuses audio prepared in setup');
+ assert.deepEqual(texts,['Ready.','The actual question']);assert.ok(messages.at(-1).audio instanceof Blob);
+ scope.onmessage({data:{id:3,text:'Welcome to ZEDX.',prepare:true}});await new Promise(resolve=>setImmediate(resolve));
+ scope.onmessage({data:{id:33,text:'Welcome to ZEDX.'}});await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(texts.length,3,'Opening playback reuses audio prepared in setup');
  assert.ok(messages.at(-1).audio instanceof Blob);
+ scope.onmessage({data:{id:4,text:'Welcome, Ziad. Full question.',prepare:true}});await new Promise(resolve=>setImmediate(resolve));
+ const prepared=messages.at(-1).audio;
+ scope.onmessage({data:{id:5,text:'Welcome, Ziad. Full question.'}});await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(texts.length,4,'Named opening is inferred once during preparation');
+ assert.equal(messages.at(-1).audio,prepared,'Interview reuses the entire named opening');
 });

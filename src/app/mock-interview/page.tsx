@@ -21,8 +21,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { SUPPORTED_LANGUAGES } from "@/lib/languages";
 import { disposeAmySpeech, preloadAmySpeech, synthesizeAmySpeech, getEnglishSpeechPreference, setEnglishSpeechPreference, splitAmySpeechText } from "@/lib/piper-amy";
-import { AMY_OPENING_TEXT } from '@/lib/piper-amy-opening';
-import { markInterviewFirstAudio } from '@/lib/interview-startup-timing';
+import { getAmyOpeningText } from '@/lib/piper-amy-opening';
+import { markInterviewFirstAudio, observeInterviewPreview } from '@/lib/interview-startup-timing';
 import { getWebInterviewMessages, getWebSpeechProvider, loadWebSpeechVoices, resolveWebInterviewLanguage, selectWebSpeechVoice } from "@/lib/web-interview-language";
 import { supabase } from "@/lib/supabase";
 import { interviewService, SessionExchange } from "@/lib/interview-service";
@@ -215,6 +215,8 @@ export default function MockInterviewPage() {
             isMounted.current = false;
             speechRequestRef.current++;
             amyPlaybackCancelRef.current?.();
+            if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
+            if (typeof window !== 'undefined') window.speechSynthesis?.cancel();
             // React development mode replays effects. Preserve setup's warm worker
             // across that replay, but release it when the page actually unmounts.
             speechCleanupTimer.current = setTimeout(disposeAmySpeech, 0);
@@ -289,22 +291,27 @@ export default function MockInterviewPage() {
         let stream: MediaStream | null = null;
         let audioCtx: any = null;
         let jsNode: any = null;
+        let lastLevelUpdate = 0;
+        let hardwareDisposed = false;
+        let stopPreviewObservation = () => {};
         
         // Wait until user explicitly enables hardware to request permissions
         if (!isMicEnabled && !isCameraEnabled) return;
 
         // 1. Setup Webcam
         const constraints = { 
-            video: isCameraEnabled, 
+            video: isCameraEnabled ? { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 24, max: 30 } } : false,
             audio: isMicEnabled 
         };
 
         if (isMicEnabled || isCameraEnabled) {
             navigator.mediaDevices.getUserMedia(constraints)
                 .then(s => {
+                    if (hardwareDisposed) { s.getTracks().forEach(track => track.stop()); return; }
                     stream = s;
                     if (videoRef.current && isCameraEnabled) {
                         videoRef.current.srcObject = stream;
+                        stopPreviewObservation = observeInterviewPreview(videoRef.current);
                     }
                     
                     // Setup Audio Context for Mic Level indicator only if Mic is enabled
@@ -327,6 +334,9 @@ export default function MockInterviewPage() {
                         gainNode.connect(audioCtx.destination);
                         
                         jsNode.onaudioprocess = () => {
+                            const now = performance.now();
+                            if (now - lastLevelUpdate < 100) return;
+                            lastLevelUpdate = now;
                             const array = new Uint8Array(analyser.frequencyBinCount);
                             analyser.getByteFrequencyData(array);
                             let values = 0;
@@ -335,7 +345,7 @@ export default function MockInterviewPage() {
                                 values += (array[i]);
                             }
                             const average = values / length;
-                            setAudioLevel(average);
+                            setAudioLevel((previous: number) => Math.abs(previous - average) >= 2 ? average : previous);
                         };
                     }
                 })
@@ -419,20 +429,13 @@ export default function MockInterviewPage() {
         }
 
         return () => {
+            stopPreviewObservation();
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
             if (recognitionRef.current) {
                 recognitionRef.current.onend = null;
                 try { recognitionRef.current.stop(); } catch (e) {}
             }
-            if (audioRef.current) {
-                audioRef.current.onended = null;
-                audioRef.current.pause();
-                audioRef.current.src = "";
-            }
-            // Stop fallback browser TTS if it's currently speaking
-            if (typeof window !== 'undefined' && window.speechSynthesis) {
-                window.speechSynthesis.cancel();
-            }
+            hardwareDisposed = true;
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
             }
@@ -642,9 +645,9 @@ export default function MockInterviewPage() {
 
         if (targetMainIndex === 0 && history.length === 0) {
             // ZERO-LATENCY GREETING for Main Question 1
-            let candidateName = "";
+            let candidateName = useInterviewStore.getState().candidateName || "";
             try {
-                if (langObj.code !== 'en-US') {
+                if (langObj.code !== 'en-US' || !candidateName || getEnglishSpeechPreference() === 'browser') {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session?.user?.user_metadata?.full_name) {
                     candidateName = session.user.user_metadata.full_name.split(' ')[0];
@@ -663,7 +666,8 @@ export default function MockInterviewPage() {
             } else if (langObj.code.startsWith('ar')) {
                 nextQuestionText = `أهلاً بك${nameAr}، أنا زيدكس، وسأكون مسؤولاً عن الانترفيو الخاص بك اليوم. هل يمكن أن تبدأ بتعريف نفسك والتحدث قليلاً عن خبراتك؟`;
             } else if (langObj.code === 'en-US') {
-                nextQuestionText = `${AMY_OPENING_TEXT} I will be conducting your interview today. Could you please start by introducing yourself and telling me a little bit about your background?`;
+                nextQuestionText = getAmyOpeningText(candidateName);
+                useInterviewStore.getState().setInterviewContext({ candidateName });
             } else if (langObj.code === 'es-ES') {
                 nextQuestionText = `¡Bienvenido${candidateName ? ` ${candidateName}` : ""}! Soy ZED-X y hoy realizaré tu entrevista de práctica. Para comenzar, ¿podrías presentarte y contarme un poco sobre ti y tu experiencia profesional?`;
             } else if (langObj.code === 'fr-FR') {
@@ -885,7 +889,7 @@ Resume Context: ${resume}`;
 
             if (language === 'en-US' && getEnglishSpeechPreference() === 'amy') {
                 try {
-                    const chunks = splitAmySpeechText(text);
+                    const chunks = text === getAmyOpeningText(useInterviewStore.getState().candidateName || '') ? [text] : splitAmySpeechText(text);
                     const prepare = (chunk: string) => synthesizeAmySpeech(chunk).then(
                         audio => ({ audio, error: null }),
                         error => ({ audio: null, error })
@@ -1033,7 +1037,7 @@ Resume Context: ${resume}`;
     if (!isSetup) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-emerald-500 w-12 h-12" /></div>;
 
     return (
-        <div className="h-[100dvh] w-full bg-black text-white relative overflow-hidden flex flex-col">
+        <div className="min-h-[100dvh] w-full bg-black text-white relative overflow-x-hidden flex flex-col">
             <PaywallModal 
                 open={showPaywall} 
                 onOpenChange={setShowPaywall}
@@ -1080,7 +1084,7 @@ Resume Context: ${resume}`;
                             opacity: isSpeaking ? [0.7, 1, 0.7] : 0.5
                         }}
                         transition={{ duration: 1.5, repeat: Infinity }}
-                        className="absolute inset-0 bg-[#84cc16] rounded-full blur-[80px]"
+                        className="absolute -inset-20 rounded-full bg-[radial-gradient(circle,rgba(132,204,22,0.4)_0%,rgba(132,204,22,0.1)_45%,transparent_70%)]"
                     ></motion.div>
                     
                     <div className="relative w-32 h-32 sm:w-48 sm:h-48 rounded-full bg-black border-2 border-[#84cc16]/50 flex items-center justify-center shadow-[0_0_40px_rgba(132,204,22,0.3)] z-10 overflow-hidden">
@@ -1089,9 +1093,9 @@ Resume Context: ${resume}`;
                                 {[1, 2, 3, 4, 5].map((i) => (
                                     <motion.div 
                                         key={i}
-                                        animate={{ height: ["20%", "100%", "20%"] }}
-                                        transition={{ duration: Math.random() * 0.5 + 0.5, repeat: Infinity, delay: i * 0.1 }}
-                                        className="w-2 sm:w-3 bg-[#84cc16] rounded-full"
+                                        animate={{ scaleY: [0.2, 1, 0.2] }}
+                                        transition={{ duration: 0.55 + i * 0.08, repeat: Infinity, delay: i * 0.1 }}
+                                        className="h-full w-2 sm:w-3 bg-[#84cc16] rounded-full"
                                     ></motion.div>
                                 ))}
                             </div>
@@ -1109,7 +1113,7 @@ Resume Context: ${resume}`;
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0 }}
-                            className="max-w-xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl relative"
+                            className="max-w-xl bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl relative"
                         >
                             {/* Arrow removed for cleaner glassmorphism look */}
                             <p className="text-xl sm:text-2xl text-emerald-50 leading-relaxed">
@@ -1184,7 +1188,7 @@ Resume Context: ${resume}`;
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0 }}
-                                className="bg-emerald-900/30 border border-emerald-500/30 backdrop-blur-md rounded-2xl p-4 text-emerald-100 text-lg shadow-lg"
+                                className="bg-emerald-900/30 border border-emerald-500/30 rounded-2xl p-4 text-emerald-100 text-lg shadow-lg"
                             >
                                 {userTranscript}
                                 <span className="animate-pulse ml-1">|</span>
@@ -1196,8 +1200,8 @@ Resume Context: ${resume}`;
 
             {/* Background Effects */}
             <div className="absolute inset-0 z-0 pointer-events-none">
-                <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] bg-emerald-900/20 blur-[120px] rounded-full"></div>
-                <div className="absolute bottom-[-20%] left-[-10%] w-[50%] h-[50%] bg-green-900/10 blur-[120px] rounded-full"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(6,78,59,0.2),transparent_65%)]"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(20,83,45,0.1),transparent_65%)]"></div>
             </div>
         </div>
     );

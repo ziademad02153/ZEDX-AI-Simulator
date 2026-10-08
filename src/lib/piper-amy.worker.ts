@@ -1,13 +1,13 @@
 import { TtsSession } from '@mintplex-labs/piper-tts-web';
-import { AMY_OPENING_TEXT } from './piper-amy-opening';
 
 const scope = self as unknown as {
-    onmessage: ((event: MessageEvent<{ id: number; text?: string }>) => void) | null;
+    onmessage: ((event: MessageEvent<{ id: number; text?: string; prepare?: boolean }>) => void) | null;
     postMessage: (message: unknown) => void;
 };
 let session: Promise<TtsSession> | undefined;
 let warmed = false;
-let openingAudio: Blob | undefined;
+let preparedText: string | undefined;
+let preparedAudio: Blob | undefined;
 let queue = Promise.resolve();
 scope.onmessage = ({ data }) => {
     queue = queue.then(async () => {
@@ -24,16 +24,18 @@ scope.onmessage = ({ data }) => {
             }
             session ||= TtsSession.create({ voiceId: 'en_US-amy-medium', progress: ({ loaded, total }) => scope.postMessage({ id: data.id, progress: { loaded, total } }) });
             const engine = await session;
-            // Prepare the actual opening in setup, before declaring the voice ready.
-            // Keep its audio in the worker for immediate playback when the interview begins.
-            if (!warmed) { openingAudio = await engine.predict(AMY_OPENING_TEXT); warmed = true; }
-            const audio = data.text ? (data.text === AMY_OPENING_TEXT ? openingAudio : await engine.predict(data.text)) : undefined;
+            // Warm the runtime once; hardware setup prepares the whole personalized opening.
+            // Avoid generating both a generic and a named full introduction.
+            if (!warmed) { await engine.predict('Ready.'); warmed = true; }
+            const audio = data.text ? (data.text === preparedText ? preparedAudio : await engine.predict(data.text)) : undefined;
+            if (data.prepare && data.text) { preparedText = data.text; preparedAudio = audio; }
             scope.postMessage({ id: data.id, audio });
         } catch (error) {
             console.warn('Amy engine failed:', error instanceof Error ? error.message : 'Unknown runtime error');
             session = undefined;
             warmed = false;
-            openingAudio = undefined;
+            preparedText = undefined;
+            preparedAudio = undefined;
             TtsSession._instance = null;
             scope.postMessage({ id: data.id, error: error instanceof Error ? error.message : 'Amy speech generation is unavailable' });
         }

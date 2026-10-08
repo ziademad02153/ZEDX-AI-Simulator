@@ -181,6 +181,7 @@ for (const language of [...languages, { ...languages[0], piperUnavailable: true 
     const speak = pageHandler('speakText', {
       language: language.code, ...languageTools, SUPPORTED_LANGUAGES: languages, getEnglishSpeechPreference: () => language.browserSelected ? 'browser' : 'amy',
       splitAmySpeechText: text => language.segmented ? [text, 'A follow-up sentence.'] : [text],
+      getAmyOpeningText: () => 'A prepared opening', useInterviewStore: { getState: () => ({ candidateName: 'Test' }) },
       synthesizeAmySpeech: async () => {
         assert.equal(subtitles[0], '', 'The question stays hidden while Amy generates audio');
         amyCalls++;

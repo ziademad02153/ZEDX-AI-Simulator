@@ -544,17 +544,16 @@ export default function NewInterviewPage() {
                                         }}
                                         triggerClassName="h-[38px] text-[13px] bg-black/[0.03] dark:bg-white/[0.05] border-black/[0.06] dark:border-white/[0.08] rounded-xl"
                                     />
-                                    {language === 'en-US' && !isDesktop && (
+                                    {language === 'en-US' && !isDesktop && (englishVoice === 'browser' || amyState.status === 'ready' || amyState.status === 'error' || amyState.cached === false || browserVoiceError) && (
                                         <div className="rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03] p-3 space-y-2">
                                             <p role="status" aria-live="polite" className="text-xs font-medium text-zinc-700 dark:text-zinc-200">
                                                 {englishVoice === 'browser' ? 'Browser English voice selected ✓' :
                                                     amyState.status === 'ready' ? 'Amy is ready ✓' :
                                                     amyState.status === 'error' ? 'Amy could not be prepared. Retry or choose an English browser voice.' :
-                                                    amyState.cached ? 'Starting your saved Amy voice — no model download…' :
                                                     amyState.progress === 100 ? 'Initializing the English voice…' :
                                                     amyState.progress !== null ? `Downloading the English voice… ${amyState.progress}%` : 'Preparing the English voice…'}
                                             </p>
-                                            {englishVoice === 'amy' && (amyState.status === 'loading' || amyState.status === 'idle') && (
+                                            {englishVoice === 'amy' && amyState.cached === false && (amyState.status === 'loading' || amyState.status === 'idle') && (
                                                 <>
                                                     <progress aria-label="English voice preparation" value={amyState.progress ?? undefined} max={100} className="w-full h-1.5 accent-lime-500" />
                                                     <p className="text-[11px] text-zinc-500">First use downloads the voice (about 63 MB) and playback files. Saved in this browser. You can finish your setup while it prepares.</p>

@@ -16,7 +16,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useInterviewStore } from '@/lib/store';
-import { getEnglishSpeechPreference, preloadAmySpeech } from '@/lib/piper-amy';
+import { getEnglishSpeechPreference, preloadAmySpeech, prepareAmyOpening } from '@/lib/piper-amy';
+import { getAmyOpeningText } from '@/lib/piper-amy-opening';
+import { supabase } from '@/lib/supabase';
 import { resolveWebInterviewLanguage } from '@/lib/web-interview-language';
 import { markInterviewStart } from '@/lib/interview-startup-timing';
 
@@ -42,6 +44,21 @@ export default function HowToUsePage() {
     const [agreed, setAgreed] = useState(false);
     const [preparingVoice, setPreparingVoice] = useState(false);
     const [voiceError, setVoiceError] = useState('');
+    const openingPreparation = useRef<Promise<void> | null>(null);
+
+    const prepareOpening = () => {
+        if (!openingPreparation.current) {
+            openingPreparation.current = (async () => {
+                const [, auth] = await Promise.all([preloadAmySpeech(), supabase.auth.getSession()]);
+                const metadata = auth.data.session?.user.user_metadata;
+                const rawName = metadata?.full_name || metadata?.name;
+                const candidateName = typeof rawName === 'string' ? rawName.trim().split(/\s+/)[0] : '';
+                useInterviewStore.getState().setInterviewContext({ candidateName });
+                await prepareAmyOpening(getAmyOpeningText(candidateName));
+            })().catch(error => { openingPreparation.current = null; throw error; });
+        }
+        return openingPreparation.current;
+    };
 
     const needsAmy = () => {
         const context = useInterviewStore.getState();
@@ -52,7 +69,14 @@ export default function HowToUsePage() {
     };
 
     useEffect(() => {
-        if (needsAmy()) void preloadAmySpeech().catch(() => { /* Start displays a retryable error. */ });
+        let active = true;
+        if (needsAmy()) {
+            setPreparingVoice(true);
+            void prepareOpening().catch(() => {
+                if (active) setVoiceError('Amy is not ready yet. Please retry before starting the interview.');
+            }).finally(() => { if (active) setPreparingVoice(false); });
+        }
+        return () => { active = false; };
     }, []);
 
     useEffect(() => {
@@ -79,17 +103,20 @@ export default function HowToUsePage() {
     useEffect(() => {
         if (step === 1) {
             let activeStream: MediaStream | null = null;
+            let cameraDisposed = false;
+            let detectionTimer: ReturnType<typeof setTimeout> | undefined;
             const startCamera = async () => {
                 try {
                     const s = await navigator.mediaDevices.getUserMedia({ 
-                        video: selectedVideo ? { deviceId: { exact: selectedVideo } } : true 
+                        video: { ...(selectedVideo ? { deviceId: { exact: selectedVideo } } : {}), width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 24, max: 30 } }
                     });
+                    if (cameraDisposed) { s.getTracks().forEach(track => track.stop()); return; }
                     activeStream = s;
                     setStream(s);
                     if (videoRef.current) {
                         videoRef.current.srcObject = s;
                     }
-                    setTimeout(() => setIsDetecting(false), 2000);
+                    detectionTimer = setTimeout(() => setIsDetecting(false), 2000);
                 } catch (err) {
                     console.error("Camera access error:", err);
                 }
@@ -97,6 +124,8 @@ export default function HowToUsePage() {
             startCamera();
 
             return () => {
+                cameraDisposed = true;
+                clearTimeout(detectionTimer);
                 if (activeStream) {
                     activeStream.getTracks().forEach(track => track.stop());
                 }
@@ -108,6 +137,8 @@ export default function HowToUsePage() {
     useEffect(() => {
         if (step === 2 && isTestingMic) {
             let activeStream: MediaStream | null = null;
+            let micDisposed = false;
+            let successTimer: ReturnType<typeof setTimeout> | undefined;
             let audioContext: AudioContext | null = null;
             let javascriptNode: ScriptProcessorNode | null = null;
 
@@ -116,6 +147,7 @@ export default function HowToUsePage() {
                     const s = await navigator.mediaDevices.getUserMedia({ 
                         audio: selectedAudio ? { deviceId: { exact: selectedAudio } } : true 
                     });
+                    if (micDisposed) { s.getTracks().forEach(track => track.stop()); return; }
                     activeStream = s;
                     
                     audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -162,7 +194,7 @@ export default function HowToUsePage() {
                         // Automatically complete the mic test when enough sound is detected
                         if (avgLevel > 15 && !successTriggered) {
                             successTriggered = true;
-                            setTimeout(() => {
+                            successTimer = setTimeout(() => {
                                 setIsTestingMic(false);
                                 setIsMicTested(true);
                             }, 800); // 800ms delay so they can see the visualizer jump before it closes
@@ -178,6 +210,8 @@ export default function HowToUsePage() {
             startMic();
 
             return () => {
+                micDisposed = true;
+                clearTimeout(successTimer);
                 if (activeStream) activeStream.getTracks().forEach(track => track.stop());
                 if (javascriptNode && audioContext) {
                     javascriptNode.disconnect();
@@ -197,7 +231,7 @@ export default function HowToUsePage() {
         setPreparingVoice(true);
         try {
             // A reload on this page must not open the interview with a cold engine.
-            if (needsAmy()) await preloadAmySpeech();
+            if (needsAmy()) await prepareOpening();
             router.push("/mock-interview");
         } catch {
             setVoiceError('Amy is not ready yet. Please retry before starting the interview.');
