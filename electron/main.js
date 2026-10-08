@@ -2,6 +2,12 @@ const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage, clipboard,
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 
+// Software composition avoids a black capture rectangle for protected,
+// transparent Windows overlays. This must run before app readiness.
+if (process.platform === 'win32') {
+    app.disableHardwareAcceleration();
+}
+
 const ICON_PATH = path.join(__dirname, '..', 'public', 'favicon.ico');
 
 // Bypass Google OAuth "This browser or app may not be secure" error

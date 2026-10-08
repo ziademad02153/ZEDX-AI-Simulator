@@ -166,41 +166,53 @@ test('report validation rejects mismatched language, wrong script, and missing l
   assert.ok(!getRubric13EvaluatorSystemPrompt('ar-EG').includes('Egyptian Arabic'));
 });
 
-for (const language of [...languages, { ...languages[0], piperUnavailable: true }, { ...languages[0], browserSelected: true }]) {
+for (const language of [...languages, { ...languages[0], piperUnavailable: true }, { ...languages[0], browserSelected: true }, { ...languages[0], segmented: true }]) {
   test(`${language.code}${language.piperUnavailable ? ' (Amy unavailable)' : language.browserSelected ? ' (browser selected)' : ''}: actual web page speaks with the selected provider and language`, async () => {
     let apiCalls = 0;
     let amyCalls = 0;
     let nativeUtterance;
+    let failedQuestion;
     const subtitles = [];
     const synth = { getVoices: () => [{ lang: language.code, name: 'Local' }], cancel() {}, speak(utterance) { nativeUtterance = utterance; utterance.onend(); } };
     class Audio {
+      pause() {}
       play() { this.onplay(); this.onended(); return Promise.resolve(); }
     }
     const speak = pageHandler('speakText', {
       language: language.code, ...languageTools, SUPPORTED_LANGUAGES: languages, getEnglishSpeechPreference: () => language.browserSelected ? 'browser' : 'amy',
+      splitAmySpeechText: text => language.segmented ? [text, 'A follow-up sentence.'] : [text],
       synthesizeAmySpeech: async () => {
         assert.equal(subtitles[0], '', 'The question stays hidden while Amy generates audio');
         amyCalls++;
-        if (language.piperUnavailable) throw new Error('Exercise the English browser fallback');
+        if (language.piperUnavailable) throw new Error('Exercise paused Amy failure');
         return new Blob(['amy audio'], { type: 'audio/wav' });
       },
       getPhoneticText: text => text, isMounted: { current: true }, isCompletingRef: { current: false },
-      speechRequestRef: { current: 0 }, audioRef: { current: null }, utteranceRef: { current: null },
+      speechRequestRef: { current: 0 }, amyPlaybackCancelRef: { current: null }, audioRef: { current: null }, utteranceRef: { current: null },
       questionEndedAtRef: { current: null }, speechStartedAtRef: { current: null }, recognitionRef: { current: null },
-      setIsSpeaking() {}, setIsListening() {}, setUserTranscript() {}, setZedxText: text => subtitles.push(text),
+      setIsSpeaking() {}, setIsListening() {}, setUserTranscript() {}, setAmyFailedQuestion: text => { failedQuestion = text; }, setZedxText: text => subtitles.push(text),
+      console: { error() {} },
       window: { speechSynthesis: synth }, navigator: { userAgent: 'Test desktop' }, toast: { error: () => assert.fail('Unexpected audio error') },
       SpeechSynthesisUtterance: class { constructor(text) { this.text = text; } }, Audio, URL,
       supabase: { auth: { getSession: async () => ({ data: { session: { access_token: 'test-token' } } }) } },
       fetch: async (_url, options) => { apiCalls++; assert.equal(JSON.parse(options.body).language, language.code); return new Response('audio'); },
     });
     await speak(language.q1);
+    if (language.piperUnavailable) {
+      assert.equal(failedQuestion, language.q1);
+      assert.equal(nativeUtterance, undefined, 'Amy failure must not silently switch voices');
+      assert.equal(apiCalls, 0);
+      assert.equal(amyCalls, 1);
+      assert.equal(subtitles.includes(language.q1), false);
+      return;
+    }
     assert.ok(subtitles.includes(language.q1));
     if (language.code.startsWith('ar')) {
       assert.equal(amyCalls, 0);
       assert.equal(apiCalls, 1);
       assert.equal(nativeUtterance, undefined);
     } else if (language.code === 'en-US' && !language.piperUnavailable && !language.browserSelected) {
-      assert.equal(amyCalls, 1);
+      assert.equal(amyCalls, language.segmented ? 2 : 1);
       assert.equal(apiCalls, 0);
       assert.equal(nativeUtterance, undefined);
     } else {

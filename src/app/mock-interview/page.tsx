@@ -20,7 +20,9 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { SUPPORTED_LANGUAGES } from "@/lib/languages";
-import { disposeAmySpeech, preloadAmySpeech, synthesizeAmySpeech, getEnglishSpeechPreference } from "@/lib/piper-amy";
+import { disposeAmySpeech, preloadAmySpeech, synthesizeAmySpeech, getEnglishSpeechPreference, setEnglishSpeechPreference, splitAmySpeechText } from "@/lib/piper-amy";
+import { AMY_OPENING_TEXT } from '@/lib/piper-amy-opening';
+import { markInterviewFirstAudio } from '@/lib/interview-startup-timing';
 import { getWebInterviewMessages, getWebSpeechProvider, loadWebSpeechVoices, resolveWebInterviewLanguage, selectWebSpeechVoice } from "@/lib/web-interview-language";
 import { supabase } from "@/lib/supabase";
 import { interviewService, SessionExchange } from "@/lib/interview-service";
@@ -153,6 +155,7 @@ export default function MockInterviewPage() {
     const [userTranscript, setUserTranscript] = useState("");
     
     const [isSpeaking, setIsSpeaking] = useState(false); // Is ZEDX speaking?
+    const [amyFailedQuestion, setAmyFailedQuestion] = useState<string | null>(null);
     const [isListening, setIsListening] = useState(false); // Are we listening to user?
     const [audioLevel, setAudioLevel] = useState(0);
     const [isMobile, setIsMobile] = useState(false);
@@ -166,6 +169,7 @@ export default function MockInterviewPage() {
     const recognitionRef = useRef<any>(null);
     const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const amyPlaybackCancelRef = useRef<(() => void) | null>(null);
     const finalTranscriptRef = useRef("");
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
     const isMounted = useRef(true);
@@ -210,6 +214,7 @@ export default function MockInterviewPage() {
         return () => {
             isMounted.current = false;
             speechRequestRef.current++;
+            amyPlaybackCancelRef.current?.();
             // React development mode replays effects. Preserve setup's warm worker
             // across that replay, but release it when the page actually unmounts.
             speechCleanupTimer.current = setTimeout(disposeAmySpeech, 0);
@@ -628,6 +633,7 @@ export default function MockInterviewPage() {
 
         setZedxText("Thinking...");
         setIsSpeaking(true);
+        setAmyFailedQuestion(null);
 
         const focusArea = (targetMainIndex + 1) % 2 === 0 ? "Job Description" : "Resume";
         const langObj = SUPPORTED_LANGUAGES.find(l => l.code === language) || SUPPORTED_LANGUAGES[0];
@@ -638,17 +644,18 @@ export default function MockInterviewPage() {
             // ZERO-LATENCY GREETING for Main Question 1
             let candidateName = "";
             try {
+                if (langObj.code !== 'en-US') {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session?.user?.user_metadata?.full_name) {
                     candidateName = session.user.user_metadata.full_name.split(' ')[0];
                 } else if (session?.user?.user_metadata?.name) {
                     candidateName = session.user.user_metadata.name.split(' ')[0];
                 }
+                }
             } catch (e) {}
 
             const lowerName = candidateName.toLowerCase();
             const arName = PHONETIC_EGYPTIAN_NAMES_AR[lowerName] || candidateName;
-            const nameEn = candidateName ? `, ${candidateName}` : "";
             const nameAr = candidateName ? ` يا ${arName}` : "";
 
             if (langObj.code === 'ar-EG') {
@@ -656,7 +663,7 @@ export default function MockInterviewPage() {
             } else if (langObj.code.startsWith('ar')) {
                 nextQuestionText = `أهلاً بك${nameAr}، أنا زيدكس، وسأكون مسؤولاً عن الانترفيو الخاص بك اليوم. هل يمكن أن تبدأ بتعريف نفسك والتحدث قليلاً عن خبراتك؟`;
             } else if (langObj.code === 'en-US') {
-                nextQuestionText = `Welcome${nameEn}, I am ZEDX. I will be conducting your interview today. Could you please start by introducing yourself and telling me a little bit about your background?`;
+                nextQuestionText = `${AMY_OPENING_TEXT} I will be conducting your interview today. Could you please start by introducing yourself and telling me a little bit about your background?`;
             } else if (langObj.code === 'es-ES') {
                 nextQuestionText = `¡Bienvenido${candidateName ? ` ${candidateName}` : ""}! Soy ZED-X y hoy realizaré tu entrevista de práctica. Para comenzar, ¿podrías presentarte y contarme un poco sobre ti y tu experiencia profesional?`;
             } else if (langObj.code === 'fr-FR') {
@@ -813,6 +820,8 @@ Resume Context: ${resume}`;
 
     const speakText = async (text: string) => {
         const speechRequest = ++speechRequestRef.current;
+        amyPlaybackCancelRef.current?.();
+        amyPlaybackCancelRef.current = null;
         if (audioRef.current) {
             audioRef.current.onended = null;
             audioRef.current.onerror = null;
@@ -876,12 +885,52 @@ Resume Context: ${resume}`;
 
             if (language === 'en-US' && getEnglishSpeechPreference() === 'amy') {
                 try {
-                    blob = await synthesizeAmySpeech(text);
+                    const chunks = splitAmySpeechText(text);
+                    const prepare = (chunk: string) => synthesizeAmySpeech(chunk).then(
+                        audio => ({ audio, error: null }),
+                        error => ({ audio: null, error })
+                    );
+                    let nextAudio = prepare(chunks[0]);
+                    for (let index = 0; index < chunks.length; index++) {
+                        const result = await nextAudio;
+                        if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
+                        if (result.error || !result.audio) throw result.error || new Error('Amy returned no audio');
+                        // Generate the next sentence while this one plays.
+                        if (index + 1 < chunks.length) nextAudio = prepare(chunks[index + 1]);
+                        const url = URL.createObjectURL(result.audio);
+                        const audio = new Audio(url);
+                        audioRef.current = audio;
+                        let cancelPlayback: (() => void) | null = null;
+                        try {
+                            await new Promise<void>((resolve, reject) => {
+                                cancelPlayback = resolve;
+                                amyPlaybackCancelRef.current = resolve;
+                                audio.onplay = () => {
+                                    if (isMounted.current && speechRequest === speechRequestRef.current) setZedxText(text);
+                                };
+                                audio.onplaying = () => markInterviewFirstAudio('Amy');
+                                audio.onended = () => resolve();
+                                audio.onerror = () => reject(new Error('Amy audio playback failed'));
+                                void audio.play().catch(reject);
+                            });
+                        } finally {
+                            if (amyPlaybackCancelRef.current === cancelPlayback) amyPlaybackCancelRef.current = null;
+                            audio.onplay = null;
+                            audio.onplaying = null;
+                            audio.onended = null;
+                            audio.onerror = null;
+                            audio.pause();
+                            URL.revokeObjectURL(url);
+                        }
+                        if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
+                    }
+                    resumeListening();
+                    return;
+                } catch (error) {
                     if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
-                    audioUrl = URL.createObjectURL(blob);
-                } catch {
-                    if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
-                    await playNativeTTS();
+                    console.error('[Amy interview audio]', error);
+                    setIsSpeaking(false);
+                    setAmyFailedQuestion(text);
                     return;
                 }
             } else if (getWebSpeechProvider(language) === 'elevenlabs') {
@@ -957,6 +1006,7 @@ Resume Context: ${resume}`;
     const endInterview = () => {
         if (confirm("Are you sure you want to end the interview early?")) {
             speechRequestRef.current++;
+            amyPlaybackCancelRef.current?.();
             disposeAmySpeech();
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
             if (audioRef.current) {
@@ -1069,6 +1119,19 @@ Resume Context: ${resume}`;
                     )}
                 </AnimatePresence>
             </div>
+
+            {amyFailedQuestion && (
+                <div role="alert" className="relative z-30 mx-auto mb-4 max-w-lg rounded-xl border border-amber-500/40 bg-zinc-900 p-4 text-center">
+                    <p className="text-sm text-amber-200">Amy could not play this question. Your interview is paused.</p>
+                    <div className="mt-3 flex justify-center gap-3">
+                        <Button onClick={() => { void speakText(amyFailedQuestion); }}>Retry Amy</Button>
+                        <Button variant="outline" onClick={() => {
+                            setEnglishSpeechPreference('browser');
+                            void speakText(amyFailedQuestion);
+                        }}>Use browser voice</Button>
+                    </div>
+                </div>
+            )}
 
             {/* Bottom Section: Webcam & User Speech */}
             <div className="w-full p-4 sm:p-6 flex flex-col md:flex-row items-center md:items-end justify-between z-20 gap-4 sm:gap-6">
