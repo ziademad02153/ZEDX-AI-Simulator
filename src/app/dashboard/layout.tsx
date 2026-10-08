@@ -1,5 +1,7 @@
 "use client";
 
+import { syncServerSession } from "@/lib/session-sync";
+
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Video, FileText, LogOut, Clock, Loader2 } from "lucide-react";
@@ -50,6 +52,7 @@ function NavItems({ setMobileMenuOpen }: { setMobileMenuOpen: (open: boolean) =>
                 className="w-full justify-start gap-4 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 py-6 text-sm font-medium"
                 onClick={async () => {
                     await supabase.auth.signOut();
+            await syncServerSession(null);
                     document.cookie = "auth_token=; path=/; max-age=0";
                     window.location.href = "/login";
                 }}

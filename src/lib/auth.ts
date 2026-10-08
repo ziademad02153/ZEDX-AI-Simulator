@@ -1,3 +1,4 @@
+import { syncServerSession } from "@/lib/session-sync";
 import { create } from 'zustand';
 import { supabase } from './supabase';
 import { User } from '@supabase/supabase-js';
@@ -110,6 +111,7 @@ export const useAuth = create<AuthState>((set) => ({
 
   signOut: async () => {
     await supabase.auth.signOut();
+            await syncServerSession(null);
     document.cookie = 'auth_token=; path=/; max-age=0';
     set({ user: null });
   },

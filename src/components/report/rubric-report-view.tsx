@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { getReportLabels, reportStatusLabel, reportMetadataLabel, reportTime } from "@/lib/report-labels";
 import Link from "next/link";
 import { 
     Interview, 
@@ -21,6 +22,7 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/lib/supabase";
+import { syncServerSession } from '@/lib/session-sync';
 
 interface RubricReportViewProps {
     interview: Interview;
@@ -47,7 +49,9 @@ export function RubricReportView({
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token || "";
-            window.open(`/api/report/${interview.id}/pdf?token=${token}`, "_blank");
+            if (!token) throw new Error('Please sign in to download the report.');
+            await syncServerSession(token);
+            window.open(`/api/report/${interview.id}/pdf`, "_blank", 'noopener,noreferrer');
         } catch (e) {
             console.error(e);
         }
@@ -73,7 +77,10 @@ export function RubricReportView({
         assessment_date
     } = rubricReport;
 
-    const formattedDate = new Date(assessment_date).toLocaleDateString("en-US", {
+    const webMock = interview.analysis?.session_mode === 'mock_interview';
+    const labels = getReportLabels(candidate.language, webMock);
+    const localized = webMock && candidate.language !== 'en-US';
+    const formattedDate = new Date(assessment_date).toLocaleDateString(localized ? candidate.language : "en-US", {
         year: "numeric",
         month: "short",
         day: "numeric"
@@ -82,17 +89,18 @@ export function RubricReportView({
     const isZeroEvidence = overall_evaluation.bars_score === null;
 
     const formatCompKey = (key: string): string => {
+        if (localized) return competencies.find(comp => comp.key === key)?.name || key;
         return key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()).replace(/\bAnd\b/g, "&");
     };
 
     return (
-        <div className="report-workbench min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-200 pb-12 print:pb-0 print:bg-white transition-colors duration-300">
+        <div lang={webMock ? candidate.language : undefined} dir={webMock && candidate.language.startsWith('ar') ? 'rtl' : 'ltr'} className="report-workbench min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-200 pb-12 print:pb-0 print:bg-white transition-colors duration-300">
             {/* Top Navigation & Action Toolbar */}
             <div className="no-print sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/90 backdrop-blur-md border-b border-slate-200 dark:border-white/10 px-4 py-3">
                 <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
                     <Link href="/dashboard">
                         <Button variant="ghost" size="sm" className="text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl text-xs">
-                            <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to Dashboard
+                            <ArrowLeft className="w-4 h-4 mr-1.5" /> {labels.back}
                         </Button>
                     </Link>
 
@@ -102,7 +110,7 @@ export function RubricReportView({
                             <button 
                                 onClick={() => handleCopyId(assessment_id)}
                                 className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
-                                title="Copy Assessment ID"
+                                title={labels.copy}
                             >
                                 {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-500 dark:text-[#9df400]" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
                             </button>
@@ -111,7 +119,7 @@ export function RubricReportView({
                             onClick={handleDownloadPdf}
                             className="bg-emerald-500 hover:bg-emerald-600 dark:bg-[#9df400] dark:hover:bg-[#8ee000] text-white dark:text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 dark:shadow-[#9df400]/20 flex items-center gap-1.5 px-4 py-2 transition-all hover:scale-105"
                         >
-                            <Printer className="w-4 h-4" /> Save as PDF
+                            <Printer className="w-4 h-4" /> {labels.pdf}
                         </Button>
                     </div>
                 </div>
@@ -129,13 +137,13 @@ export function RubricReportView({
                                 <span className="px-3 py-1 bg-slate-100 dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 rounded-full text-xs font-semibold uppercase tracking-wider">{candidate.target_role}</span>
                             </div>
                             <p className="text-slate-500 dark:text-zinc-400 text-sm">
-                                {candidate.track} Track • Evaluated on {formattedDate}
+                                {reportMetadataLabel(candidate.track, candidate.language, webMock)} • {labels.date}: {formattedDate}
                             </p>
                         </div>
                         <div className="flex flex-col gap-1 md:text-right">
-                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Assessment Info</span>
-                            <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">{candidate.difficulty} • {candidate.interview_type}</span>
-                            <span className="text-xs text-slate-400 dark:text-zinc-500">Lang: {candidate.language}</span>
+                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500">{labels.info}</span>
+                            <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">{reportMetadataLabel(candidate.difficulty, candidate.language, webMock)} • {reportMetadataLabel(candidate.interview_type, candidate.language, webMock)}</span>
+                            <span className="text-xs text-slate-400 dark:text-zinc-500">{labels.language}: {candidate.language}</span>
                         </div>
                     </div>
                 </div>
@@ -143,10 +151,10 @@ export function RubricReportView({
                 {/* Overall Score & Performance Summary */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="bg-white dark:bg-zinc-950 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-zinc-800 flex flex-col items-center justify-center text-center">
-                        <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-500 mb-6">Overall BARS Score</h2>
+                        <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-500 mb-6">{labels.score}</h2>
                         <div className="flex items-baseline gap-1">
-                            <span className="text-7xl font-black tracking-tighter text-slate-900 dark:text-white">
-                                {overall_evaluation.bars_score !== null ? overall_evaluation.bars_score.toFixed(1) : "N/A"}
+                            <span className={`${overall_evaluation.bars_score === null ? 'text-2xl leading-snug text-center' : 'text-7xl'} font-black tracking-tighter text-slate-900 dark:text-white`}>
+                                {overall_evaluation.bars_score !== null ? overall_evaluation.bars_score.toFixed(1) : labels.unrated}
                             </span>
                             {overall_evaluation.bars_score !== null && (
                                 <span className="text-2xl font-bold text-slate-400 dark:text-zinc-500">/ 5.0</span>
@@ -156,17 +164,17 @@ export function RubricReportView({
                             overall_evaluation.bars_score === null ? 'bg-slate-100 text-slate-500 dark:bg-zinc-900 dark:text-zinc-400' :
                             overall_evaluation.bars_score >= 3.0 ? 'bg-emerald-100 text-emerald-700 dark:bg-[#9df400]/20 dark:text-[#9df400]' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
                         }`}>
-                            {overall_evaluation.performance_level}
+                            {reportStatusLabel(overall_evaluation.performance_level, labels)}
                         </div>
                         <div className="mt-4 text-xs font-medium text-slate-400 dark:text-zinc-500">
-                            Assessment Coverage: {overall_evaluation.assessment_coverage_pct}%
+                            {labels.coverage}: {overall_evaluation.assessment_coverage_pct}%
                         </div>
                     </div>
                     
                     <div className="lg:col-span-2 bg-white dark:bg-zinc-950 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-zinc-800 flex flex-col justify-center">
                         <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
                             <div className="w-1.5 h-6 bg-emerald-500 dark:bg-[#9df400] rounded-full"></div>
-                            Performance Summary
+                            {labels.summary}
                         </h2>
                         <p className="text-slate-600 dark:text-zinc-300 leading-relaxed">
                             {overall_evaluation.executive_summary}
@@ -176,12 +184,12 @@ export function RubricReportView({
 
                 {/* Detailed Competency Analysis */}
                 <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Competency Analysis</h2>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">{labels.competencies}</h2>
                     <div className="space-y-6">
                         {competencies.map((comp) => {
                             const isUnrated = comp.bars_score === null;
                             const isAmber = !isUnrated && comp.bars_score! < 2.5;
-                            const scoreText = isUnrated ? "Unrated" : `${comp.bars_score!.toFixed(1)}`;
+                            const scoreText = isUnrated ? labels.unrated : `${comp.bars_score!.toFixed(1)}`;
                             const fillPct = isUnrated ? 0 : Math.min(100, Math.max(0, (comp.bars_score! / 5.0) * 100));
 
                             return (
@@ -195,11 +203,11 @@ export function RubricReportView({
                                                     comp.evidence_status === 'Partial' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
                                                     'bg-slate-100 text-slate-600 dark:bg-zinc-900 dark:text-zinc-400'
                                                 }`}>
-                                                    {comp.evidence_status} Evidence
+                                                    {reportStatusLabel(comp.evidence_status, labels)}
                                                 </span>
                                             </h3>
                                             <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
-                                                {comp.weight_rationale || "Evaluated competency based on response dimensions."}
+                                                {comp.weight_rationale || '—'}
                                             </p>
                                         </div>
                                         <div className="flex flex-col items-end gap-2 shrink-0 w-full md:w-auto">
@@ -207,7 +215,7 @@ export function RubricReportView({
                                                 isUnrated ? 'bg-slate-100 text-slate-500 dark:bg-zinc-900 dark:text-zinc-400' :
                                                 isAmber ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-emerald-100 text-emerald-700 dark:bg-[#9df400]/20 dark:text-[#9df400]'
                                             }`}>
-                                                BARS: {scoreText}
+                                                {scoreText}{!isUnrated && ' / 5.0'}
                                             </div>
                                             <div className="w-full md:w-32">
                                                 <div className="w-full bg-slate-100 dark:bg-zinc-900 rounded-full h-2 overflow-hidden mb-1">
@@ -217,7 +225,7 @@ export function RubricReportView({
                                                     />
                                                 </div>
                                                 <div className="text-[10px] text-slate-400 dark:text-zinc-500 font-medium uppercase text-right">
-                                                    Weight: {comp.weight_pct}%
+                                                    {labels.weight}: {comp.weight_pct}%
                                                 </div>
                                             </div>
                                         </div>
@@ -226,7 +234,7 @@ export function RubricReportView({
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                         <div>
                                             <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                                Observable Behaviors
+                                                {labels.behaviors}
                                             </h4>
                                             <ul className="space-y-2">
                                                 {comp.observable_behaviors && comp.observable_behaviors.length > 0 ? (
@@ -237,13 +245,13 @@ export function RubricReportView({
                                                         </li>
                                                     ))
                                                 ) : (
-                                                    <li className="text-sm text-slate-500 italic">No observable strengths demonstrated.</li>
+                                                    <li className="text-sm text-slate-500 italic">{localized ? '—' : 'No observable strengths demonstrated.'}</li>
                                                 )}
                                             </ul>
                                         </div>
                                         <div>
                                             <h4 className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                                Observed Gaps
+                                                {labels.gaps}
                                             </h4>
                                             <ul className="space-y-2">
                                                 {comp.observed_gaps && comp.observed_gaps.length > 0 ? (
@@ -254,7 +262,7 @@ export function RubricReportView({
                                                         </li>
                                                     ))
                                                 ) : (
-                                                    <li className="text-sm text-slate-500 italic">No major gaps observed.</li>
+                                                    <li className="text-sm text-slate-500 italic">{localized ? '—' : 'No major gaps observed.'}</li>
                                                 )}
                                             </ul>
                                         </div>
@@ -262,7 +270,7 @@ export function RubricReportView({
 
                                     <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-xl p-4 border border-slate-100 dark:border-zinc-800">
                                         <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                            Traceable Evidence
+                                            {labels.traceable}
                                         </h4>
                                         <div className="space-y-2">
                                             {comp.traceable_evidence && comp.traceable_evidence.length > 0 ? (
@@ -272,7 +280,7 @@ export function RubricReportView({
                                                     </p>
                                                 ))
                                             ) : (
-                                                <p className="text-sm text-slate-500 italic">No direct verbal evidence captured for this competency.</p>
+                                                <p className="text-sm text-slate-500 italic">{localized ? '—' : 'No direct verbal evidence captured for this competency.'}</p>
                                             )}
                                         </div>
                                     </div>
@@ -284,19 +292,19 @@ export function RubricReportView({
 
                 {/* Detailed Questions Assessment */}
                 <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6 mt-4">Question-by-Question Deep Dive</h2>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6 mt-4">{labels.questions}</h2>
                     <div className="space-y-6">
                         {questions_assessment.map((q) => {
                             const isUnrated = q.bars_score === null;
                             const isAmber = !isUnrated && q.bars_score! < 3.0;
-                            const scoreText = isUnrated ? "Unrated" : `${q.bars_score!.toFixed(1)} / 5.0`;
+                            const scoreText = isUnrated ? labels.unrated : `${q.bars_score!.toFixed(1)} / 5.0`;
 
                             return (
                                 <div key={q.question_number} className="bg-white dark:bg-zinc-950 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200 dark:border-zinc-800">
                                     <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
                                         <div className="flex flex-wrap items-center gap-2">
                                             <span className="bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 font-bold text-xs px-3 py-1 rounded-full uppercase tracking-wider">
-                                                Question {q.question_number}
+                                                {labels.question} {q.question_number}
                                             </span>
                                             {q.targeted_competencies.map(c => (
                                                 <span key={c} className="text-xs font-semibold text-slate-500 dark:text-zinc-400 px-2 border-l border-slate-300 dark:border-zinc-800 uppercase tracking-wider">
@@ -308,7 +316,7 @@ export function RubricReportView({
                                             isUnrated ? 'bg-slate-100 text-slate-600 dark:bg-zinc-900 dark:text-zinc-400' :
                                             isAmber ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-emerald-100 text-emerald-700 dark:bg-[#9df400]/20 dark:text-[#9df400]'
                                         }`}>
-                                            BARS Score: {scoreText}
+                                            {scoreText}
                                         </div>
                                     </div>
 
@@ -319,14 +327,14 @@ export function RubricReportView({
                                     </div>
 
                                     <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-2xl p-5 mb-6 border border-slate-100 dark:border-zinc-800">
-                                        <div className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-3">Candidate Response</div>
+                                        <div className="text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-3">{labels.response}</div>
                                         <p className="text-slate-700 dark:text-zinc-300 italic text-sm leading-relaxed whitespace-pre-wrap">
                                             "{q.candidate_answer}"
                                         </p>
                                         
                                         {q.follow_up && q.follow_up.probe && (
                                             <div className="mt-4 pt-4 border-t border-slate-200 dark:border-zinc-800">
-                                                <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400 mb-1">↳ Follow-up: {q.follow_up.probe}</div>
+                                                <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400 mb-1">↳ {labels.followup}: {q.follow_up.probe}</div>
                                                 <p className="text-slate-600 dark:text-zinc-400 italic text-sm pl-4 whitespace-pre-wrap">
                                                     "{q.follow_up.response}"
                                                 </p>
@@ -336,30 +344,30 @@ export function RubricReportView({
 
                                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
                                         <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl p-4 border border-emerald-100 dark:border-emerald-900/30">
-                                            <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-2 flex items-center gap-2">Strengths</h4>
+                                            <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-2 flex items-center gap-2">{labels.strengths}</h4>
                                             <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed">
-                                                {q.strengths && q.strengths.length > 0 ? q.strengths.join(". ") : "No specific strengths noted for this response."}
+                                                {q.strengths && q.strengths.length > 0 ? q.strengths.join(". ") : localized ? '—' : "No specific strengths noted for this response."}
                                             </p>
                                         </div>
                                         <div className="bg-amber-50 dark:bg-amber-900/10 rounded-2xl p-4 border border-amber-100 dark:border-amber-900/30">
-                                            <h4 className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest mb-2 flex items-center gap-2">Gaps</h4>
+                                            <h4 className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest mb-2 flex items-center gap-2">{labels.gaps}</h4>
                                             <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed">
-                                                {q.gaps && q.gaps.length > 0 ? q.gaps.join(". ") : "No major flaws observed."}
+                                                {q.gaps && q.gaps.length > 0 ? q.gaps.join(". ") : localized ? '—' : "No major flaws observed."}
                                             </p>
                                         </div>
                                         <div className="bg-slate-50 dark:bg-zinc-900/50 rounded-2xl p-4 border border-slate-200 dark:border-zinc-800/50">
-                                            <h4 className="text-xs font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-widest mb-2">Scoring Rationale</h4>
+                                            <h4 className="text-xs font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-widest mb-2">{labels.rationale}</h4>
                                             <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed">
-                                                {q.scoring_rationale || q.evaluator_note || "Insufficient verbal evidence provided."}
+                                                {q.scoring_rationale || q.evaluator_note || labels.insufficient}
                                             </p>
                                         </div>
                                     </div>
                                     
                                     {/* Individualized Ideal Answer */}
                                     <div className="bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl p-5 border border-indigo-100 dark:border-indigo-900/30 border-l-4 border-l-indigo-500 dark:border-l-indigo-400">
-                                        <h4 className="text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-widest mb-2">Ideal Response Example (Generic)</h4>
+                                        <h4 className="text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-widest mb-2">{labels.ideal}</h4>
                                         <p className="text-sm text-slate-700 dark:text-zinc-300 leading-relaxed">
-                                            {q.benchmark_model || "A distinguished response clearly sets operational context, provides structured decision trade-offs, and quantifies performance outcomes."}
+                                            {q.benchmark_model || '—'}
                                         </p>
                                     </div>
                                 </div>
@@ -372,30 +380,30 @@ export function RubricReportView({
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-1 space-y-6">
                         <div className="bg-white dark:bg-zinc-950 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-zinc-800">
-                            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-6">Session Telemetry</h3>
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-6">{labels.metrics}</h3>
                             <div className="space-y-4">
                                 <div>
-                                    <div className="text-2xl font-black text-slate-800 dark:text-white font-mono">{descriptive_session_metrics?.total_duration_minutes ?? 12}m</div>
-                                    <div className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mt-1">Total Duration</div>
+                                    <div className="text-2xl font-black text-slate-800 dark:text-white font-mono">{reportTime(descriptive_session_metrics?.total_duration_minutes, 'minute', candidate.language, webMock)}</div>
+                                    <div className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mt-1">{labels.duration}</div>
                                 </div>
                                 <div className="border-t border-slate-100 dark:border-zinc-800 pt-4">
-                                    <div className="text-2xl font-black text-slate-800 dark:text-white font-mono">{descriptive_session_metrics?.average_latency_seconds ?? 1.8}s</div>
-                                    <div className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mt-1">Avg Latency</div>
+                                    <div className="text-2xl font-black text-slate-800 dark:text-white font-mono">{reportTime(descriptive_session_metrics?.average_latency_seconds, 'second', candidate.language, webMock)}</div>
+                                    <div className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mt-1">{labels.latency}</div>
                                 </div>
                                 <div className="border-t border-slate-100 dark:border-zinc-800 pt-4">
-                                    <div className="text-2xl font-black text-slate-800 dark:text-white font-mono">{descriptive_session_metrics?.total_words ?? 840}</div>
-                                    <div className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mt-1">Word Count</div>
+                                    <div className="text-2xl font-black text-slate-800 dark:text-white font-mono">{descriptive_session_metrics?.total_words ?? '—'}</div>
+                                    <div className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mt-1">{labels.words}</div>
                                 </div>
                                 <div className="border-t border-slate-100 dark:border-zinc-800 pt-4">
                                     <div className="text-2xl font-black text-slate-800 dark:text-white font-mono">{descriptive_session_metrics?.total_exchanges ?? questions_assessment.length}</div>
-                                    <div className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mt-1">Total Exchanges</div>
+                                    <div className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mt-1">{labels.exchanges}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
                     <div className="lg:col-span-2 bg-white dark:bg-zinc-950 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200 dark:border-zinc-800">
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">7-Day Targeted Coaching Roadmap</h3>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">{labels.plan}</h3>
                         <div className="space-y-4">
                             {action_plan_7_days.map((plan, idx) => (
                                 <div key={idx} className="bg-slate-50 dark:bg-zinc-900/50 rounded-2xl p-5 border border-slate-100 dark:border-zinc-800">
@@ -406,8 +414,8 @@ export function RubricReportView({
                                         <span className="font-bold text-slate-800 dark:text-slate-200">{plan.focus_area}</span>
                                     </div>
                                     <div className="text-sm text-slate-600 dark:text-zinc-400 space-y-2">
-                                        <div><strong className="text-slate-700 dark:text-zinc-300">Action:</strong> {plan.actions.join(" ")}</div>
-                                        <div><strong className="text-slate-700 dark:text-zinc-300">Outcome:</strong> {plan.expected_outcome}</div>
+                                        <div><strong className="text-slate-700 dark:text-zinc-300">{labels.actions}:</strong> {plan.actions.join(" ")}</div>
+                                        <div><strong className="text-slate-700 dark:text-zinc-300">{labels.outcome}:</strong> {plan.expected_outcome}</div>
                                     </div>
                                 </div>
                             ))}

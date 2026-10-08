@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { SERVER_SESSION_COOKIE } from '@/lib/server-session';
 
-export default function middleware(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
     // Define protected routes
-    const protectedPaths = ['/dashboard', '/interview', '/desktop-assistant'];
+    const protectedPaths = ['/dashboard', '/interview', '/mock-interview', '/desktop-assistant', '/onboarding', '/desktop'];
     const publicPaths = ['/scanner-frame', '/desktop/overlay'];
     if (publicPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
         const requestHeaders = new Headers(request.headers);
@@ -21,7 +23,7 @@ export default function middleware(request: NextRequest) {
 
     if (isProtected) {
         // Check for auth_token cookie
-        const token = request.cookies.get('auth_token');
+        const token = request.cookies.get(SERVER_SESSION_COOKIE);
 
         if (!token || !token.value) {
             // Redirect to login if no token found
@@ -30,15 +32,24 @@ export default function middleware(request: NextRequest) {
             return NextResponse.redirect(loginUrl);
         }
 
-        // SECURITY FIX: Stricter token format validation
-        // Token must be exactly 32 alphanumeric characters (from Supabase JWT slice)
-        const tokenRegex = /^[A-Za-z0-9_-]{32,36}$/;
-        if (!tokenRegex.test(token.value)) {
-            // Invalid token format, clear it and redirect
-            const response = NextResponse.redirect(new URL('/login', request.url));
-            response.cookies.delete('auth_token');
-            return response;
+        try {
+            const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+                auth: { persistSession: false, autoRefreshToken: false },
+            });
+            const { data, error } = await client.auth.getUser(token.value);
+            if (!error && data.user) return NextResponse.next();
+            if (error && (error.status && error.status >= 500 || error.name === 'AuthRetryableFetchError')) {
+                return new NextResponse('Unable to verify your session. Please retry.', { status: 503 });
+            }
+        } catch {
+            return new NextResponse('Unable to verify your session. Please retry.', { status: 503 });
         }
+        const loginUrl = new URL('/login', request.url);
+        loginUrl.searchParams.set('from', request.nextUrl.pathname);
+        const response = NextResponse.redirect(loginUrl);
+        response.cookies.delete(SERVER_SESSION_COOKIE);
+        response.cookies.delete('auth_token');
+        return response;
     }
 
     return NextResponse.next();
@@ -48,6 +59,9 @@ export const config = {
     matcher: [
         '/dashboard/:path*',
         '/interview/:path*',
+        '/mock-interview/:path*',
+        '/onboarding/:path*',
+        '/desktop/:path*',
         '/desktop-assistant/:path*',
         '/desktop/overlay/:path*',
         '/scanner-frame/:path*',

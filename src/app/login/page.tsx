@@ -1,5 +1,7 @@
 "use client";
 
+import { syncServerSession } from "@/lib/session-sync";
+
 import { useState, useEffect } from "react";
 import { Eye, EyeOff, Sparkles, RefreshCw, CheckCircle2, ArrowLeft, Mail } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -59,6 +61,7 @@ export default function LoginPage() {
                 const { supabase } = await import("@/lib/supabase");
                 const { data } = await supabase.auth.getSession();
                 if (data.session) {
+                    await syncServerSession(data.session.access_token);
                     const sessionId = data.session.access_token.slice(0, 32);
                     const isSecure = window.location.protocol === "https:";
                     document.cookie = `auth_token=${sessionId}; path=/; max-age=86400; SameSite=Lax${isSecure ? "; Secure" : ""}`;
@@ -133,7 +136,9 @@ export default function LoginPage() {
                 setSuccess("Sign-in link sent! Check your email.");
             } else {
                 const result = await signIn(formData.email, formData.password) as { session?: { access_token: string } };
-                const sessionId = result?.session?.access_token?.slice(0, 32) || crypto.randomUUID();
+                if (!result?.session?.access_token) throw new Error("No authenticated session returned");
+                await syncServerSession(result.session.access_token);
+                const sessionId = result.session.access_token.slice(0, 32);
                 const isSecure = window.location.protocol === "https:";
                 document.cookie = `auth_token=${sessionId}; path=/; max-age=86400; SameSite=Lax${isSecure ? "; Secure" : ""}`;
                 window.location.href = getPostLoginRedirect();
@@ -166,7 +171,9 @@ export default function LoginPage() {
         setError(null);
         try {
             const result = await verifyOtp(formData.email, formData.otp, "signup") as { session?: { access_token: string } };
-            const sessionId = result?.session?.access_token?.slice(0, 32) || crypto.randomUUID();
+            if (!result?.session?.access_token) throw new Error("No authenticated session returned");
+                await syncServerSession(result.session.access_token);
+                const sessionId = result.session.access_token.slice(0, 32);
             const isSecure = window.location.protocol === "https:";
             document.cookie = `auth_token=${sessionId}; path=/; max-age=86400; SameSite=Lax${isSecure ? "; Secure" : ""}`;
             window.location.href = getPostLoginRedirect();

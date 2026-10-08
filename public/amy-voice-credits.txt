@@ -1,0 +1,21 @@
+Amy medium (en_US-amy-medium) voice attribution
+
+Model: Rhasspy Piper voices, trained by Michael Hansen.
+https://huggingface.co/rhasspy/piper-voices/blob/main/en/en_US/amy/medium/MODEL_CARD
+
+The model card references MycroftAI/mimic3-voices for source licensing:
+https://github.com/MycroftAI/mimic3-voices
+Creative Commons Attribution-ShareAlike 4.0 International:
+https://github.com/MycroftAI/mimic3-voices/blob/master/LICENSE
+https://creativecommons.org/licenses/by-sa/4.0/
+
+The Amy model is used without modifying its weights.
+Browser library: Mintplex-Labs/piper-tts-web (MIT).
+https://github.com/Mintplex-Labs/piper-tts-web
+Runtime: Microsoft ONNX Runtime (MIT).
+https://github.com/microsoft/onnxruntime
+Phonemizer: diffusionstudio/piper-wasm, based on eSpeak NG/Piper.
+https://github.com/diffusionstudio/piper-wasm
+
+Local integration is under evaluation. Final distribution obligations of
+the voice, source data, and bundled phonemizer require review before release.

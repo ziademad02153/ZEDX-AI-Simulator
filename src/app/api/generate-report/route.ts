@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { interviewService, SessionExchange, LegacyScorecard } from "@/lib/interview-service";
 import { getRubric13EvaluatorSystemPrompt, getRubric13EvaluatorUserPrompt } from "@/lib/prompts";
 import { enforceRubric13ReportSchema, generateLegacyProjection } from "@/lib/rubric-evaluator";
+import { validateWebReportLanguage } from "@/lib/web-report-language";
+import { SUPPORTED_LANGUAGES } from "@/lib/languages";
 
 export const runtime = 'edge';
 
@@ -27,6 +29,7 @@ export async function POST(request: Request) {
 
         const body = await request.json();
         const { interviewId } = body;
+        const regenerate = body.regenerate === true;
 
         if (!interviewId) {
             return NextResponse.json({ error: { message: "Missing interviewId" } }, { status: 400 });
@@ -45,7 +48,7 @@ export async function POST(request: Request) {
         }
 
         // Return cached Rubric 1.3 report if already generated
-        if (interview.analysis?.rubric_report && interview.analysis.rubric_report.rubric_version === "1.3") {
+        if (!regenerate && interview.analysis?.rubric_report && interview.analysis.rubric_report.rubric_version === "1.3") {
             return NextResponse.json({ 
                 rubric_report: interview.analysis.rubric_report,
                 scorecard: interview.analysis.scorecard 
@@ -53,8 +56,15 @@ export async function POST(request: Request) {
         }
 
         // Preserve legacy reports: If interview has legacy scorecard from earlier, return directly
-        if (interview.analysis?.scorecard && !interview.analysis?.rubric_report) {
+        if (!regenerate && interview.analysis?.scorecard && !interview.analysis?.rubric_report) {
             return NextResponse.json({ scorecard: interview.analysis.scorecard });
+        }
+
+        // Explicit regeneration still respects the authenticated user's request budget.
+        if (regenerate) {
+            const { data: allowed, error: rateError } = await supabaseAdmin.rpc('check_rate_limit', { p_user_id: user.id, p_max: 20 });
+            if (rateError || typeof allowed !== 'boolean') return NextResponse.json({ error: { message: 'Usage verification unavailable. Please retry.' } }, { status: 503 });
+            if (allowed === false) return NextResponse.json({ error: { message: 'Too many requests. Please wait before retrying.' } }, { status: 429 });
         }
 
         // --- Rate Limiting Check (4 Reports/Month for Free Tier) ---
@@ -66,7 +76,7 @@ export async function POST(request: Request) {
 
         const userTier = profile?.tier || 'free';
 
-        if (userTier === 'free') {
+        if (userTier === 'free' && !interview.analysis?.rubric_report && !interview.analysis?.scorecard) {
             const startOfMonth = new Date();
             startOfMonth.setDate(1);
             startOfMonth.setHours(0, 0, 0, 0);
@@ -92,6 +102,10 @@ export async function POST(request: Request) {
 
         // 1. Gather Real Session Context
         const lang = interview.analysis?.language || "en-US";
+        const isWebMock = interview.analysis?.session_mode === 'mock_interview';
+        if (isWebMock && !SUPPORTED_LANGUAGES.some(item => item.code === lang)) {
+            return NextResponse.json({ error: { message: 'Unsupported saved interview language.' } }, { status: 400 });
+        }
         const jd = interview.analysis?.job_description || "Professional Role Expectations";
         const interviewType = interview.analysis?.interview_type || "General";
         const difficulty = interview.analysis?.difficulty || "Mid-Level";
@@ -142,6 +156,10 @@ export async function POST(request: Request) {
             }];
         }
 
+        if (regenerate && sessionExchanges.length === 0) {
+            return NextResponse.json({ error: { message: 'The original interview responses are unavailable, so this saved report cannot be regenerated.' } }, { status: 400 });
+        }
+
         // Compute descriptive audio and session metrics (Non-scoring)
         const totalDurationMinutes = interview.analysis?.duration_minutes 
             || Math.max(1, Math.round(((new Date(interview.analysis?.completed_at || interview.created_at).getTime() - new Date(interview.analysis?.started_at || interview.created_at).getTime()) / 60000)) || 1);
@@ -176,7 +194,7 @@ export async function POST(request: Request) {
         const candidateName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || "Candidate";
 
         // 2. Prepare System & User Prompts
-        const systemPrompt = getRubric13EvaluatorSystemPrompt(lang);
+        const systemPrompt = getRubric13EvaluatorSystemPrompt(lang, isWebMock);
         const userPrompt = getRubric13EvaluatorUserPrompt({
             targetRole,
             track: interviewType,
@@ -223,12 +241,16 @@ export async function POST(request: Request) {
         let rawContent: string | null = null;
         let successfulModel = modelsToTry[0];
         let lastErrorMsg = "";
+        // Leave time for persistence and the client response; retries must not run indefinitely.
+        const evaluationDeadline = Date.now() + 110000;
 
         for (const targetModel of modelsToTry) {
             for (const apiKey of shuffledKeys) {
+                const remainingMs = evaluationDeadline - Date.now();
+                if (remainingMs <= 0) break;
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), Math.min(30000, remainingMs));
                 try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 45000);
 
                     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                         method: "POST",
@@ -242,14 +264,12 @@ export async function POST(request: Request) {
                                 { role: "system", content: systemPrompt },
                                 { role: "user", content: userPrompt }
                             ],
-                            max_tokens: 4096,
+                            max_tokens: 8192,
                             temperature: 0.1,
                             response_format: { type: "json_object" }
                         }),
                         signal: controller.signal
                     });
-
-                    clearTimeout(timeoutId);
 
                     if (!response.ok) {
                         const errText = await response.text();
@@ -259,8 +279,10 @@ export async function POST(request: Request) {
                     }
 
                     const data = await response.json();
+                    if (data.choices?.[0]?.finish_reason === 'length') throw new Error('Evaluator output was truncated');
                     const content = data.choices?.[0]?.message?.content;
                     if (content && content.trim().length > 0) {
+                        if (isWebMock) validateWebReportLanguage(JSON.parse(content.trim()), lang);
                         rawContent = content;
                         successfulModel = targetModel;
                         break;
@@ -268,6 +290,8 @@ export async function POST(request: Request) {
                 } catch (err: any) {
                     lastErrorMsg = err?.message || "Fetch aborted/failed";
                     console.warn(`[Rubric 1.3 Evaluator] Model ${targetModel} error: ${lastErrorMsg}. Retrying...`);
+                } finally {
+                    clearTimeout(timeoutId);
                 }
             }
 
@@ -302,6 +326,7 @@ export async function POST(request: Request) {
             interviewType,
             difficulty,
             language: lang,
+            strictLanguage: isWebMock,
             evaluatorModel: successfulModel,
             sessionExchanges,
             descriptiveMetrics

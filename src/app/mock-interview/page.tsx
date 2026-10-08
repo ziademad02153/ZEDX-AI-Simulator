@@ -20,11 +20,14 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { SUPPORTED_LANGUAGES } from "@/lib/languages";
+import { disposeAmySpeech, preloadAmySpeech, synthesizeAmySpeech, getEnglishSpeechPreference } from "@/lib/piper-amy";
+import { getWebInterviewMessages, getWebSpeechProvider, loadWebSpeechVoices, resolveWebInterviewLanguage, selectWebSpeechVoice } from "@/lib/web-interview-language";
 import { supabase } from "@/lib/supabase";
 import { interviewService, SessionExchange } from "@/lib/interview-service";
 import { useInterviewStore } from "@/lib/store";
 import { Lock } from "lucide-react";
 import { PaywallModal } from "@/components/paywall-modal";
+import { toast } from 'sonner';
 
 const PHONETIC_EGYPTIAN_NAMES_AR: Record<string, string> = {
     // Male Names
@@ -166,8 +169,12 @@ export default function MockInterviewPage() {
     const finalTranscriptRef = useRef("");
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
     const isMounted = useRef(true);
+    const speechCleanupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasStartedRef = useRef(false);
     const dbInterviewIdRef = useRef<string | null>(null);
+    const pendingSaveRef = useRef<Promise<void>>(Promise.resolve());
+    const isCompletingRef = useRef(false);
+    const speechRequestRef = useRef(0);
     const sessionStartTimeRef = useRef<number>(Date.now());
     const questionEndedAtRef = useRef<number | null>(null);
     const speechStartedAtRef = useRef<number | null>(null);
@@ -197,6 +204,18 @@ export default function MockInterviewPage() {
         };
     }, [isListening, questionsAsked, currentQuestionIndex, currentQuestionType, userTranscript]);
 
+    useEffect(() => {
+        if (speechCleanupTimer.current) clearTimeout(speechCleanupTimer.current);
+        isMounted.current = true;
+        return () => {
+            isMounted.current = false;
+            speechRequestRef.current++;
+            // React development mode replays effects. Preserve setup's warm worker
+            // across that replay, but release it when the page actually unmounts.
+            speechCleanupTimer.current = setTimeout(disposeAmySpeech, 0);
+        };
+    }, []);
+
     // Initialize context from Zustand (and fallback to localStorage for backwards compatibility/hard reloads if any)
     useEffect(() => {
         let _targetRole = "";
@@ -212,12 +231,14 @@ export default function MockInterviewPage() {
             const state = useInterviewStore.getState();
             const savedTargetRole = localStorage.getItem("interview_context_target_role");
             _targetRole = state.targetRole || savedTargetRole || "";
-            const stateLang = state.language && state.language.trim();
             const savedLang = localStorage.getItem("interview_context_lang");
-            _lang = stateLang || (savedLang && savedLang.trim()) || "en-US";
+            _lang = resolveWebInterviewLanguage(state.language, savedLang, Boolean(state.jobDescription && state.resumeText));
             if (!SUPPORTED_LANGUAGES.some(l => l.code === _lang)) {
                 console.warn(`[Mock Interview] Unsupported language code "${_lang}". Falling back to "en-US".`);
                 _lang = "en-US";
+            }
+            if (_lang === 'en-US' && getEnglishSpeechPreference() === 'amy') {
+                void preloadAmySpeech().catch(() => { /* Browser English voice remains available. */ });
             }
             try {
                 localStorage.setItem("interview_context_lang", _lang);
@@ -337,11 +358,11 @@ export default function MockInterviewPage() {
                 
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     const result = event.results[i][0];
-                    // Filter out obvious background noise (low confidence)
-                    if (event.results[i].isFinal && result.confidence < 0.5) continue;
+                    // Do not silently remove recognized words from an answer based on
+                    // an engine-specific confidence estimate; the evaluator receives the transcript.
                     
                     if (event.results[i].isFinal) {
-                        finalTranscriptRef.current += result.transcript;
+                        finalTranscriptRef.current = [finalTranscriptRef.current.trim(), result.transcript.trim()].filter(Boolean).join(' ');
                         hasValidSpeech = true;
                     } else {
                         interimTranscript += result.transcript;
@@ -349,7 +370,7 @@ export default function MockInterviewPage() {
                     }
                 }
                 
-                const currentText = finalTranscriptRef.current + interimTranscript;
+                const currentText = [finalTranscriptRef.current.trim(), interimTranscript.trim()].filter(Boolean).join(' ');
                 setUserTranscript(currentText);
 
                 // Record candidate speech start time on first valid utterance
@@ -393,7 +414,6 @@ export default function MockInterviewPage() {
         }
 
         return () => {
-            isMounted.current = false;
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
             if (recognitionRef.current) {
                 recognitionRef.current.onend = null;
@@ -433,45 +453,55 @@ export default function MockInterviewPage() {
         }
     }, [isSetup, isMicEnabled, isCameraEnabled]);
 
-    const completeInterview = (finalHistory: any[]) => {
+    const completeInterview = async (finalHistory: any[]) => {
+        if (isCompletingRef.current) return;
+        isCompletingRef.current = true;
         const completedAt = new Date().toISOString();
         const totalDurationMinutes = Math.max(1, Math.round((Date.now() - sessionStartTimeRef.current) / 60000));
 
-        setZedxText("The interview is complete. Generating your report...");
-        speakText("The interview is complete. Generating your report...");
+        const completionMessage = getWebInterviewMessages(language).completed;
+        setZedxText(completionMessage);
+        speakText(completionMessage);
 
         localStorage.setItem("interview_results", JSON.stringify(finalHistory));
         localStorage.setItem("interview_completed_at", completedAt);
         localStorage.setItem("session_exchanges", JSON.stringify(sessionExchangesRef.current));
 
-        if (dbInterviewIdRef.current) {
-            interviewService.updateInterview(dbInterviewIdRef.current, {
-                analysis: {
-                    target_role: targetRole || undefined,
-                    job_description: jd,
-                    resume_name: resume ? resume.substring(0, 80).replace(/\n/g, ' ') : "Uploaded Resume",
-                    resume_text: resume || undefined,
-                    interview_type: interviewType,
-                    difficulty,
-                    language,
-                    model,
-                    question_count: questionCount,
-                    started_at: new Date(sessionStartTimeRef.current).toISOString(),
-                    completed_at: completedAt,
-                    duration_minutes: totalDurationMinutes,
-                    questions: finalHistory,
-                    session_exchanges: sessionExchangesRef.current
-                }
-            }).catch(console.error);
-        }
-
-        setTimeout(() => {
+        try {
+            // Flush queued saves before saving the final language and generating its report.
+            await pendingSaveRef.current.catch(() => {});
+            const analysis = {
+                target_role: targetRole || undefined,
+                job_description: jd,
+                resume_name: resume ? resume.substring(0, 80).replace(/\n/g, ' ') : "Uploaded Resume",
+                resume_text: resume || undefined,
+                interview_type: interviewType,
+                difficulty,
+                language,
+                session_mode: 'mock_interview' as const,
+                model,
+                question_count: questionCount,
+                started_at: new Date(sessionStartTimeRef.current).toISOString(),
+                completed_at: completedAt,
+                duration_minutes: totalDurationMinutes,
+                questions: finalHistory,
+                session_exchanges: sessionExchangesRef.current
+            };
             if (dbInterviewIdRef.current) {
-                router.push(`/dashboard/report/${dbInterviewIdRef.current}`);
+                await interviewService.updateInterview(dbInterviewIdRef.current, { analysis });
             } else {
-                router.push("/dashboard/report");
+                const saved = await interviewService.saveInterview(`Interview - ${targetRole || interviewType} (${difficulty})`, "", analysis);
+                dbInterviewIdRef.current = saved.id;
             }
-        }, 4000);
+            localStorage.setItem("current_db_id", dbInterviewIdRef.current);
+            setTimeout(() => {
+                if (isMounted.current) router.push(`/dashboard/report/${dbInterviewIdRef.current}`);
+            }, 4000);
+        } catch (error) {
+            console.error("Failed to save completed interview", error);
+            setZedxText(getWebInterviewMessages(language).connectionError);
+            isCompletingRef.current = false;
+        }
     };
 
     const handleUserFinishedSpeaking = async (transcript: string) => {
@@ -539,6 +569,7 @@ export default function MockInterviewPage() {
             interview_type: interviewType,
             difficulty,
             language,
+            session_mode: 'mock_interview' as const,
             model,
             question_count: questionCount,
             started_at: new Date(sessionStartTimeRef.current).toISOString(),
@@ -546,16 +577,17 @@ export default function MockInterviewPage() {
             session_exchanges: sessionExchangesRef.current
         };
 
-        if (dbInterviewIdRef.current) {
-            interviewService.updateInterview(dbInterviewIdRef.current, { analysis: sessionPayload }).catch(console.error);
-            localStorage.setItem("current_db_id", dbInterviewIdRef.current);
-        } else {
-            const interviewTitle = targetRole ? `Interview - ${targetRole} (${difficulty})` : `Interview - ${interviewType} (${difficulty})`;
-            interviewService.saveInterview(interviewTitle, "", sessionPayload).then(saved => {
+        pendingSaveRef.current = pendingSaveRef.current.catch(() => {}).then(async () => {
+            if (dbInterviewIdRef.current) {
+                await interviewService.updateInterview(dbInterviewIdRef.current, { analysis: sessionPayload });
+            } else {
+                const interviewTitle = `Interview - ${targetRole || interviewType} (${difficulty})`;
+                const saved = await interviewService.saveInterview(interviewTitle, "", sessionPayload);
                 dbInterviewIdRef.current = saved.id;
-                localStorage.setItem("current_db_id", saved.id);
-            }).catch(console.error);
-        }
+            }
+            localStorage.setItem("current_db_id", dbInterviewIdRef.current);
+        });
+        pendingSaveRef.current.catch(console.error);
 
         // Determine next transition step
         if (currentType === "followup") {
@@ -730,8 +762,10 @@ Resume Context: ${resume}`;
                 nextQuestionText = cleanQuestionText;
             } catch (err) {
                 console.error("AI Generation Failed:", err);
-                nextQuestionText = "I apologize, but I have lost connection to my AI servers. Please check your network connection and try again.";
-                isFollowUp = false;
+                const message = getWebInterviewMessages(language).connectionError;
+                setZedxText(message);
+                await speakText(message);
+                return; // A failed request must not advance the interview or enter the report as a question.
             }
 
             // Apply state updates based on isFollowUp
@@ -778,9 +812,12 @@ Resume Context: ${resume}`;
     };
 
     const speakText = async (text: string) => {
+        const speechRequest = ++speechRequestRef.current;
         if (audioRef.current) {
             audioRef.current.onended = null;
+            audioRef.current.onerror = null;
             audioRef.current.pause();
+            if (audioRef.current.src.startsWith('blob:')) URL.revokeObjectURL(audioRef.current.src);
             audioRef.current.src = "";
         }
         if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -793,42 +830,61 @@ Resume Context: ${resume}`;
 
         setIsSpeaking(true);
         setIsListening(false); // Fix: Ensure we are NOT listening while ZEDX starts speaking
-        // We set text empty until audio starts playing for perfect sync
-        setZedxText(""); 
+        // Reveal the question when playback starts, keeping text and voice in sync.
+        setZedxText("");
 
-        const fallbackTTS = () => {
+        const resumeListening = () => {
+            if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
+            setIsSpeaking(false);
+            if (isCompletingRef.current) return;
+            setIsListening(true);
+            setUserTranscript("");
+            questionEndedAtRef.current = Date.now();
+            speechStartedAtRef.current = null;
+            if (recognitionRef.current && !/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
+                try { recognitionRef.current.start(); } catch {}
+            }
+        };
+
+        const playNativeTTS = async () => {
+            if (!window.speechSynthesis) throw new Error("Web Speech is unavailable");
+            const voices = await loadWebSpeechVoices(window.speechSynthesis);
+            if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
+            const voice = selectWebSpeechVoice(voices, language);
+            if (!voice) throw new Error(`No browser voice is available for ${language}`);
             setZedxText(text);
             const utterance = new SpeechSynthesisUtterance(getPhoneticText(text, language));
             utteranceRef.current = utterance; // Prevent garbage collection
             utterance.lang = language;
+            utterance.voice = voice;
             
-            // Make the fallback voice faster and more lively
-            utterance.rate = 1.15; // 15% faster
+            utterance.rate = /Mobi|Android|iPhone/i.test(navigator.userAgent) ? 1.05 : 1.10;
             utterance.pitch = 1.1; // Slightly higher pitch for energy
             
-            const onEndOrError = () => {
-                setIsSpeaking(false);
-                setIsListening(true);
-                setUserTranscript("");
-                questionEndedAtRef.current = Date.now();
-                speechStartedAtRef.current = null;
-                if (recognitionRef.current) {
-                    if (!/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
-                        try { recognitionRef.current.start(); } catch (e) {}
-                    }
-                }
-            };
-            
-            utterance.onend = onEndOrError;
-            utterance.onerror = onEndOrError;
+            utterance.onend = resumeListening;
+            utterance.onerror = () => { notifyAudioError(); resumeListening(); };
             window.speechSynthesis.speak(utterance);
         };
+
+        const notifyAudioError = () => toast.error(language.startsWith('ar')
+            ? 'تعذر تشغيل صوت المقابلة. يمكنك قراءة السؤال الظاهر والمتابعة.'
+            : `Interview audio is unavailable in ${SUPPORTED_LANGUAGES.find(item => item.code === language)?.native || language}. You can read the question and continue.`);
 
         try {
             let audioUrl = "";
             let blob: Blob;
 
-            if (language.startsWith('ar')) {
+            if (language === 'en-US' && getEnglishSpeechPreference() === 'amy') {
+                try {
+                    blob = await synthesizeAmySpeech(text);
+                    if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
+                    audioUrl = URL.createObjectURL(blob);
+                } catch {
+                    if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
+                    await playNativeTTS();
+                    return;
+                }
+            } else if (getWebSpeechProvider(language) === 'elevenlabs') {
                 // Arabic goes to our Vercel API (which uses ElevenLabs)
                 const { data: { session } } = await supabase.auth.getSession();
                 const token = session?.access_token || "";
@@ -842,76 +898,20 @@ Resume Context: ${resume}`;
                     body: JSON.stringify({ text, language })
                 });
 
-                if (!isMounted.current) return;
+                if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
                 if (!res.ok) throw new Error("TTS failed");
 
                 blob = await res.blob();
                 audioUrl = URL.createObjectURL(blob);
             } else {
-                // Completely free, zero-latency client-side TTS using native browser voices
-                // This does NOT use WebSockets, so the red WebSocket error is impossible here.
-                const playPremiumNativeTTS = () => {
-                    setZedxText(text);
-                    const utterance = new SpeechSynthesisUtterance(getPhoneticText(text, language));
-                    utteranceRef.current = utterance;
-                    utterance.lang = language;
-                    
-                    // Apply speed and liveliness improvements
-                    const isMobileTTS = /Mobi|Android|iPhone/i.test(navigator.userAgent);
-                    utterance.rate = isMobileTTS ? 1.05 : 1.10; // Reduced from 1.18 to 1.10 for a more relaxed, natural pacing
-                    utterance.pitch = 1.1; // Slightly higher pitch for energy
-                    
-                    const voices = window.speechSynthesis.getVoices();
-                    const langPrefix = language.split('-')[0]; // e.g. 'en', 'es', 'fr'
-                    
-                    // Prioritize premium MALE voices built into the user's OS/Browser for the specific language
-                    let bestMaleVoice = voices.find(v => 
-                        v.lang.startsWith(langPrefix) && 
-                        (v.name.includes("Natural") || v.name.includes("Online"))
-                    );
-
-                    if (!bestMaleVoice) {
-                        bestMaleVoice = voices.find(v => 
-                            v.lang.startsWith(langPrefix) && 
-                            !v.name.includes("David") &&
-                            (v.name.includes("Google UK English Male") || v.name.includes("Daniel") || v.name.includes("Alex") || v.name.includes("Male"))
-                        ) || voices.find(v => v.lang.startsWith(langPrefix) && !v.name.includes("David")) || voices.find(v => v.lang.startsWith(langPrefix));
-                    }
-                    
-                    if (bestMaleVoice) utterance.voice = bestMaleVoice;
-
-                    const onEndOrError = () => {
-                        setIsSpeaking(false);
-                        setIsListening(true);
-                        setUserTranscript("");
-                        questionEndedAtRef.current = Date.now();
-                        speechStartedAtRef.current = null;
-                        if (recognitionRef.current) {
-                            if (!/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
-                                try { recognitionRef.current.start(); } catch (e) {}
-                            }
-                        }
-                    };
-                    
-                    utterance.onend = onEndOrError;
-                    utterance.onerror = onEndOrError;
-                    
-                    window.speechSynthesis.speak(utterance);
-                };
-
-                // Browsers load voices asynchronously, we must ensure they are loaded before speaking
-                if (window.speechSynthesis.getVoices().length === 0) {
-                    window.speechSynthesis.onvoiceschanged = () => {
-                        playPremiumNativeTTS();
-                        window.speechSynthesis.onvoiceschanged = null; // Fix: Prevent multiple firings which causes premature onend
-                    };
-                } else {
-                    playPremiumNativeTTS();
-                }
+                await playNativeTTS();
                 return; // Exit early since audio playback is handled natively
             }
 
-            if (!isMounted.current) return;
+            if (!isMounted.current || speechRequest !== speechRequestRef.current) {
+                URL.revokeObjectURL(audioUrl);
+                return;
+            }
             
             const audio = new Audio(audioUrl);
             audioRef.current = audio;
@@ -923,34 +923,41 @@ Resume Context: ${resume}`;
 
             audio.onended = () => {
                 URL.revokeObjectURL(audioUrl); // Fix memory leak
-                setIsSpeaking(false);
-                // Start listening to user
-                setIsListening(true);
-                setUserTranscript("");
-                questionEndedAtRef.current = Date.now();
-                speechStartedAtRef.current = null;
-                if (recognitionRef.current) {
-                    if (!/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
-                        try { recognitionRef.current.start(); } catch (e) {}
-                    }
-                }
+                resumeListening();
             };
 
             // Catch playback errors (e.g., autoplay policies or format issues)
-            audio.play().catch(err => {
-                console.error("Audio playback failed:", err);
+            let playbackFailed = false;
+            const handlePlaybackFailure = async () => {
+                if (playbackFailed || !isMounted.current || speechRequest !== speechRequestRef.current) return;
+                playbackFailed = true;
+                audio.onended = null;
+                audio.onerror = null;
+                audio.pause();
                 URL.revokeObjectURL(audioUrl); // Fix memory leak on error
-                fallbackTTS();
-            });
+                setZedxText(text);
+                if (language === 'en-US') {
+                    try { await playNativeTTS(); return; } catch { /* Report failure only when both providers fail. */ }
+                }
+                notifyAudioError();
+                resumeListening();
+            };
+            audio.onerror = () => { void handlePlaybackFailure(); };
+            void audio.play().catch(handlePlaybackFailure);
 
         } catch (err) {
+            if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
             console.error("TTS Error", err);
-            fallbackTTS();
+            notifyAudioError();
+            setZedxText(text);
+            resumeListening();
         }
     };
 
     const endInterview = () => {
         if (confirm("Are you sure you want to end the interview early?")) {
+            speechRequestRef.current++;
+            disposeAmySpeech();
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
             if (audioRef.current) {
                 audioRef.current.pause();

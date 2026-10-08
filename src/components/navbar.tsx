@@ -1,5 +1,7 @@
 "use client";
 
+import { syncServerSession } from "@/lib/session-sync";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Menu, LayoutDashboard, PlayCircle, FolderOpen, History, MonitorSmartphone, Info, LogOut, ChevronDown } from "lucide-react";
@@ -166,6 +168,7 @@ function AuthButtons({ isMobile, scrolled, onSheetClose }: { isMobile?: boolean,
         try {
             const { supabase } = await import("@/lib/supabase");
             await supabase.auth.signOut();
+            await syncServerSession(null);
         } catch (e) {
             console.error("Logout error:", e);
         }

@@ -74,6 +74,11 @@ const nextConfig: NextConfig = {
     ],
   },
   webpack: (config) => {
+    // Piper requires its own matching ONNX WASM runtime; retain the existing runtime for other features.
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'onnxruntime-web/wasm$': 'onnxruntime-piper/wasm',
+    };
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,

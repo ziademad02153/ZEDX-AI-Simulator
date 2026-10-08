@@ -34,7 +34,8 @@ export default function PrintReportPage({ params }: { params: Promise<{ id: stri
                         track: rawReport.candidate?.track || "Role-Specific",
                         interviewType: rawReport.candidate?.interview_type || "Technical",
                         difficulty: rawReport.candidate?.difficulty || "Intermediate",
-                        language: rawReport.candidate?.language || "en-US",
+                        language: data.analysis?.language || rawReport.candidate?.language || "en-US",
+                        strictLanguage: data.analysis?.session_mode === 'mock_interview',
                         evaluatorModel: rawReport.candidate?.evaluator_model || "openai/gpt-oss-120b",
                         sessionExchanges: exchanges,
                         descriptiveMetrics: (rawReport as any).session_telemetry || rawReport.descriptive_session_metrics
@@ -91,7 +92,7 @@ export default function PrintReportPage({ params }: { params: Promise<{ id: stri
         );
     }
 
-    const htmlContent = generateExecutiveReportHtml(rubricReport);
+    const htmlContent = generateExecutiveReportHtml(rubricReport, interview?.analysis?.session_mode === 'mock_interview');
 
     // Extract styles and body content from the generated HTML
     const matchStyle = htmlContent.match(/<style>([\s\S]*?)<\/style>/);

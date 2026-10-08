@@ -33,8 +33,11 @@ export async function POST(req: Request) {
 
         const { text, language = 'en-US' } = await req.json();
 
-        if (!text) {
+        if (typeof text !== 'string' || !text.trim()) {
             return NextResponse.json({ error: 'Text is required' }, { status: 400 });
+        }
+        if (typeof language !== 'string' || !SUPPORTED_LANGUAGES.some(item => item.code === language)) {
+            return NextResponse.json({ error: 'Unsupported language' }, { status: 400 });
         }
 
         // 1. Arabic -> ElevenLabs (Premium Natural Voice)
@@ -102,8 +105,8 @@ export async function POST(req: Request) {
         }
 
         // If it reaches here, it means it's a non-Arabic language that was incorrectly sent to the API
-        // Because the client now handles non-Arabic Edge TTS directly in the browser.
-        return NextResponse.json({ error: "Non-Arabic languages should be handled by the client using EdgeTTS directly." }, { status: 400 });
+        // Non-Arabic mock interviews use the browser Web Speech API.
+        return NextResponse.json({ error: "Non-Arabic languages should use Web Speech in the browser." }, { status: 400 });
 
     } catch (error: any) {
         console.error('Error generating TTS:', error);

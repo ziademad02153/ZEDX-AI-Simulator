@@ -1,5 +1,7 @@
 "use client";
 
+import { syncServerSession } from "@/lib/session-sync";
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -43,7 +45,8 @@ export default function AuthCallbackPage() {
                     }
 
                     if (data.session) {
-                        const sessionId = data.session.access_token.slice(0, 32);
+                        await syncServerSession(data.session.access_token);
+                    const sessionId = data.session.access_token.slice(0, 32);
                         document.cookie = `auth_token=${sessionId}; path=/; max-age=86400; SameSite=Lax`;
                         setStatus("Login successful!");
                         window.location.href = "/dashboard";
@@ -65,7 +68,8 @@ export default function AuthCallbackPage() {
                     }
 
                     if (data.session) {
-                        const sessionId = data.session.access_token.slice(0, 32);
+                        await syncServerSession(data.session.access_token);
+                    const sessionId = data.session.access_token.slice(0, 32);
                         document.cookie = `auth_token=${sessionId}; path=/; max-age=86400; SameSite=Lax`;
                         setStatus("Login successful!");
                         window.location.href = "/dashboard";
@@ -77,6 +81,7 @@ export default function AuthCallbackPage() {
                 const { data: sessionData } = await supabase.auth.getSession();
 
                 if (sessionData.session) {
+                    await syncServerSession(sessionData.session.access_token);
                     const sessionId = sessionData.session.access_token.slice(0, 32);
                     document.cookie = `auth_token=${sessionId}; path=/; max-age=86400; SameSite=Lax`;
                     setStatus("Session found! Redirecting...");

@@ -62,9 +62,8 @@ export async function POST(request: NextRequest) {
             p_max: MAX_REQUESTS
         });
 
-        if (rateLimitError) {
-            console.error('[Stream Rate Limit Error] Fallback to allow:', rateLimitError.message);
-            // Allow if RPC fails so we don't break the app
+        if (rateLimitError || isAllowed == null) {
+            return new Response(JSON.stringify({ error: "Usage verification unavailable. Please retry." }), { status: 503 });
         } else if (isAllowed === false) {
             return new Response(JSON.stringify({ error: "Rate limit exceeded. Please wait a minute." }), { status: 429 });
         }
@@ -72,27 +71,6 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { model, messages, promptType, promptContext } = body;
 
-        // 5. Paywall check for free users
-        if (currentTier === 'free' && promptType !== 'report_evaluator') {
-            const startOfMonth = new Date();
-            startOfMonth.setDate(1);
-            startOfMonth.setHours(0, 0, 0, 0);
-
-            const { count } = await supabaseAdmin
-                .from('interviews')
-                .select('id', { count: 'exact', head: true })
-                .eq('user_id', user.id)
-                .gte('created_at', startOfMonth.toISOString());
-
-            if ((count !== null && count >= 4) || profile.questions_asked >= 16) {
-                return new Response(JSON.stringify({ error: "PAYWALL_LIMIT_REACHED", code: "PAYWALL_LIMIT_REACHED" }), { status: 403 });
-            }
-        }
-
-        // 6. Increment question count BEFORE the AI call (atomic, prevent race conditions)
-        if (currentTier === 'free' && promptType !== 'report_evaluator') {
-            await supabaseAdmin.rpc('increment_questions', { user_id: user.id });
-        }
 
         // 7. Generate secure system prompt on the server
         const systemPrompt = getSystemPrompt(promptType as PromptType, promptContext);
@@ -122,6 +100,17 @@ export async function POST(request: NextRequest) {
                 { status: 500, headers: { "Content-Type": "application/json" } }
             );
         }
+
+        let reservationId: string | null = null;
+        const { data: reservation, error: reservationError } = await supabaseAdmin.rpc('reserve_ai_question', { p_user_id: user.id });
+        if (reservationError || !reservation || typeof reservation.allowed !== 'boolean') {
+            return new Response(JSON.stringify({ error: "Usage verification unavailable. Please retry." }), { status: 503 });
+        }
+        if (!reservation.allowed) {
+            return new Response(JSON.stringify({ error: "PAYWALL_LIMIT_REACHED", code: "PAYWALL_LIMIT_REACHED" }), { status: 403 });
+        }
+        reservationId = reservation.reservation_id;
+
 
         // Fisher-Yates shuffle for even key distribution
         const shuffledKeys = [...groqApiKeys];
@@ -223,6 +212,8 @@ export async function POST(request: NextRequest) {
                 // continue to next key
             }
         }
+
+        if (reservationId) await supabaseAdmin.rpc('release_ai_question', { p_reservation_id: reservationId });
 
         // All keys failed
         console.error("[Stream] All Groq keys exhausted. Last error:", lastError);

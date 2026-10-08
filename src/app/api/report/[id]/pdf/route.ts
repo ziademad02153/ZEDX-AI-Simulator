@@ -7,6 +7,7 @@ import path from "path";
 import os from "os";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { SERVER_SESSION_COOKIE } from '@/lib/server-session';
 
 const execFileAsync = promisify(execFile);
 
@@ -37,12 +38,13 @@ export async function GET(
     const { id } = await context.params;
 
     try {
-        const token = request.nextUrl.searchParams.get('token');
+        // Credentials belong in a header or HttpOnly cookie, never a shareable URL.
+        const token = request.headers.get('authorization')?.match(/^Bearer (.+)$/)?.[1] || request.cookies.get(SERVER_SESSION_COOKIE)?.value;
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
         const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
         
-        const { data: { user } } = token ? await supabaseAdmin.auth.getUser(token) : await supabaseAdmin.auth.getUser();
+        const { data: { user } } = token ? await supabaseAdmin.auth.getUser(token) : { data: { user: null } };
         
         if (!user) {
             return NextResponse.json({ error: "User not authenticated" }, { status: 401 });
@@ -74,19 +76,20 @@ export async function GET(
             interviewType: interview.analysis?.interview_type || rawReport.candidate?.interview_type || "Technical",
             difficulty: interview.analysis?.difficulty || rawReport.candidate?.difficulty || "Intermediate",
             language: interview.analysis?.language || rawReport.candidate?.language || "en-US",
+            strictLanguage: interview.analysis?.session_mode === 'mock_interview',
             evaluatorModel: rawReport.candidate?.evaluator_model || "openai/gpt-oss-120b",
             sessionExchanges: exchanges,
             descriptiveMetrics: (rawReport as any).session_telemetry || rawReport.descriptive_session_metrics
         });
 
-        const htmlContent = generateExecutiveReportHtml(rubricReport);
+        const htmlContent = generateExecutiveReportHtml(rubricReport, interview.analysis?.session_mode === 'mock_interview');
 
         const browserPath = findBrowserBinary();
         if (!browserPath) {
             // Fallback: Return HTML if headless browser is unavailable on this host
             return new NextResponse(htmlContent, {
                 headers: {
-                    "Content-Type": "text/html; charset=utf-8"
+                    "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer"
                 }
             });
         }
@@ -121,6 +124,8 @@ export async function GET(
                 return new NextResponse(pdfBuffer, {
                     headers: {
                         "Content-Type": "application/pdf",
+                        "Cache-Control": "private, no-store",
+                        "Referrer-Policy": "no-referrer",
                         "Content-Disposition": `attachment; filename="${filename}"`
                     }
                 });
@@ -132,7 +137,7 @@ export async function GET(
             // Fallback to serving raw HTML
             fs.promises.unlink(tempHtmlPath).catch(() => {});
             return new NextResponse(htmlContent, {
-                headers: { "Content-Type": "text/html; charset=utf-8" }
+                headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" }
             });
         }
     } catch (err: any) {
