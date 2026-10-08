@@ -42,7 +42,7 @@ export function disposeAmySpeech(reason?: string): void {
     publish({ status: reason ? 'error' : 'idle', progress: null });
 }
 
-function request(text?: string): Promise<Blob | undefined> {
+function request(text?: string, prepare = false): Promise<Blob | undefined> {
     if (typeof window === 'undefined' || !window.Worker) return Promise.reject(new Error('Browser workers are unavailable'));
     if (!worker) {
         worker = new Worker(new URL('./piper-amy.worker.ts', import.meta.url), { type: 'module' });
@@ -56,7 +56,7 @@ function request(text?: string): Promise<Blob | undefined> {
             if (data.progress) {
                 const { loaded, total } = data.progress;
                 if (speechState.status === 'loading' && Number.isFinite(loaded) && Number.isFinite(total) && total > 0) {
-                    publish({ status: 'loading', progress: Math.min(100, Math.max(0, Math.floor(loaded * 100 / total))) });
+                    publish({ status: 'loading', progress: Math.min(100, Math.max(0, Math.floor(loaded * 100 / total))), cached: speechState.cached });
                 }
                 return;
             }
@@ -70,9 +70,9 @@ function request(text?: string): Promise<Blob | undefined> {
     }
     return new Promise((resolve, reject) => {
         const id = ++nextId;
-        const timer = setTimeout(() => disposeAmySpeech('English voice preparation timed out'), text ? 20000 : 300000);
+        const timer = setTimeout(() => disposeAmySpeech('English voice preparation timed out'), text && !prepare ? 20000 : 300000);
         pending.set(id, { resolve, reject, timer });
-        try { worker!.postMessage({ id, text }); }
+        try { worker!.postMessage({ id, text, prepare }); }
         catch { disposeAmySpeech(); }
     });
 }
@@ -100,6 +100,12 @@ export async function synthesizeAmySpeech(text: string): Promise<Blob> {
     return audio;
 }
 
+export async function prepareAmyOpening(text: string): Promise<void> {
+    if (!text.trim() || text.length > 6000) throw new Error('Invalid English opening');
+    await preloadAmySpeech();
+    await request(text, true);
+}
+
 // Keep inference bounded so playback can start before the whole question is rendered.
 export function splitAmySpeechText(text: string, maxLength = 180): string[] {
     if (!Number.isInteger(maxLength) || maxLength < 1) throw new Error('Invalid speech chunk size');
@@ -113,7 +119,11 @@ export function splitAmySpeechText(text: string, maxLength = 180): string[] {
             chunks.push(remaining.slice(0, cut).trim());
             remaining = remaining.slice(cut).trim();
         }
-        if (remaining) chunks.push(remaining);
+        if (remaining) {
+            const previous = chunks.at(-1);
+            if (previous && previous.length + remaining.length + 1 <= maxLength) chunks[chunks.length - 1] = `${previous} ${remaining}`;
+            else chunks.push(remaining);
+        }
     }
     return chunks;
 }
