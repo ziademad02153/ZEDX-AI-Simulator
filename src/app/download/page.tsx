@@ -6,9 +6,50 @@ import { Button } from "@/components/ui/button";
 import { Check, Download, Monitor, Shield, Info } from "lucide-react";
 import Link from "next/link";
 import dynamic from 'next/dynamic';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 const AnimatedOrb = dynamic(() => import('@/components/animated-orb').then(mod => mod.AnimatedOrb), { ssr: false });
 
 export default function DownloadPage() {
+    const [access, setAccess] = useState<'checking' | 'ultra' | 'locked' | 'error'>('checking');
+    const [downloading, setDownloading] = useState(false);
+    const [downloadError, setDownloadError] = useState('');
+    useEffect(() => {
+        let active = true;
+        const check = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) { if (active) setAccess('locked'); return; }
+                const response = await fetch('/api/desktop-download?check=1', {
+                    headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store',
+                });
+                if (active) setAccess(response.ok ? 'ultra' : response.status === 401 || response.status === 403 ? 'locked' : 'error');
+            } catch { if (active) setAccess('error'); }
+        };
+        void check();
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+            if (active) { setAccess('checking'); void check(); }
+        });
+        return () => { active = false; subscription.unsubscribe(); };
+    }, []);
+    const download = async () => {
+        setDownloading(true);
+        setDownloadError('');
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) { setAccess('locked'); return; }
+            const response = await fetch('/api/desktop-download', {
+                method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store',
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) setAccess('locked');
+                throw new Error(result.error || 'Unable to start your download. Please retry.');
+            }
+            window.location.assign(result.url);
+        } catch (error) { setDownloadError(error instanceof Error ? error.message : 'Unable to start your download. Please retry.'); }
+        finally { setDownloading(false); }
+    };
     return (
         <div className="min-h-screen flex flex-col bg-white dark:bg-black font-sans text-gray-900 dark:text-gray-100 overflow-x-hidden">
             <script
@@ -25,12 +66,6 @@ export default function DownloadPage() {
                             "ratingValue": "4.9",
                             "ratingCount": "150"
                         },
-                        "offers": {
-                            "@type": "Offer",
-                            "price": "0",
-                            "priceCurrency": "USD"
-                        },
-                        "downloadUrl": "https://github.com/ziademad02153/zedx-ai-dist/releases/download/v1.1.5/ZEDX.AI.Setup.1.1.5.exe",
                         "featureList": "Real-time Meeting Simulation, Internal Audio Routing, Context Analysis, Practice Interface, AI Simulator",
                         "author": {
                             "@type": "Organization",
@@ -163,17 +198,19 @@ export default function DownloadPage() {
                             </ul>
 
                             <div className="space-y-4 mt-auto relative z-10">
-                                <Link
-                                    href="https://github.com/ziademad02153/zedx-ai-dist/releases/download/v1.1.5/ZEDX.AI.Setup.1.1.5.exe"
-                                    className="block"
-                                >
-                                    <Button variant="ghost" className="w-full rounded-2xl py-7 text-xl hover:bg-emerald-500/10 transition-all font-extrabold border-0 shadow-none">
+                                {access === 'ultra' ? (
+                                    <Button onClick={download} disabled={downloading} variant="ghost" className="w-full rounded-2xl py-7 text-xl hover:bg-emerald-500/10 transition-all font-extrabold border-0 shadow-none">
                                         <span className="relative z-10 flex items-center justify-center gap-2 text-emerald-600 dark:text-emerald-400">
                                             <Download size={22} strokeWidth={2.5} />
-                                            Download for Windows
+                                            {downloading ? 'Starting download…' : 'Download for Windows'}
                                         </span>
                                     </Button>
-                                </Link>
+                                ) : access === 'locked' ? (
+                                    <Link href="/pricing" className="block"><Button variant="ghost" className="w-full rounded-2xl py-7 text-xl font-extrabold">Available with Ultra</Button></Link>
+                                ) : (
+                                    <p role="status" className="text-center text-sm text-zinc-600 dark:text-zinc-400">{access === 'checking' ? 'Checking your subscription…' : 'Unable to verify your subscription. Please refresh to retry.'}</p>
+                                )}
+                                {downloadError && <p role="alert" className="text-center text-sm text-red-500">{downloadError}</p>}
                             </div>
                         </div>
                     </div>

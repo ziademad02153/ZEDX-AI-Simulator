@@ -39,9 +39,9 @@ export function Footer() {
                             <h4 className="text-[14px] font-semibold text-zinc-900 dark:text-white mb-5">Platform</h4>
                             <ul className="space-y-4">
                                 <li><Link href="/about" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">About ZEDX</Link></li>
-                                <li><Link href="/how-it-works" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">How it Works</Link></li>
+                                <li><Link href="/" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">Home</Link></li>
                                 <li><Link href="/pricing" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">Pricing</Link></li>
-                                <li><Link href="/desktop-app" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">Desktop App</Link></li>
+                                <li><Link href="/download" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">Desktop App</Link></li>
                             </ul>
                         </div>
 
@@ -50,9 +50,9 @@ export function Footer() {
                             <h4 className="text-[14px] font-semibold text-zinc-900 dark:text-white mb-5">Workspace</h4>
                             <ul className="space-y-4">
                                 <li><Link href="/dashboard" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">Dashboard</Link></li>
-                                <li><Link href="/simulation" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">New Interview</Link></li>
-                                <li><Link href="/dashboard/context-files" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">My Context Files</Link></li>
-                                <li><Link href="/dashboard/interviews" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">Training History</Link></li>
+                                <li><Link href="/dashboard/new" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">New Interview</Link></li>
+                                <li><Link href="/dashboard/resumes" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">My Context Files</Link></li>
+                                <li><Link href="/dashboard/history" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">Training History</Link></li>
                             </ul>
                         </div>
 
@@ -60,8 +60,8 @@ export function Footer() {
                         <div className="flex flex-col">
                             <h4 className="text-[14px] font-semibold text-zinc-900 dark:text-white mb-5">Support & Legal</h4>
                             <ul className="space-y-4">
-                                <li><Link href="/help" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">Help Center</Link></li>
-                                <li><Link href="/suggestion" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">Suggestion</Link></li>
+                                <li><a href="mailto:zedx.ai.support@gmail.com" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">Help Center</a></li>
+                                <li><a href="mailto:zedx.ai.support@gmail.com?subject=ZEDX%20Suggestion" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">Suggestion</a></li>
                                 <li><Link href="/privacy" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">Privacy Policy</Link></li>
                                 <li><Link href="/terms" className="text-[13px] font-medium text-zinc-600 dark:text-gray-400 hover:text-black dark:hover:text-emerald-400 transition-colors">Terms of Service</Link></li>
                             </ul>
