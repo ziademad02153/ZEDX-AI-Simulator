@@ -19,7 +19,7 @@ const NAV_LINKS = [
     { label: "My Context Files", href: "/dashboard/resumes" },
     { label: "Training History", href: "/dashboard/history" },
     { label: "Pricing", href: "/pricing" },
-    { label: "How it Works", href: "/#features" },
+    { label: "Home", href: "/" },
     { label: "Desktop App", href: "/download" },
     { label: "About ZEDX", href: "/about" },
     { label: "Contact Sales", href: "/contact-sales" },
