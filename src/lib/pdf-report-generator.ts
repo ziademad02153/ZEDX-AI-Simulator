@@ -319,12 +319,18 @@ export function generateExecutiveReportHtml(report: Rubric13Report, preserveInte
         .score-number {
             font-size: 46px;
             font-weight: 900;
-            line-height: 1;
+            line-height: 1.4;
             letter-spacing: -1.5px;
             color: #0f172a;
             display: flex;
             align-items: baseline;
             gap: 2px;
+            min-height: 64px;
+        }
+        .score-value {
+            display: block;
+            line-height: 1.4;
+            flex-shrink: 0;
         }
         .score-denom {
             font-size: 16px;
@@ -338,7 +344,8 @@ export function generateExecutiveReportHtml(report: Rubric13Report, preserveInte
             text-transform: uppercase;
             letter-spacing: 0.8px;
             color: #64748b;
-            margin-top: 4px;
+            margin-top: 10px;
+            line-height: 1.6;
         }
         .hire-pill {
             margin-top: 8px;
@@ -971,7 +978,7 @@ export function generateExecutiveReportHtml(report: Rubric13Report, preserveInte
             <div class="score-box">
                 <div class="score-number" dir="ltr">
                     ${overall_evaluation.bars_score !== null
-                        ? `${overall_evaluation.bars_score.toFixed(1)}<span class="score-denom">/ 5.0</span>`
+                        ? `<span class="score-value">${overall_evaluation.bars_score.toFixed(1)}</span><span class="score-denom">/ 5.0</span>`
                         : `<span style="font-size: 18px; line-height: 1.4;">${escapeHtml(labels.unrated)}</span>`
                     }
                 </div>
