@@ -29,9 +29,13 @@ export async function POST(request: Request) {
 
         const formData = await request.formData();
         const file = formData.get("file") as File;
+        const isWebInterview = formData.get('purpose') === 'web_mock_interview';
 
         if (!file) {
             return NextResponse.json({ error: "Missing file" }, { status: 400 });
+        }
+        if (isWebInterview && (!(file instanceof File) || file.size > 4 * 1024 * 1024)) {
+            return NextResponse.json({ error: 'Answer audio is too large or invalid.' }, { status: 413 });
         }
 
         const API_KEYS = [
@@ -79,18 +83,25 @@ export async function POST(request: Request) {
 
         // Shuffle keys once to start randomly but consistently
         const shuffledKeys = [...API_KEYS].sort(() => Math.random() - 0.5);
+        const deadline = Date.now() + 18000;
+        let attempts = 0;
 
         let lastError = null;
 
         // TRY MULTIPLE KEYS AUTOMATICALLY (Robustness)
         for (const apiKey of shuffledKeys) {
+            if (isWebInterview && (attempts >= 3 || Date.now() >= deadline)) break;
+            attempts++;
+            const controller = new AbortController();
+            const timeout = isWebInterview ? setTimeout(() => controller.abort(), Math.min(7000, Math.max(1, deadline - Date.now()))) : null;
             try {
                 const maskedKey = apiKey.substring(0, 8) + '...';
 
                 const groqFormData = new FormData();
-                const audioBlob = new Blob([arrayBuffer], { type: "audio/webm" });
-                groqFormData.append("file", audioBlob, "audio.webm");
-                groqFormData.append("model", formData.get("model")?.toString() || "whisper-large-v3-turbo");
+                const audioBlob = new Blob([arrayBuffer], { type: isWebInterview ? file.type : "audio/webm" });
+                groqFormData.append("file", audioBlob, isWebInterview ? file.name : "audio.webm");
+                groqFormData.append("model", isWebInterview ? "whisper-large-v3" : formData.get("model")?.toString() || "whisper-large-v3-turbo");
+                if (isWebInterview) groqFormData.append('response_format', 'verbose_json');
                 groqFormData.append("temperature", "0");
 
                 if (formData.get("language")) {
@@ -110,10 +121,15 @@ export async function POST(request: Request) {
                         "Authorization": `Bearer ${apiKey}`,
                     },
                     body: groqFormData,
+                    ...(isWebInterview ? { signal: controller.signal } : {}),
                 });
 
                 if (response.ok) {
                     const data = await response.json();
+                    if (isWebInterview && Array.isArray(data.segments) && data.segments.length > 0 &&
+                        data.segments.every((segment: any) => segment.no_speech_prob > 0.8 && segment.avg_logprob < -1)) {
+                        return NextResponse.json({ error: 'No reliable speech detected. Please repeat the answer.' }, { status: 422 });
+                    }
                     return NextResponse.json({ text: data.text });
                 }
 
@@ -135,6 +151,8 @@ export async function POST(request: Request) {
                 const error = err as Error;
                 lastError = error;
                 console.error(`[Transcribe API] Fetch failed for key:`, error.message);
+            } finally {
+                if (timeout !== null) clearTimeout(timeout);
             }
         }
 

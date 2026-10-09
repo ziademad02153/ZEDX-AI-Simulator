@@ -30,6 +30,8 @@ import { useInterviewStore } from "@/lib/store";
 import { Lock } from "lucide-react";
 import { PaywallModal } from "@/components/paywall-modal";
 import { toast } from 'sonner';
+import { parseInterviewQuestion } from '@/lib/interview-question-quality';
+import { recordInterviewAnswer, transcribeInterviewAnswer } from '@/lib/web-answer-recording';
 
 const PHONETIC_EGYPTIAN_NAMES_AR: Record<string, string> = {
     // Male Names
@@ -160,6 +162,15 @@ export default function MockInterviewPage() {
     const [audioLevel, setAudioLevel] = useState(0);
     const [isMobile, setIsMobile] = useState(false);
     const [showPaywall, setShowPaywall] = useState(false);
+    const [answerCaptureFailed, setAnswerCaptureFailed] = useState(false);
+    const [isTranscribing, setIsTranscribing] = useState(false);
+    const micStreamRef = useRef<MediaStream | null>(null);
+    const answerRecorderRef = useRef<ReturnType<typeof recordInterviewAnswer> | null>(null);
+    const pendingAnswerAudioRef = useRef<Blob | null>(null);
+    const submittingAnswerRef = useRef(false);
+    const pendingAnswerEndedAtRef = useRef<number | null>(null);
+    const [generationFailed, setGenerationFailed] = useState(false);
+    const failedGenerationRef = useRef<{ forceNextMain: boolean; targetMainIndex: number; history: any[] } | null>(null);
     
     useEffect(() => {
         setIsMobile(/Mobi|Android|iPhone/i.test(navigator.userAgent) || window.innerWidth < 768);
@@ -309,6 +320,7 @@ export default function MockInterviewPage() {
                 .then(s => {
                     if (hardwareDisposed) { s.getTracks().forEach(track => track.stop()); return; }
                     stream = s;
+                    micStreamRef.current = s;
                     if (videoRef.current && isCameraEnabled) {
                         videoRef.current.srcObject = stream;
                         stopPreviewObservation = observeInterviewPreview(videoRef.current);
@@ -429,6 +441,10 @@ export default function MockInterviewPage() {
         }
 
         return () => {
+            answerRecorderRef.current?.cancel();
+            answerRecorderRef.current = null;
+            pendingAnswerAudioRef.current = null;
+            micStreamRef.current = null;
             stopPreviewObservation();
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
             if (recognitionRef.current) {
@@ -517,14 +533,38 @@ export default function MockInterviewPage() {
         const currentType = currentQuestionTypeRef.current;
         const currentMainIndex = mainQuestionIndexRef.current;
 
-        if (!currentIsListening) return;
+        if ((!currentIsListening && !pendingAnswerAudioRef.current) || submittingAnswerRef.current) return;
+        submittingAnswerRef.current = true;
         setIsListening(false);
         stateRef.current.isListening = false; // Synchronous block for trailing events
         if (recognitionRef.current) recognitionRef.current.stop();
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
 
+        const speechEndedAt = pendingAnswerEndedAtRef.current ?? Date.now();
+        pendingAnswerEndedAtRef.current = speechEndedAt;
+        setIsTranscribing(true);
+        try {
+            if (!pendingAnswerAudioRef.current) {
+                if (!answerRecorderRef.current) throw new Error('No answer recording');
+                pendingAnswerAudioRef.current = await answerRecorderRef.current.finish();
+                answerRecorderRef.current = null;
+            }
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) throw new Error('No session');
+            transcript = await transcribeInterviewAnswer(pendingAnswerAudioRef.current, session.access_token, language);
+            if (!isMounted.current) return;
+            pendingAnswerAudioRef.current = null;
+            pendingAnswerEndedAtRef.current = null;
+            setAnswerCaptureFailed(false);
+        } catch {
+            if (isMounted.current) setAnswerCaptureFailed(true);
+            return; // Never save the provisional browser transcript as a verified answer.
+        } finally {
+            submittingAnswerRef.current = false;
+            if (isMounted.current) setIsTranscribing(false);
+        }
+
         // Calculate speech timing and word metrics
-        const speechEndedAt = Date.now();
         const speechStartedAt = speechStartedAtRef.current || speechEndedAt;
         const questionEndedAt = questionEndedAtRef.current;
         const durationSeconds = Math.max(0, Math.round(((speechEndedAt - speechStartedAt) / 1000) * 10) / 10);
@@ -563,6 +603,7 @@ export default function MockInterviewPage() {
             } as any;
         }
         setQuestionsAsked(newHistory);
+        stateRef.current.questionsAsked = newHistory;
         setUserTranscript(""); // Clear UI
         finalTranscriptRef.current = ""; // Reset stable transcript for next question
         speechStartedAtRef.current = null;
@@ -582,7 +623,7 @@ export default function MockInterviewPage() {
             question_count: questionCount,
             started_at: new Date(sessionStartTimeRef.current).toISOString(),
             questions: newHistory,
-            session_exchanges: sessionExchangesRef.current
+            session_exchanges: [...sessionExchangesRef.current]
         };
 
         pendingSaveRef.current = pendingSaveRef.current.catch(() => {}).then(async () => {
@@ -628,6 +669,8 @@ export default function MockInterviewPage() {
         history: any[];
     }) => {
         const { forceNextMain, targetMainIndex, history } = options;
+        setGenerationFailed(false);
+        failedGenerationRef.current = null;
 
         if (targetMainIndex >= questionCount) {
             completeInterview(history);
@@ -691,7 +734,8 @@ export default function MockInterviewPage() {
             const previousQ = history[history.length - 1].q;
             const previousA = history[history.length - 1].a;
             const askedQuestions = history.map(h => h.q).join(" | ");
-            const randomAngle = ["leadership skills", "problem solving", "technical depth", "past challenges", "teamwork and communication", "adaptability"][Math.floor(Math.random() * 6)];
+            const coveredMainQuestions = history.filter(h => h.type !== 'followup').length;
+            const randomAngle = ["role-specific problem solving", "design choices and trade-offs", "verification and quality", "failure diagnosis and recovery", "collaboration and requirements", "prioritization under constraints"][(coveredMainQuestions - 1) % 6];
 
             let prompt = "";
             if (forceNextMain) {
@@ -712,6 +756,7 @@ Resume Context: ${resume}`;
 This was Main Question ${targetMainIndex + 1} of ${questionCount}. No follow-up probe has been asked for this topic yet.
 Analyze the candidate's answer carefully:
 - If the answer was INCOMPLETE, VAGUE, SURFACE-LEVEL, or lacks essential depth: Ask ONE concise, focused follow-up probe (1-2 sentences) to deepen the evidence on this same topic. Prefix your response strictly with "[FOLLOW_UP]: ".
+- The follow-up must request ONE missing detail. NEVER repeat or paraphrase the original question, ask for the same story again, or ask for details already supplied. If speech transcription is unclear, ask about the ONE unclear detail without judging the candidate's competence. If no useful new probe exists, move to the next main question.
 - If the answer was CLEAR, REASONABLY DETAILED, or SUFFICIENT: Acknowledge it with a brief reaction and smoothly transition to Main Question ${targetMainIndex + 2} of ${questionCount} focusing on ${focusArea} (${randomAngle}). Prefix your response strictly with "[NEXT_MAIN]: ".
 CRITICAL RULES:
 1. Maximum 1 follow-up allowed per main question.
@@ -738,6 +783,8 @@ Resume Context: ${resume}`;
                         model: model,
                         promptType: 'mock_interview',
                         promptContext: { interviewType, difficulty, language },
+                        interviewHistory: history,
+                        forceNextMain,
                         prompt
                     })
                 });
@@ -754,28 +801,16 @@ Resume Context: ${resume}`;
                     throw new Error(data.error?.message || "API request failed");
                 }
 
-                const rawText = data.content || "";
-                let cleanQuestionText = rawText;
-
-                if (forceNextMain) {
-                    isFollowUp = false;
-                    cleanQuestionText = rawText.replace(/\[(NEXT_MAIN|FOLLOW_UP)\]:?\s*/gi, "").trim();
-                } else if (rawText.startsWith("[FOLLOW_UP]:") || rawText.includes("[FOLLOW_UP]")) {
-                    isFollowUp = true;
-                    cleanQuestionText = rawText.replace(/\[FOLLOW_UP\]:?\s*/gi, "").trim();
-                } else if (rawText.startsWith("[NEXT_MAIN]:") || rawText.includes("[NEXT_MAIN]")) {
-                    isFollowUp = false;
-                    cleanQuestionText = rawText.replace(/\[NEXT_MAIN\]:?\s*/gi, "").trim();
-                } else {
-                    isFollowUp = false;
-                    cleanQuestionText = rawText.trim();
-                }
-                nextQuestionText = cleanQuestionText;
+                const parsedQuestion = parseInterviewQuestion(data.content || '', forceNextMain);
+                isFollowUp = parsedQuestion.followUp;
+                nextQuestionText = parsedQuestion.text;
             } catch (err) {
                 console.error("AI Generation Failed:", err);
                 const message = getWebInterviewMessages(language).connectionError;
                 setZedxText(message);
-                await speakText(message);
+                failedGenerationRef.current = options;
+                setGenerationFailed(true);
+                setIsSpeaking(false);
                 return; // A failed request must not advance the interview or enter the report as a question.
             }
 
@@ -817,6 +852,7 @@ Resume Context: ${resume}`;
             }
         ];
         setQuestionsAsked(newHistory);
+        stateRef.current.questionsAsked = newHistory;
 
         // Play TTS
         await speakText(nextQuestionText);
@@ -843,6 +879,7 @@ Resume Context: ${resume}`;
 
         setIsSpeaking(true);
         setIsListening(false); // Fix: Ensure we are NOT listening while ZEDX starts speaking
+        stateRef.current.isListening = false;
         // Reveal the question when playback starts, keeping text and voice in sync.
         setZedxText("");
 
@@ -850,6 +887,18 @@ Resume Context: ${resume}`;
             if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
             setIsSpeaking(false);
             if (isCompletingRef.current) return;
+            try {
+                if (!micStreamRef.current) throw new Error('Microphone not ready');
+                answerRecorderRef.current?.cancel();
+                answerRecorderRef.current = recordInterviewAnswer(micStreamRef.current);
+                pendingAnswerAudioRef.current = null;
+                pendingAnswerEndedAtRef.current = null;
+                setAnswerCaptureFailed(false);
+            } catch {
+                setAnswerCaptureFailed(true);
+                return;
+            }
+            stateRef.current.isListening = true;
             setIsListening(true);
             setUserTranscript("");
             questionEndedAtRef.current = Date.now();
@@ -1153,10 +1202,27 @@ Resume Context: ${resume}`;
                         <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover transform -scale-x-100" />
                     </div>{/* end webcam box */}
 
-                    {/* Mobile Tap-to-Speak Button */}
-                    {isMobile && isListening && (
+                    {isTranscribing && <Loader2 className="w-6 h-6 animate-spin" aria-label="Transcribing answer" />}
+                    {generationFailed && <Button onClick={() => {
+                        if (failedGenerationRef.current) void generateNextStep(failedGenerationRef.current);
+                    }}>Retry</Button>}
+                    {answerCaptureFailed && (
+                        <div role="alert" className="flex flex-col gap-2">
+                            <p>{getWebInterviewMessages(language).connectionError}</p>
+                            <Button onClick={() => {
+                                if (pendingAnswerAudioRef.current) void handleUserFinishedSpeaking('');
+                                else void speakText(questionsAsked[questionsAsked.length - 1]?.q || '');
+                            }}>Retry</Button>
+                            <Button onClick={() => {
+                                pendingAnswerAudioRef.current = null;
+                                void speakText(questionsAsked[questionsAsked.length - 1]?.q || '');
+                            }}>Record answer again</Button>
+                        </div>
+                    )}
+                    {/* A manual finish also works when the browser recognition engine is unavailable. */}
+                    {isListening && (
                         <div className="flex flex-col gap-2 w-full sm:w-auto">
-                            {userTranscript.length > 0 ? (
+                            {userTranscript.length > 0 || !isMobile || !recognitionRef.current ? (
                                 <Button 
                                     onClick={() => handleUserFinishedSpeaking(userTranscript)}
                                     className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-6 px-4 shadow-lg border border-blue-500/50 w-full"

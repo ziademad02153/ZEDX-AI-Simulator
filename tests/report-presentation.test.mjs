@@ -21,6 +21,7 @@ function load(path) {
   if(name==='@/components/ui/button')return {Button:({children,...props})=>React.createElement('button',props,children)};
   if(name==='@/lib/supabase')return {supabase:{}};
   if(name==='@/lib/session-sync')return {syncServerSession:()=>{}};
+  if(name==='sonner')return {toast:{error(){}}};
   if(name.startsWith('@/'))return load('src/'+name.slice(2)+(name.includes('/components/')?'.tsx':'.ts'));
   if(name==='./languages')return load('src/lib/languages.ts');
   throw Error('Unexpected dependency '+name);
