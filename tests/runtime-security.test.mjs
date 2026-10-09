@@ -23,6 +23,7 @@ function module(path, client, extras = {}) {
       if (name === 'next/server') return { NextResponse };
       if (name === '@supabase/supabase-js') return { createClient: () => client };
       if (name === '@/lib/prompts') return { getSystemPrompt: () => 'test' };
+      if (name === '@/lib/interview-question-quality') return module('src/lib/interview-question-quality.ts', client);
       if (name === '@/lib/server-session') return { SERVER_SESSION_COOKIE: 'zedx_session' };
       if (name === 'node:crypto') return { createHmac };
       if (name === 'nodemailer') return { createTransport: () => ({ sendMail: extras.sendMail || (async () => {}) }) };
@@ -125,7 +126,9 @@ test('report download ignores URL credentials and checks report ownership using 
     } }) }),
   };
   const GET = module('src/app/api/report/[id]/pdf/route.ts', client, { modules: {
-    '@/lib/pdf-report-generator': { generateExecutiveReportHtml: () => '<html>Test</html>' },
+    '@/lib/pdf-report-generator': { generateExecutiveReportHtml: () => '<html><body>Test</body></html>' },
+    '@/lib/browser-print-document': module('src/lib/browser-print-document.ts', client),
+    '@/lib/report-labels': { getReportLabels: () => ({ pdf: 'Save as PDF' }) },
     '@/lib/rubric-evaluator': { enforceRubric13ReportSchema: value => value },
     fs: { existsSync: () => false }, path: {}, os: {}, child_process: { execFile() {} }, util: { promisify: () => () => {} },
   } }).GET;
@@ -135,6 +138,8 @@ test('report download ignores URL credentials and checks report ownership using 
   const header = await GET(req('https://test.local/api/report/test/pdf', 'header-token'), { params: Promise.resolve({ id: 'test' }) });
   assert.equal(header.status, 200);
   assert.equal(header.headers.get('cache-control'), 'private, no-store');
+  assert.equal(header.headers.get('content-type'), 'text/html; charset=utf-8');
+  assert.match(await header.text(), /onclick="window.print\(\)"/);
   assert.equal(receivedToken, 'header-token');
   assert.ok(filters.some(([field, value]) => field === 'user_id' && value === 'owner'));
   assert.equal((await GET(req('https://test.local/api/report/test/pdf', null, 'cookie-token'), { params: Promise.resolve({ id: 'test' }) })).status, 200);

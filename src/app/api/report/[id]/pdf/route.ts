@@ -8,6 +8,8 @@ import os from "os";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { SERVER_SESSION_COOKIE } from '@/lib/server-session';
+import { addBrowserPrintControls } from '@/lib/browser-print-document';
+import { getReportLabels } from '@/lib/report-labels';
 
 const execFileAsync = promisify(execFile);
 
@@ -83,11 +85,12 @@ export async function GET(
         });
 
         const htmlContent = generateExecutiveReportHtml(rubricReport, interview.analysis?.session_mode === 'mock_interview');
+        const printFallback = addBrowserPrintControls(htmlContent, getReportLabels(rubricReport.candidate.language, interview.analysis?.session_mode === 'mock_interview').pdf);
 
         const browserPath = findBrowserBinary();
         if (!browserPath) {
             // Fallback: Return HTML if headless browser is unavailable on this host
-            return new NextResponse(htmlContent, {
+            return new NextResponse(printFallback, {
                 headers: {
                     "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer"
                 }
@@ -136,7 +139,7 @@ export async function GET(
             console.error("[PDF Route] Browser headless execution error:", execErr);
             // Fallback to serving raw HTML
             fs.promises.unlink(tempHtmlPath).catch(() => {});
-            return new NextResponse(htmlContent, {
+            return new NextResponse(printFallback, {
                 headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" }
             });
         }

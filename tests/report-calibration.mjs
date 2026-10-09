@@ -21,6 +21,14 @@ const strong = [
     'I would first assess impact, assign an incident coordinator and give stakeholders a concise update. One engineer investigates logs and metrics while another prepares a rollback. I choose rollback when it restores service safely, communicate the decision and verify recovery through error-rate and latency monitoring. After recovery I run a blameless review, document the root cause and owners, and add a regression test and an alert. I distinguish this proposed approach from work I have actually done.'
 ];
 const cases = [
+    { id: 'garbled-metrics', answers: [
+        'client site was laplabs SST generals test accuracy from 1000 percent to 1800 percent and reducing spent by 1400 percent',
+        'later that use rights swatches subscription cross safety STD client grow whatever subsecond DDS',
+        'steering comment feedback Loops and fucking guess what is Level security for complaints'
+    ], expected: 'Corrupted automatic recognition and isolated apparent profanity must not produce confident competence or misconduct ratings.' },
+    { id: 'ambiguous-profanity', answers: [strong[0], strong[1],
+        'I coordinated firmware and QA teams, agreed test acceptance criteria and reviewed failures weekly. We used NumPy, SciPy and FFT for signal analysis. The transcript ends with fucking guess what is Level security for complaints.'
+    ], expected: 'Recoverable relevant evidence should remain assessed; a garbled isolated profanity must not force behavioral score 1.' },
     { id: 'strong', answers: strong, expected: 'Strong, accurate and complete answers should rate above weak/partial answers.' },
     { id: 'strong-repeat', answers: strong, expected: 'Same answers, role and difficulty; score drift should be at most 0.5.' },
     { id: 'brief-correct', answers: [

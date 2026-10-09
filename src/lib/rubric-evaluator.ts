@@ -240,6 +240,16 @@ export function enforceRubric13ReportSchema(
 ): Rubric13Report {
     const exchanges = ctx.sessionExchanges || [];
     const localized = ctx.strictLanguage && ctx.language !== 'en-US';
+    const unusableQuestions = new Set<number>((Array.isArray(raw?.questions_assessment) ? raw.questions_assessment : [])
+        .filter((question: any) => question.transcript_quality === 'unusable')
+        .map((question: any) => Number(question.question_number)));
+    const assessableExchanges = exchanges.filter((exchange: any, index: number) =>
+        !unusableQuestions.has(Number(exchange.mainQuestionIndex ?? index) + 1));
+    const uncertainQuestions = new Set<number>((Array.isArray(raw?.questions_assessment) ? raw.questions_assessment : [])
+        .filter((question: any) => question.transcript_quality === 'uncertain')
+        .map((question: any) => Number(question.question_number)));
+    const clearExchanges = assessableExchanges.filter((exchange: any, index: number) =>
+        !uncertainQuestions.has(Number(exchange.mainQuestionIndex ?? index) + 1));
 
     // 1. Extract and enforce the 5 competencies
     const rawCompetencies: any[] = Array.isArray(raw?.competencies) ? raw.competencies : [];
@@ -284,7 +294,9 @@ export function enforceRubric13ReportSchema(
 
         // Traceable evidence quotes
         const normalizeEvidence = (text: string) => text.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim().replace(/^["“”]+|["“”]+$/g, '').trim();
-        const answers = exchanges.map((exchange: any) => normalizeEvidence(String(exchange.answer || ''))).filter(Boolean);
+        // Recognition corruption cannot support a judgment of the candidate's communication.
+        const evidenceExchanges = key === 'communication_and_clarity' ? clearExchanges : assessableExchanges;
+        const answers = evidenceExchanges.map((exchange: any) => normalizeEvidence(String(exchange.answer || ''))).filter(Boolean);
         const rawQuotes = Array.isArray(rawItem.traceable_evidence) 
             ? rawItem.traceable_evidence
                 .filter((q: any) => typeof q === "string" && q.trim().length > 0)
@@ -294,6 +306,9 @@ export function enforceRubric13ReportSchema(
             : [];
 
         if (rawQuotes.length === 0 && evidenceStatus !== 'Not Directly Assessed') evidenceStatus = 'Insufficient';
+        const clearAnswers = clearExchanges.map((exchange: any) => normalizeEvidence(String(exchange.answer || ''))).filter(Boolean);
+        if (evidenceStatus === 'Sufficient' && uncertainQuestions.size > 0 && rawQuotes.some((quote: string) =>
+            !clearAnswers.some(answer => answer.includes(normalizeEvidence(quote))))) evidenceStatus = 'Partial';
 
         // STRICT Insufficient Evidence Rule:
         let barsScore: number | null = null;
@@ -384,7 +399,7 @@ export function enforceRubric13ReportSchema(
         }
 
         let qScore: number | null = null;
-        if ((mainEx && !cAnswer && !followUpObj?.response) || q.bars_score === null || q.bars_score === undefined || String(q.bars_score).trim().toLowerCase() === "null") {
+        if (q.transcript_quality === 'unusable' || (mainEx && !cAnswer && !followUpObj?.response) || q.bars_score === null || q.bars_score === undefined || String(q.bars_score).trim().toLowerCase() === "null") {
             qScore = null;
         } else {
             qScore = parseBarsScore(q.bars_score);

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { 
     ArrowLeft, 
     Printer, 
+    Loader2,
     Check, 
     Copy, 
     Brain,
@@ -21,8 +22,7 @@ import {
     AlertTriangle
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { supabase } from "@/lib/supabase";
-import { syncServerSession } from '@/lib/session-sync';
+import { toast } from 'sonner';
 
 interface RubricReportViewProps {
     interview: Interview;
@@ -38,6 +38,7 @@ export function RubricReportView({
     isLegacy = false
 }: RubricReportViewProps) {
     const [copiedId, setCopiedId] = useState(false);
+    const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
     const handleCopyId = (idText: string) => {
         navigator.clipboard.writeText(idText);
@@ -46,15 +47,16 @@ export function RubricReportView({
     };
 
     const handleDownloadPdf = async () => {
+        if (!rubricReport || isDownloadingPdf) return;
+        setIsDownloadingPdf(true);
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token || "";
-            if (!token) throw new Error('Please sign in to download the report.');
-            await syncServerSession(token);
-            window.open(`/api/report/${interview.id}/pdf`, "_blank", 'noopener,noreferrer');
+            const { downloadReportPdf } = await import('@/lib/download-report-pdf');
+            const html = generateExecutiveReportHtml(rubricReport, interview.analysis?.session_mode === 'mock_interview');
+            await downloadReportPdf(html, `ZEDX_Interview_Report_${rubricReport.candidate.name}_${rubricReport.assessment_id}.pdf`);
         } catch (e) {
             console.error(e);
-        }
+            toast.error('Could not download the PDF. Please try again.');
+        } finally { setIsDownloadingPdf(false); }
     };
 
     if (isLegacy || !rubricReport) {
@@ -117,9 +119,11 @@ export function RubricReportView({
                         </div>
                         <Button 
                             onClick={handleDownloadPdf}
+                            disabled={isDownloadingPdf}
+                            aria-busy={isDownloadingPdf}
                             className="bg-emerald-500 hover:bg-emerald-600 dark:bg-[#9df400] dark:hover:bg-[#8ee000] text-white dark:text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 dark:shadow-[#9df400]/20 flex items-center gap-1.5 px-4 py-2 transition-all hover:scale-105"
                         >
-                            <Printer className="w-4 h-4" /> {labels.pdf}
+                            {isDownloadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />} {labels.pdf}
                         </Button>
                     </div>
                 </div>

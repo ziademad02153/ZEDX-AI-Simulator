@@ -35,6 +35,27 @@ test('a missing competency score never becomes an invented neutral score', () =>
     assert.equal(result.overall_evaluation.bars_score, null);
 });
 
+test('unusable transcription cannot support question grades, competency grades or coverage', () => {
+    const report = raw();
+    report.questions_assessment[0].transcript_quality = 'unusable';
+    const result = enforce(report, context);
+    assert.equal(result.questions_assessment[0].bars_score, null);
+    assert.equal(result.overall_evaluation.bars_score, null);
+    assert.equal(result.overall_evaluation.assessment_coverage_pct, 0);
+    assert.ok(result.competencies.every(c => c.traceable_evidence.length === 0));
+});
+
+test('uncertain transcription preserves assessable evidence rather than inventing a failing floor', () => {
+    const report = raw();
+    report.questions_assessment[0].transcript_quality = 'uncertain';
+    const result = enforce(report, context);
+    assert.equal(result.questions_assessment[0].bars_score, 4);
+    assert.equal(result.overall_evaluation.bars_score, 4);
+    assert.equal(result.competencies.find(c => c.key === 'communication_and_clarity').bars_score, null);
+    assert.ok(result.competencies.filter(c => c.key !== 'communication_and_clarity').every(c => c.evidence_status === 'Partial'));
+    assert.ok(result.overall_evaluation.assessment_coverage_pct <= 50);
+});
+
 test('invented quotations cannot support numeric grades or coverage', () => {
     const report = raw();
     for (const competency of report.competencies) competency.traceable_evidence = ['I failed to understand any technical concepts'];

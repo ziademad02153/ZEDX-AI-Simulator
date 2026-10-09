@@ -4,6 +4,7 @@ import { interviewService, SessionExchange, LegacyScorecard } from "@/lib/interv
 import { getRubric13EvaluatorSystemPrompt, getRubric13EvaluatorUserPrompt } from "@/lib/prompts";
 import { enforceRubric13ReportSchema, generateLegacyProjection } from "@/lib/rubric-evaluator";
 import { validateWebReportLanguage } from "@/lib/web-report-language";
+import { validateWebReportEvidence } from '@/lib/web-report-evidence';
 import { SUPPORTED_LANGUAGES } from "@/lib/languages";
 
 export const runtime = 'edge';
@@ -262,7 +263,7 @@ export async function POST(request: Request) {
                             model: targetModel,
                             messages: [
                                 { role: "system", content: systemPrompt },
-                                { role: "user", content: userPrompt }
+                                { role: "user", content: userPrompt + (isWebMock ? '\nFINAL EVIDENCE RULES: Keep benchmark_model concise and generic: explain the answer structure with placeholders like [project], [measured result], [X]%; never invent a first-person career, years, company or metrics. For corrupted transcripts, mark transcript_quality uncertain or unusable. Grade recoverable technical concepts only. Communication cannot be graded from uncertain recognition. Uncertain evidence is Partial, not Sufficient. Do not convert garbled percentages into guessed achievements.' : '') + (isWebMock && lastErrorMsg.startsWith('Report ') ? `\nVALIDATION CORRECTION: ${lastErrorMsg}. Regenerate the report. Do not guess corrected figures, reward impossible percentages, or deduct marks merely for a corrupted metric. Use only recoverable actions and concepts; mark uncertain numerical outcomes as unverified.` : '') }
                             ],
                             max_tokens: 8192,
                             temperature: 0.1,
@@ -282,7 +283,11 @@ export async function POST(request: Request) {
                     if (data.choices?.[0]?.finish_reason === 'length') throw new Error('Evaluator output was truncated');
                     const content = data.choices?.[0]?.message?.content;
                     if (content && content.trim().length > 0) {
-                        if (isWebMock) validateWebReportLanguage(JSON.parse(content.trim()), lang);
+                        if (isWebMock) {
+                            const parsed = JSON.parse(content.trim());
+                            validateWebReportLanguage(parsed, lang);
+                            validateWebReportEvidence(parsed, sessionExchanges);
+                        }
                         rawContent = content;
                         successfulModel = targetModel;
                         break;
