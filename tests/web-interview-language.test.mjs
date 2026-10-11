@@ -14,6 +14,7 @@ function loader(overrides = {}, globals = {}) {
     cache.set(path, exports);
     vm.runInNewContext(code, {
       exports, console: { warn() {}, error() {}, log() {} }, URL, Response, Request, AbortController, setTimeout, clearTimeout,
+      Intl, requestAnimationFrame: () => 1, cancelAnimationFrame() {}, performance,
       process: { env: {} }, ...globals,
       require(name) {
         if (name in overrides) return overrides[name];
@@ -62,13 +63,13 @@ test('PDF preserves a real zero score and distinguishes it from an unrated repor
   raw.questions_assessment[0].bars_score = 0;
   const report = enforceRubric13ReportSchema(raw, context(languages[0].code));
   const zeroHtml = generateExecutiveReportHtml(report);
-  assert.match(zeroHtml, /0\.0<span class="score-denom">\/ 5\.0<\/span>/);
+  assert.match(zeroHtml, /<span class="score-value">0\.0<\/span><span class="score-denom">\/ 5\.0<\/span>/);
   assert.match(zeroHtml, /0\.0 \/ 5\.0/);
   report.overall_evaluation.bars_score = null;
   for (const competency of report.competencies) competency.bars_score = null;
   for (const question of report.questions_assessment) question.bars_score = null;
   const unratedHtml = generateExecutiveReportHtml(report);
-  assert.doesNotMatch(unratedHtml, /0\.0<span class="score-denom">\/ 5\.0<\/span>/);
+  assert.doesNotMatch(unratedHtml, /<span class="score-value">0\.0<\/span><span class="score-denom">\/ 5\.0<\/span>/);
 });
 
 const context = language => ({
@@ -174,14 +175,15 @@ for (const language of [...languages, { ...languages[0], piperUnavailable: true 
     let failedQuestion;
     const subtitles = [];
     const synth = { getVoices: () => [{ lang: language.code, name: 'Local' }], cancel() {}, speak(utterance) { nativeUtterance = utterance; utterance.onend(); } };
-    class Audio {
+    class Audio extends EventTarget {
       pause() {}
-      play() { this.onplay(); this.onended(); return Promise.resolve(); }
+      play() { this.onplaying?.(); this.dispatchEvent(new Event('ended')); this.onended?.(); return Promise.resolve(); }
     }
     const speak = pageHandler('speakText', {
       language: language.code, ...languageTools, SUPPORTED_LANGUAGES: languages, getEnglishSpeechPreference: () => language.browserSelected ? 'browser' : 'amy',
-      splitAmySpeechText: text => language.segmented ? [text, 'A follow-up sentence.'] : [text],
+      splitAmySpeechText: text => language.segmented ? [language.q1, 'A follow-up sentence.'] : [text],
       getAmyOpeningText: () => 'A prepared opening', useInterviewStore: { getState: () => ({ candidateName: 'Test' }) },
+      markInterviewFirstAudio() {},
       synthesizeAmySpeech: async () => {
         assert.equal(subtitles[0], '', 'The question stays hidden while Amy generates audio');
         amyCalls++;
@@ -189,20 +191,21 @@ for (const language of [...languages, { ...languages[0], piperUnavailable: true 
         return new Blob(['amy audio'], { type: 'audio/wav' });
       },
       getPhoneticText: text => text, isMounted: { current: true }, isCompletingRef: { current: false },
-      speechRequestRef: { current: 0 }, amyPlaybackCancelRef: { current: null }, audioRef: { current: null }, utteranceRef: { current: null },
+      speechRequestRef: { current: 0 }, speechProgressCleanupRef: { current: null }, amyPlaybackCancelRef: { current: null }, audioRef: { current: null }, utteranceRef: { current: null },
+      ...load('src/lib/interview-speech-progress.ts'),
       questionEndedAtRef: { current: null }, speechStartedAtRef: { current: null }, recognitionRef: { current: null },
       micStreamRef: { current: {} }, answerRecorderRef: { current: null }, pendingAnswerAudioRef: { current: null },
-      pendingAnswerEndedAtRef: { current: null },
+      pendingAnswerEndedAtRef: { current: null }, answerSilenceRef: { current: { reset() {} } },
       recordInterviewAnswer: () => ({ cancel() {}, finish: async () => new Blob(['candidate speech']) }),
       stateRef: { current: { isListening: false } }, setAnswerCaptureFailed() {},
       setIsSpeaking() {}, setIsListening() {}, setUserTranscript() {}, setAmyFailedQuestion: text => { failedQuestion = text; }, setZedxText: text => subtitles.push(text),
       console: { error() {} },
       window: { speechSynthesis: synth }, navigator: { userAgent: 'Test desktop' }, toast: { error: () => assert.fail('Unexpected audio error') },
-      SpeechSynthesisUtterance: class { constructor(text) { this.text = text; } }, Audio, URL,
+      SpeechSynthesisUtterance: class extends EventTarget { constructor(text) { super(); this.text = text; } }, Audio, URL,
       supabase: { auth: { getSession: async () => ({ data: { session: { access_token: 'test-token' } } }) } },
       fetch: async (_url, options) => { apiCalls++; assert.equal(JSON.parse(options.body).language, language.code); return new Response('audio'); },
     });
-    await speak(language.q1);
+    await speak(language.segmented ? language.q1 + ' A follow-up sentence.' : language.q1);
     if (language.piperUnavailable) {
       assert.equal(failedQuestion, language.q1);
       assert.equal(nativeUtterance, undefined, 'Amy failure must not silently switch voices');
@@ -275,6 +278,28 @@ test('TTS API calls ElevenLabs only for Egyptian/formal Arabic; the other 28 sta
     assert.equal(response.status, language.code.startsWith('ar') ? 200 : 400);
   }
   assert.equal(calls, 2);
+});
+
+test('Arabic timing response retains authentication, rate limiting, key failover and legacy audio compatibility', async () => {
+  let urls = [], authorized = true, allowed = true;
+  const payload = { audio_base64: 'YXVkaW8=', alignment: { characters: ['س'], character_start_times_seconds: [0], character_end_times_seconds: [.1] } };
+  const client = { auth: { getUser: async () => ({ data: { user: authorized ? { id: 'test' } : null } }) }, rpc: async () => ({ data: allowed }) };
+  const POST = loader({ 'next/server': { NextResponse }, '@supabase/supabase-js': { createClient: () => client } }, {
+    process: { env: { ELEVENLABS_API_KEY: 'test-key', ELEVENLABS_API_KEY_1: 'fallback-key' } },
+    fetch: async url => { urls.push(url); return urls.length === 1 ? Response.json({ error: 'quota' }, { status: 429 }) : Response.json(payload); },
+  })('src/app/api/tts/route.ts').POST;
+  const request = (language = 'ar-EG', token = 'test-token') => new Request('https://test.local/api/tts', {
+    method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body: JSON.stringify({ text: 'س', language, includeAlignment: true }),
+  });
+  const response = await POST(request());
+  assert.equal(response.status, 200); assert.deepEqual(await response.json(), payload);
+  assert.equal(urls.length, 2); assert.ok(urls.every(url => url.endsWith('/with-timestamps')));
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.equal((await POST(request('ar-EG', ''))).status, 401);
+  authorized = false; assert.equal((await POST(request())).status, 401);
+  authorized = true; allowed = false; assert.equal((await POST(request())).status, 429);
+  allowed = true; assert.equal((await POST(request('en-US'))).status, 400);
+  assert.equal(urls.length, 2, 'rejected requests must not consume voice provider requests');
 });
 
 for (const language of languages) {

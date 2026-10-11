@@ -31,7 +31,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Rate limit exceeded for TTS' }, { status: 429 });
         }
 
-        const { text, language = 'en-US' } = await req.json();
+        const { text, language = 'en-US', includeAlignment = false } = await req.json();
 
         if (typeof text !== 'string' || !text.trim()) {
             return NextResponse.json({ error: 'Text is required' }, { status: 400 });
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
             }
 
             const voiceId = "pNInz6obpgDQGcFmaJgB"; // Adam (Professional Male)
-            const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`;
+            const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/${includeAlignment === true ? 'with-timestamps' : 'stream'}`;
 
             let lastError = null;
             // Proper Fisher-Yates shuffle to distribute keys evenly
@@ -86,6 +86,13 @@ export async function POST(req: Request) {
                     });
 
                     if (response.ok) {
+                        if (includeAlignment === true) {
+                            const result = await response.json();
+                            if (typeof result.audio_base64 !== 'string' || !result.audio_base64) throw new Error('ElevenLabs returned no audio');
+                            return NextResponse.json({ audio_base64: result.audio_base64, alignment: result.alignment }, {
+                                headers: { 'Cache-Control': 'no-store' },
+                            });
+                        }
                         return new NextResponse(response.body, {
                             headers: { 'Content-Type': 'audio/mpeg', 'Transfer-Encoding': 'chunked' },
                         });
