@@ -36,9 +36,7 @@ yarn-error.log*
 
 # local data
 .data/
-# internal docs
-SCALABILITY.md
-PROJECT_RULES.md
+# Project engineering documentation is versioned with implementation changes.
 
 # vercel
 .vercel

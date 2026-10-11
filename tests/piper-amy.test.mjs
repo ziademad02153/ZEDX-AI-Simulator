@@ -28,7 +28,8 @@ test('hardware cleanup preserves interviewer playback and closes a late camera s
  vm.runInNewContext(ts.transpileModule(`exports.mount=${effect.getText(ast)};`,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,{
   exports:out,isSetup:true,isMicEnabled:false,isCameraEnabled:true,
   navigator:{mediaDevices:{getUserMedia:()=>new Promise(resolve=>{resolveStream=resolve;})}},window:{},
-  videoRef:{current:{srcObject:null}},audioRef:{current:{pause:()=>pauses++}},silenceTimerRef:{current:null},recognitionRef:{current:null},clearTimeout,
+  videoRef:{current:{srcObject:null}},audioRef:{current:{pause:()=>pauses++}},silenceTimerRef:{current:null},recognitionRef:{current:null},answerSilenceRef:{current:null},clearTimeout,
+  answerRecorderRef:{current:null},pendingAnswerAudioRef:{current:null},micStreamRef:{current:null},
   console:{error(){}},observeInterviewPreview:()=>()=>{}
  });
  const cleanup=out.mount();cleanup();
@@ -184,7 +185,7 @@ test('Interview effect replay retains the preloaded voice; real unmount disposes
         compilerOptions: { target: ts.ScriptTarget.ES2022 }
     }).outputText, {
         exports, speechCleanupTimer: { current: null }, isMounted: { current: false }, speechRequestRef: { current: 0 },
-        amyPlaybackCancelRef: { current: null }, audioRef: { current: null },
+        amyPlaybackCancelRef: { current: null }, speechProgressCleanupRef: { current: null }, audioRef: { current: null },
         setTimeout: callback => { timers.set(++nextTimer, callback); return nextTimer; },
         clearTimeout: id => timers.delete(id), disposeAmySpeech: () => disposed++
     });

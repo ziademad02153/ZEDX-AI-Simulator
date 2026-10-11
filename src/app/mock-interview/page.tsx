@@ -32,6 +32,8 @@ import { PaywallModal } from "@/components/paywall-modal";
 import { toast } from 'sonner';
 import { parseInterviewQuestion } from '@/lib/interview-question-quality';
 import { recordInterviewAnswer, transcribeInterviewAnswer } from '@/lib/web-answer-recording';
+import { createAnswerSilenceDetector } from '@/lib/answer-silence';
+import { followMediaSpeech, followNativeSpeech, locateSpeechChunk, spokenTextMap, type CharacterAlignment } from '@/lib/interview-speech-progress';
 
 const PHONETIC_EGYPTIAN_NAMES_AR: Record<string, string> = {
     // Male Names
@@ -160,7 +162,6 @@ export default function MockInterviewPage() {
     const [amyFailedQuestion, setAmyFailedQuestion] = useState<string | null>(null);
     const [isListening, setIsListening] = useState(false); // Are we listening to user?
     const [audioLevel, setAudioLevel] = useState(0);
-    const [isMobile, setIsMobile] = useState(false);
     const [showPaywall, setShowPaywall] = useState(false);
     const [answerCaptureFailed, setAnswerCaptureFailed] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
@@ -172,9 +173,8 @@ export default function MockInterviewPage() {
     const [generationFailed, setGenerationFailed] = useState(false);
     const failedGenerationRef = useRef<{ forceNextMain: boolean; targetMainIndex: number; history: any[] } | null>(null);
     
-    useEffect(() => {
-        setIsMobile(/Mobi|Android|iPhone/i.test(navigator.userAgent) || window.innerWidth < 768);
-    }, []);
+    const submitAnswerRef = useRef<() => void>(() => {});
+    const answerSilenceRef = useRef<ReturnType<typeof createAnswerSilenceDetector> | null>(null);
     
     const videoRef = useRef<HTMLVideoElement>(null);
     const recognitionRef = useRef<any>(null);
@@ -190,6 +190,7 @@ export default function MockInterviewPage() {
     const pendingSaveRef = useRef<Promise<void>>(Promise.resolve());
     const isCompletingRef = useRef(false);
     const speechRequestRef = useRef(0);
+    const speechProgressCleanupRef = useRef<(() => void) | null>(null);
     const sessionStartTimeRef = useRef<number>(Date.now());
     const questionEndedAtRef = useRef<number | null>(null);
     const speechStartedAtRef = useRef<number | null>(null);
@@ -225,6 +226,7 @@ export default function MockInterviewPage() {
         return () => {
             isMounted.current = false;
             speechRequestRef.current++;
+            speechProgressCleanupRef.current?.();
             amyPlaybackCancelRef.current?.();
             if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
             if (typeof window !== 'undefined') window.speechSynthesis?.cancel();
@@ -339,6 +341,13 @@ export default function MockInterviewPage() {
                         
                         analyser.smoothingTimeConstant = 0.8;
                         analyser.fftSize = 1024;
+                        const pcm = new Float32Array(analyser.fftSize);
+                        const endpoint = createAnswerSilenceDetector(
+                            () => submitAnswerRef.current(),
+                            () => { speechStartedAtRef.current ??= Date.now(); },
+                        );
+                        answerSilenceRef.current = endpoint;
+                        void audioCtx.resume().catch(() => {});
                         
                         microphone.connect(analyser);
                         analyser.connect(jsNode);
@@ -349,6 +358,8 @@ export default function MockInterviewPage() {
                             const now = performance.now();
                             if (now - lastLevelUpdate < 100) return;
                             lastLevelUpdate = now;
+                            analyser.getFloatTimeDomainData(pcm);
+                            endpoint.sample(pcm, now, stateRef.current.isListening);
                             const array = new Uint8Array(analyser.frequencyBinCount);
                             analyser.getByteFrequencyData(array);
                             let values = 0;
@@ -405,20 +416,7 @@ export default function MockInterviewPage() {
                     speechStartedAtRef.current = Date.now();
                 }
 
-                // Reset Silence Timer
-                if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-                
-                // If they spoke something meaningful, start the 3 second silence countdown
-                if (currentText.trim().length > 0 && hasValidSpeech) {
-                    silenceTimerRef.current = setTimeout(() => {
-                        handleUserFinishedSpeaking(currentText);
-                    }, 3000); // 3 seconds of silence = auto submit
-                } else if (currentText.trim().length > 0) {
-                    // Fallback for very short noises so it doesn't hang forever if it was actually speech
-                    silenceTimerRef.current = setTimeout(() => {
-                        handleUserFinishedSpeaking(currentText);
-                    }, 6000);
-                }
+                // Recognition supplies provisional captions only. Acoustic silence ends the turn.
             };
             
             let fatalError = false;
@@ -443,6 +441,7 @@ export default function MockInterviewPage() {
         return () => {
             answerRecorderRef.current?.cancel();
             answerRecorderRef.current = null;
+            answerSilenceRef.current = null;
             pendingAnswerAudioRef.current = null;
             micStreamRef.current = null;
             stopPreviewObservation();
@@ -858,8 +857,12 @@ Resume Context: ${resume}`;
         await speakText(nextQuestionText);
     };
 
+    submitAnswerRef.current = () => { void handleUserFinishedSpeaking(''); };
+
     const speakText = async (text: string) => {
         const speechRequest = ++speechRequestRef.current;
+        speechProgressCleanupRef.current?.();
+        speechProgressCleanupRef.current = null;
         amyPlaybackCancelRef.current?.();
         amyPlaybackCancelRef.current = null;
         if (audioRef.current) {
@@ -885,12 +888,16 @@ Resume Context: ${resume}`;
 
         const resumeListening = () => {
             if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
+            speechProgressCleanupRef.current?.();
+            speechProgressCleanupRef.current = null;
+            setZedxText(text);
             setIsSpeaking(false);
             if (isCompletingRef.current) return;
             try {
                 if (!micStreamRef.current) throw new Error('Microphone not ready');
                 answerRecorderRef.current?.cancel();
                 answerRecorderRef.current = recordInterviewAnswer(micStreamRef.current);
+                answerSilenceRef.current?.reset();
                 pendingAnswerAudioRef.current = null;
                 pendingAnswerEndedAtRef.current = null;
                 setAnswerCaptureFailed(false);
@@ -914,17 +921,25 @@ Resume Context: ${resume}`;
             if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
             const voice = selectWebSpeechVoice(voices, language);
             if (!voice) throw new Error(`No browser voice is available for ${language}`);
-            setZedxText(text);
-            const utterance = new SpeechSynthesisUtterance(getPhoneticText(text, language));
+            const mapped = spokenTextMap(text, part => getPhoneticText(part, language));
+            const utterance = new SpeechSynthesisUtterance(mapped.text);
             utteranceRef.current = utterance; // Prevent garbage collection
             utterance.lang = language;
             utterance.voice = voice;
             
             utterance.rate = /Mobi|Android|iPhone/i.test(navigator.userAgent) ? 1.05 : 1.10;
             utterance.pitch = 1.1; // Slightly higher pitch for energy
+            speechProgressCleanupRef.current = followNativeSpeech(utterance, {
+                text, language, originalIndex: mapped.originalIndex,
+                active: () => isMounted.current && speechRequest === speechRequestRef.current,
+                reveal: setZedxText,
+            });
             
             utterance.onend = resumeListening;
-            utterance.onerror = () => { notifyAudioError(); resumeListening(); };
+            utterance.onerror = () => {
+                if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
+                notifyAudioError(); resumeListening();
+            };
             window.speechSynthesis.speak(utterance);
         };
 
@@ -935,6 +950,7 @@ Resume Context: ${resume}`;
         try {
             let audioUrl = "";
             let blob: Blob;
+            let alignment: CharacterAlignment | undefined;
 
             if (language === 'en-US' && getEnglishSpeechPreference() === 'amy') {
                 try {
@@ -944,6 +960,7 @@ Resume Context: ${resume}`;
                         error => ({ audio: null, error })
                     );
                     let nextAudio = prepare(chunks[0]);
+                    let chunkCursor = 0;
                     for (let index = 0; index < chunks.length; index++) {
                         const result = await nextAudio;
                         if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
@@ -953,20 +970,27 @@ Resume Context: ${resume}`;
                         const url = URL.createObjectURL(result.audio);
                         const audio = new Audio(url);
                         audioRef.current = audio;
+                        const range = locateSpeechChunk(text, chunks[index], chunkCursor);
+                        chunkCursor = range.end;
+                        const stopProgress = followMediaSpeech(audio, {
+                            text: text.slice(range.start, range.end), language,
+                            active: () => isMounted.current && speechRequest === speechRequestRef.current,
+                            reveal: partial => setZedxText(text.slice(0, range.start) + partial),
+                        });
+                        speechProgressCleanupRef.current = stopProgress;
                         let cancelPlayback: (() => void) | null = null;
                         try {
                             await new Promise<void>((resolve, reject) => {
                                 cancelPlayback = resolve;
                                 amyPlaybackCancelRef.current = resolve;
-                                audio.onplay = () => {
-                                    if (isMounted.current && speechRequest === speechRequestRef.current) setZedxText(text);
-                                };
                                 audio.onplaying = () => markInterviewFirstAudio('Amy');
                                 audio.onended = () => resolve();
                                 audio.onerror = () => reject(new Error('Amy audio playback failed'));
                                 void audio.play().catch(reject);
                             });
                         } finally {
+                            stopProgress();
+                            if (speechProgressCleanupRef.current === stopProgress) speechProgressCleanupRef.current = null;
                             if (amyPlaybackCancelRef.current === cancelPlayback) amyPlaybackCancelRef.current = null;
                             audio.onplay = null;
                             audio.onplaying = null;
@@ -997,13 +1021,22 @@ Resume Context: ${resume}`;
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${token}`
                     },
-                    body: JSON.stringify({ text, language })
+                    body: JSON.stringify({ text, language, includeAlignment: true })
                 });
 
                 if (!isMounted.current || speechRequest !== speechRequestRef.current) return;
                 if (!res.ok) throw new Error("TTS failed");
 
-                blob = await res.blob();
+                if (res.headers.get('content-type')?.includes('application/json')) {
+                    const result = await res.json();
+                    if (typeof result.audio_base64 !== 'string' || !result.audio_base64) throw new Error('TTS returned no audio');
+                    const bytes = Uint8Array.from(atob(result.audio_base64), character => character.charCodeAt(0));
+                    blob = new Blob([bytes], { type: 'audio/mpeg' });
+                    alignment = result.alignment;
+                } else {
+                    // Compatibility with a server still serving the previous audio response.
+                    blob = await res.blob();
+                }
                 audioUrl = URL.createObjectURL(blob);
             } else {
                 await playNativeTTS();
@@ -1018,10 +1051,11 @@ Resume Context: ${resume}`;
             const audio = new Audio(audioUrl);
             audioRef.current = audio;
 
-            audio.onplay = () => {
-                // Sync text with audio start
-                setZedxText(text);
-            };
+            speechProgressCleanupRef.current = followMediaSpeech(audio, {
+                text, language, alignment,
+                active: () => isMounted.current && speechRequest === speechRequestRef.current,
+                reveal: setZedxText,
+            });
 
             audio.onended = () => {
                 URL.revokeObjectURL(audioUrl); // Fix memory leak
@@ -1059,6 +1093,7 @@ Resume Context: ${resume}`;
     const endInterview = () => {
         if (confirm("Are you sure you want to end the interview early?")) {
             speechRequestRef.current++;
+            speechProgressCleanupRef.current?.();
             amyPlaybackCancelRef.current?.();
             disposeAmySpeech();
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
@@ -1155,17 +1190,17 @@ Resume Context: ${resume}`;
                 </div>
 
                 {/* AI Text Bubble */}
-                <AnimatePresence mode="wait">
+                <AnimatePresence>
                     {zedxText && (
                         <motion.div 
-                            key={zedxText}
-                            initial={{ opacity: 0, x: -20 }}
+                            key={speechRequestRef.current}
+                            initial={false}
                             animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0 }}
+                            exit={{ opacity: 0, transition: { duration: 0 } }}
                             className="max-w-xl bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl relative"
                         >
                             {/* Arrow removed for cleaner glassmorphism look */}
-                            <p className="text-xl sm:text-2xl text-emerald-50 leading-relaxed">
+                            <p lang={language} dir="auto" className="text-xl sm:text-2xl text-emerald-50 leading-relaxed whitespace-pre-wrap">
                                 {zedxText}
                             </p>
                         </motion.div>
@@ -1217,31 +1252,6 @@ Resume Context: ${resume}`;
                                 pendingAnswerAudioRef.current = null;
                                 void speakText(questionsAsked[questionsAsked.length - 1]?.q || '');
                             }}>Record answer again</Button>
-                        </div>
-                    )}
-                    {/* A manual finish also works when the browser recognition engine is unavailable. */}
-                    {isListening && (
-                        <div className="flex flex-col gap-2 w-full sm:w-auto">
-                            {userTranscript.length > 0 || !isMobile || !recognitionRef.current ? (
-                                <Button 
-                                    onClick={() => handleUserFinishedSpeaking(userTranscript)}
-                                    className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-6 px-4 shadow-lg border border-blue-500/50 w-full"
-                                >
-                                    <span className="font-bold text-lg">Send Answer</span>
-                                </Button>
-                            ) : (
-                                <Button 
-                                    onClick={() => {
-                                        if (recognitionRef.current) {
-                                            try { recognitionRef.current.start(); } catch (e) {}
-                                        }
-                                    }}
-                                    className="bg-[#84cc16] hover:bg-[#65a30d] text-white rounded-xl py-6 px-4 shadow-[0_0_15px_rgba(132,204,22,0.4)] border border-[#84cc16]/50 w-full"
-                                >
-                                    <Mic className="w-6 h-6 mr-2" />
-                                    <span className="font-bold text-lg">Start Speaking</span>
-                                </Button>
-                            )}
                         </div>
                     )}
                 </div>{/* end hardware controls wrapper */}
