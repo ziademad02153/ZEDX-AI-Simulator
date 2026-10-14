@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
 
-async function route(path, client, env = {}) {
+async function route(path, client, env = {}, confirmation = async () => {}) {
   const source = await readFile(new URL(`../${path}`, import.meta.url), 'utf8');
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText;
   const exports = {};
@@ -14,6 +14,7 @@ async function route(path, client, env = {}) {
       if (name === 'next/server') return { NextResponse: { json: (body, init) => Response.json(body, init) } };
       if (name === '@supabase/supabase-js') return { createClient: () => client };
       if (name === 'nodemailer') return { createTransport: () => ({ sendMail: async () => {} }) };
+      if (name === '@/lib/payment-confirmation') return { sendPaymentConfirmation: confirmation };
       throw new Error(`Unexpected dependency: ${name}`);
     }
   };
@@ -28,6 +29,25 @@ const jsonRequest = (body, authenticated = true) => new Request('https://example
 });
 const webhook = (fields, secret = env.GUMROAD_WEBHOOK_SECRET) => new Request(`https://example.test/api?secret=${secret}`, {
   method:'POST', body:new URLSearchParams(fields)
+});
+
+test('approved payments email the authenticated account using the receipt expiry; mail failure does not reverse approval', async () => {
+  let sent;
+  const client = {
+    rpc: async () => ({ data:{success:true,tier:'ultra'},error:null }),
+    auth:{admin:{getUserById:async () => ({data:{user:{email:'buyer@example.test'}},error:null})}},
+    from(table) { return {select:() => ({eq:() => ({
+      single:async () => ({data:{user_id:uuid,amount:600,currency:'EGP',transaction_id:'ref'},error:null}),
+      eq:() => ({single:async () => ({data:{applied_tier:'ultra',applied_expires_at:'2027-01-14T12:00:00Z'},error:null})})
+    })})}; }
+  };
+  const POST = await route('src/app/api/admin/payments/action/route.ts',client,env,async input => {sent=input;});
+  const res=await POST(jsonRequest({id:uuid,action:'approve'}));
+  assert.equal((await res.json()).confirmation_email,'sent');
+  assert.equal(sent.email,'buyer@example.test'); assert.equal(sent.expiresAt,'2027-01-14T12:00:00Z');
+  const fail=await route('src/app/api/admin/payments/action/route.ts',client,env,async () => {throw new Error('SMTP unavailable');});
+  const failed=await fail(jsonRequest({id:uuid,action:'approve'}));
+  assert.equal(failed.status,200);const body=await failed.json();assert.equal(body.success,true);assert.equal(body.confirmation_email,'failed');
 });
 
 test('admin uses one atomic RPC and maps replay/conflict errors', async () => {
