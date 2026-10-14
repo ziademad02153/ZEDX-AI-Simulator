@@ -60,6 +60,9 @@ export default function AdminPaymentsPage() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Action failed");
+            if (data.confirmation_email === "failed") {
+                alert("Subscription activated, but the confirmation email could not be sent. Check email configuration and contact the customer. Do not approve the payment again.");
+            }
             
             // Refresh list
             fetchApprovals();
