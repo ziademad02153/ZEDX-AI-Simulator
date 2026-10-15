@@ -59,6 +59,11 @@ groq_docs_reference.md
 /private/
 /local-docs/
 
+# Local business outreach, generated decks, media edits, and private working data
+/output/
+/outreach/
+/tmp/
+
 # Local review artifacts and generated test results
 /PROJECT_REVIEW_AR.md
 /PAYMENT_FIXES_AR.md
