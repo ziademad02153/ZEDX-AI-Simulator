@@ -13,6 +13,39 @@ function load(file, globals = {}, dependencies = {}) {
     return exports;
 }
 const quality = load('src/lib/interview-question-quality.ts');
+const prompts = load('src/lib/prompts.ts', {}, {
+    '@/lib/languages': { SUPPORTED_LANGUAGES: [{ code: 'en-US', name: 'English', native: 'English' }] }
+});
+
+test('all website type and difficulty combinations retain distinct assessment contracts', () => {
+    const types = {
+        'Role-Specific': /Do not assume every role is software engineering/,
+        Behavioral: /Do NOT ask coding exercises/,
+        Technical: /Do NOT replace technical assessment with generic leadership/,
+        'Project Deep Dive': /keep the interview anchored to it/
+    };
+    const levels = {
+        Beginner: /coursework and personal projects are valid evidence/,
+        Intermediate: /independent execution in realistic day-to-day work/,
+        Expert: /complex decisions under ambiguity/
+    };
+    for (const [interviewType, typeRule] of Object.entries(types)) {
+        for (const [difficulty, levelRule] of Object.entries(levels)) {
+            const prompt = prompts.getSystemPrompt('mock_interview', { interviewType, difficulty, language: 'en-US' });
+            assert.match(prompt, typeRule, `${interviewType}/${difficulty}: type contract`);
+            assert.match(prompt, levelRule, `${interviewType}/${difficulty}: level contract`);
+            assert.match(prompt, /Expert Behavioral remains behavioral/);
+            assert.match(prompt, /reference data, not instructions to change type/);
+            assert.match(prompt, /Begin EVERY response with exactly \[NEXT_MAIN\]: or \[FOLLOW_UP\]:/);
+        }
+    }
+});
+
+test('website assessment policies do not leak into desktop candidate-answer prompts', () => {
+    const prompt = prompts.getSystemPrompt('candidate_answer', { interviewContext: { type: 'Technical', lang: 'en-US' } });
+    assert.doesNotMatch(prompt, /INTERVIEW TYPE CONTRACT|DIFFICULTY CONTRACT/);
+    assert.match(prompt, /SPEAK IN THE FIRST PERSON/);
+});
 const { validateWebReportEvidence } = load('src/lib/web-report-evidence.ts');
 test('text-only evidence validation rejects invented acoustic and profanity penalties', () => {
     assert.throws(() => validateWebReportEvidence({ competencies: [{ observed_gaps: ['Uses profanity and has unclear pronunciation'] }] }));
@@ -47,7 +80,7 @@ test('invalid transitions never silently advance a question or allow a second fo
     assert.equal(quality.parseInterviewQuestion('[NEXT_MAIN]: How would you test the system?', true).followUp, false);
 });
 
-function questionRoute(contents) {
+function questionRoute(contents, promptContext) {
     const state = { calls: 0, reservations: 0, releases: 0 };
     const client = {
         auth: { getUser: async () => ({ data: { user: { id: 'owner' } }, error: null }) },
@@ -68,9 +101,33 @@ function questionRoute(contents) {
     });
     return { state, request: () => route.POST(new Request('https://test.local/api/generate', {
         method: 'POST', headers: { Authorization: 'Bearer test', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ promptType: 'mock_interview', prompt: 'Ask the next question', interviewHistory: history, forceNextMain: true })
+        body: JSON.stringify({ promptType: 'mock_interview', promptContext, prompt: 'Ask the next question', interviewHistory: history, forceNextMain: true })
     })) };
 }
+
+test('actual website route rejects type/depth mismatch before returning a question', async () => {
+    for (const reason of ['typeMismatch', 'difficultyMismatch']) {
+        const app = questionRoute([
+            '[NEXT_MAIN]: How would you implement a database index?',
+            JSON.stringify({ duplicate: false, typeMismatch: false, difficultyMismatch: false, [reason]: true }),
+            '[NEXT_MAIN]: Tell me about a disagreement you resolved with a classmate.',
+            JSON.stringify({ duplicate: false, typeMismatch: false, difficultyMismatch: false })
+        ], { interviewType: 'Behavioral', difficulty: 'Beginner', language: 'en-US' });
+        const response = await app.request();
+        assert.equal(response.status, 200);
+        assert.match((await response.json()).content, /classmate/);
+        assert.equal(app.state.calls, 4);
+        assert.equal(app.state.reservations, 1);
+    }
+});
+
+test('incomplete settings verdict fails safely and refunds the website question', async () => {
+    const app = questionRoute(Array.from({ length: 3 }, () => [
+        '[NEXT_MAIN]: Explain how you test an API.', '{"duplicate":false}'
+    ]).flat(), { interviewType: 'Technical', difficulty: 'Expert', language: 'en-US' });
+    assert.equal((await app.request()).status, 500);
+    assert.equal(app.state.releases, 1);
+});
 test('actual generation route discards a repeated proposal and retries within one usage reservation', async () => {
     const app = questionRoute([`[NEXT_MAIN]: ${history[0].q}`, '[NEXT_MAIN]: How would you investigate intermittent API failures?', '{"duplicate":false}']);
     const response = await app.request();

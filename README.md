@@ -176,6 +176,17 @@ identifiers and fallback order are separate configuration in
 [the generation route](src/app/api/generate/route.ts); labels are not literal
 provider model IDs. This route returns JSON, not an SSE question stream.
 Context is bounded by API history/text limits and provider context/token budgets;
+Website interview generation uses distinct contracts for Role-Specific, Behavioral,
+Technical and Project Deep Dive, combined with Beginner, Intermediate or Expert
+depth. Follow-up focus angles remain within the chosen type. A fresh setup's
+selected difficulty takes precedence over an older browser-saved value. The first
+spoken introduction remains a shared warm-up; subsequent assessment questions use
+these contracts. The server also reviews generated questions for type/depth fit
+alongside repetition, retries up to three proposals within the existing deadline,
+and returns a recoverable error with usage release when no proposal is valid.
+Focused follow-ups are judged within their parent question, not as a full new
+expert scenario. Prompt regression tests cover all 12 combinations, but live-model
+adherence and perceived difficulty still require representative session review.
 there is no universal zero-truncation guarantee. At most one focused follow-up
 per main question is requested. [Question quality logic](src/lib/interview-question-quality.ts).
 

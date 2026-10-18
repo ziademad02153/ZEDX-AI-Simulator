@@ -269,7 +269,7 @@ export default function MockInterviewPage() {
             const savedResume = localStorage.getItem("interview_context_resume");
             _resume = state.resumeText || savedResume || "";
             const savedDiff = localStorage.getItem("interview_context_difficulty");
-            _diff = (state.difficulty && state.difficulty !== "Intermediate") ? state.difficulty : (savedDiff || state.difficulty || "Intermediate");
+            _diff = (state.jobDescription && state.resumeText) ? state.difficulty : (savedDiff || state.difficulty || "Intermediate");
             const savedType = localStorage.getItem("interview_context_type");
             _type = (state.interviewType && state.interviewType !== "General") ? state.interviewType : (savedType || state.interviewType || "Technical");
             _count = parseInt(localStorage.getItem("interview_context_question_count") || "10", 10);
@@ -734,7 +734,14 @@ export default function MockInterviewPage() {
             const previousA = history[history.length - 1].a;
             const askedQuestions = history.map(h => h.q).join(" | ");
             const coveredMainQuestions = history.filter(h => h.type !== 'followup').length;
-            const randomAngle = ["role-specific problem solving", "design choices and trade-offs", "verification and quality", "failure diagnosis and recovery", "collaboration and requirements", "prioritization under constraints"][(coveredMainQuestions - 1) % 6];
+            const anglesByType: Record<string, string[]> = {
+                Behavioral: ["a past collaboration", "a disagreement and your actions", "ownership of a setback", "adapting to change", "prioritizing competing commitments", "learning from feedback"],
+                Technical: ["technical problem solving", "implementation choices", "testing and verification", "debugging and recovery", "technical constraints", "technical trade-offs"],
+                'Project Deep Dive': ["the selected project's requirements", "your personal contribution to that project", "a decision in that project", "verification of that project", "a setback in that project", "that project's outcomes and lessons"],
+                'Role-Specific': ["a core responsibility of the target role", "a realistic role-specific decision", "quality of the role's deliverables", "a work problem relevant to the role", "stakeholder requirements for the role", "role-specific prioritization"]
+            };
+            const angles = anglesByType[interviewType] || anglesByType['Role-Specific'];
+            const randomAngle = angles[Math.max(0, coveredMainQuestions - 1) % angles.length];
 
             let prompt = "";
             if (forceNextMain) {
