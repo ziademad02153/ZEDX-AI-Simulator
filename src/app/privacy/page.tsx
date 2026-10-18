@@ -82,6 +82,7 @@ export default function PrivacyPolicyPage() {
                     <section id="section2" className="mb-10">
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">2. How do we process your information?</h2>
                         <ul className="list-disc ml-6 space-y-2 text-gray-600 dark:text-gray-300">
+                            <li><strong>Independent CV tools:</strong> ATS CV Checker and CV Builder process files and text locally in your browser without sending CV content to an AI provider. Current builder data stays in page memory and is not saved to your account. Older browser drafts, if you saved any in a previous version, can be removed by clearing this site&apos;s browser storage. Downloaded PDFs remain on your device until you delete them.</li>
                             <li><strong>To provide interview practice:</strong> using your Context Files and answers to generate relevant questions and feedback.</li>
                             <li><strong>To manage Subscriptions:</strong> ensuring Pro and Ultra tier users receive their allocated premium features.</li>
                             <li><strong>To save your training history:</strong> allowing you to review past performance analytics and track improvement.</li>

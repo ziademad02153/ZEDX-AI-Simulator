@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Match the saved .dark preference used by the root theme script. */
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   scroll-behavior: smooth;
